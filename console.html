@@ -993,55 +993,92 @@ VIEWS.customers=()=>{
   return `<div class="card"><table><thead><tr><th>Customer</th><th>Company</th><th>Phone</th><th>Bookings</th></tr></thead><tbody>
   ${DATA.customers.filter(c=>c.id!=="CUS-new").map(c=>{const n=DATA.bookings.filter(b=>b.customer===c.id).length;return `<tr><td><b>${c.name}</b></td><td class="muted">${c.company||'—'}</td><td>${c.phone}</td><td>${n} <span class="muted">rental${n!==1?'s':''}</span></td></tr>`;}).join("")}</tbody></table></div>`;
 };
+const STUDIO={ name:'Sri Cine Hub Pvt Ltd', tagline:'Cinema Equipment Rental · Chennai',
+  addr:'104 Brindavan Main Road, Valasaravakkam, Chennai 600087 (opp Reliance Digital)',
+  phone:'+91 95000 72167', web:'www.sricinehub.com', sign:'Sridhar / Vijayashanthi' };
+function rfqDays(q){ return q.start&&q.end?daysBetween(q.start,q.end):0; }
 VIEWS.hirein=()=>{
   const rfqs=DATA.rfqs||[];
-  const sb=s=>({draft:'b-mut',sent:'b-info',responded:'b-warn',accepted:'b-ok',declined:'b-bad'})[s]||'b-mut';
+  const sbc=s=>({draft:'b-mut',sent:'b-info',responded:'b-warn',accepted:'b-ok',declined:'b-bad'})[s]||'b-mut';
   const inpS='padding:6px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--text)';
-  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px">
+  const dl=q=> q.start? `${fmtDate(q.start)}–${fmtDate(q.end)}${q.pickup?` · pickup ${fmtDate(q.pickup)}`:''}${q.ret?` · return ${fmtDate(q.ret)}`:''}` : 'dates not set';
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px">
     <p class="muted" style="margin:0;font-size:13px">Source gear you don't own from suppliers. RFQs from converted quotes appear here automatically.</p>
     <button class="btn btn-primary btn-sm" style="flex-shrink:0" onclick="newRFQ()">＋ New RFQ</button></div>
-  ${rfqs.length? rfqs.map(q=>`<div class="card" style="margin-bottom:14px">
-    <div class="card-h"><h3>${q.code} · ${q.supplierName}</h3><span class="badge ${sb(q.status)}">${q.status}</span></div>
-    <div style="padding:4px 0">
-      ${q.items.length?q.items.map(it=>`<div class="list-row" style="cursor:default"><div class="grow"><div class="t">${it.item}</div><div class="sub">requested ${it.requestedRate!=null?money(it.requestedRate):'—'}/day</div></div>
-        <div style="display:flex;align-items:center;gap:6px;font-size:12.5px">quoted ₹<input type="number" value="${it.quotedRate!=null?it.quotedRate:''}" placeholder="—" onchange="rfqSetRate('${it.id}',this.value)" style="width:84px;text-align:right;${inpS}"></div></div>`).join(''):'<div class="empty" style="padding:14px">No items.</div>'}
-    </div>
-    <div style="padding:12px 16px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);flex-wrap:wrap">
+  ${rfqs.length? rfqs.map(q=>`<div class="card" style="margin-bottom:16px">
+    <div class="card-h" style="align-items:flex-start"><div><h3>${q.supplierName}</h3><div class="muted" style="font-size:12px;margin-top:3px">${q.code} · 📅 ${dl(q)}</div></div><span class="badge ${sbc(q.status)}">${q.status}</span></div>
+    <table style="width:100%"><thead><tr><th>Equipment</th><th style="text-align:center">Qty</th><th style="text-align:right">Requested</th><th style="text-align:right">Quoted ₹/day</th></tr></thead><tbody>
+      ${q.items.length?q.items.map(it=>`<tr><td><b>${it.item}</b></td><td style="text-align:center">${it.qty||1}</td><td style="text-align:right" class="muted">${it.requestedRate!=null?money(it.requestedRate):'—'}</td>
+        <td style="text-align:right"><input type="number" value="${it.quotedRate!=null?it.quotedRate:''}" placeholder="—" onchange="rfqSetRate('${it.id}',this.value)" style="width:96px;text-align:right;${inpS}"></td></tr>`).join(''):'<tr><td colspan="4" class="empty">No items.</td></tr>'}
+    </tbody></table>
+    ${q.notes?`<div class="muted" style="padding:10px 16px 0;font-size:12.5px">📝 ${q.notes.replace(/</g,'&lt;')}</div>`:''}
+    <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);flex-wrap:wrap;margin-top:8px">
       ${q.bookingCode?`<span class="muted" style="font-size:12px">for <span class="lnk gold" style="cursor:pointer" onclick="openBooking('${q.bookingCode}')">${q.bookingCode}</span></span>`:'<span class="muted" style="font-size:12px">standalone</span>'}
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-        <button class="btn btn-ghost btn-sm" onclick="rfqWA('${q.id}')">💬 Send to supplier</button>
+        <button class="btn btn-ghost btn-sm" onclick="openRFQ('${q.id}')">📄 RFQ letter</button>
+        <button class="btn btn-ghost btn-sm" onclick="rfqWA('${q.id}')">💬 Send</button>
         <select onchange="rfqStatus('${q.id}',this.value)" style="${inpS};padding:7px">${['draft','sent','responded','accepted','declined'].map(s=>`<option value="${s}" ${s===q.status?'selected':''}>${s}</option>`).join('')}</select>
       </div>
     </div></div>`).join('') : `<div class="card"><div class="empty">No hire-in RFQs yet. They're created automatically when you convert a quote with hire-in lines — or add one manually with ＋ New RFQ.</div></div>`}`;
 };
 function rfqSetRate(itemId,val){ (DATA.rfqs||[]).forEach(q=>q.items.forEach(it=>{ if(it.id===itemId) it.quotedRate=+val||0; })); SDB.setRFQItemRate(itemId,+val||0); }
 function rfqStatus(id,status){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(q)q.status=status; SDB.updateRFQStatus(id,status); go('hirein'); }
-function rfqWA(id){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(!q) return; const sup=(DATA.suppliers||[]).find(s=>s.id===q.supplierId)||{};
-  const items=q.items.map(it=>`• ${it.item}${it.requestedRate?' (~₹'+it.requestedRate.toLocaleString('en-IN')+'/day)':''}`).join('\n');
-  const b=q.bookingCode?(DATA.bookings||[]).find(x=>x.code===q.bookingCode):null;
-  const dates=b?` for ${fmtDate(b.start)}–${fmtDate(b.end)}`:'';
-  const msg=`Hi ${sup.name||''}, hire-in enquiry from Sri Cine Hub (${q.code}).\nPlease confirm availability & rate${dates}:\n${items||'(items)'}\n\nThank you.`;
-  waSend(sup.contact,msg); if(q.status==='draft') rfqStatus(id,'sent');
+function rfqWA(id){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(!q) return;
+  const items=q.items.map(it=>`• ${it.qty>1?it.qty+'× ':''}${it.item}${it.requestedRate?' (~₹'+it.requestedRate.toLocaleString('en-IN')+'/day)':''}`).join('\n');
+  const dates=q.start?`\nShoot: ${fmtDate(q.start)}–${fmtDate(q.end)}${q.pickup?'  Pickup: '+fmtDate(q.pickup):''}${q.ret?'  Return: '+fmtDate(q.ret):''}`:'';
+  const msg=`Hi ${q.supplierName||''}, hire-in enquiry from ${STUDIO.name} (${q.code}).\nPlease confirm availability & your best rate/day:\n${items||'(items)'}${dates}${q.notes?'\nNote: '+q.notes:''}\n\nThank you.`;
+  waSend(q.supplierContact,msg); if(q.status==='draft') rfqStatus(id,'sent');
 }
 function newRFQ(){
   const supOpts=(DATA.suppliers||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-  const bkOpts='<option value="">— none —</option>'+(DATA.bookings||[]).filter(b=>b.status!=='returned').map(b=>`<option value="${b.code}">${b.code} · ${b.project}</option>`).join('');
+  const bkOpts='<option value="">— none —</option>'+(DATA.bookings||[]).filter(b=>b.status!=='returned').map(b=>`<option value="${b.code}" data-s="${b.start}" data-e="${b.end}">${b.code} · ${b.project}</option>`).join('');
   openModal(`<h3>New hire-in RFQ</h3><p class="mut">Request gear you don't own from a supplier.</p>
     <div class="field"><label>Supplier</label><select id="rf-sup">${supOpts}</select></div>
-    <div class="field"><label>Link to booking (optional)</label><select id="rf-bk">${bkOpts}</select></div>
-    <div class="field"><label>Items — one per line, optional "· rate"</label><textarea id="rf-items" style="width:100%;min-height:78px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-family:inherit" placeholder="ARRI Alexa 65 · 45000&#10;Master Prime Set"></textarea></div>
+    <div class="field"><label>Link to booking (optional)</label><select id="rf-bk" onchange="rfDatesFromBooking()">${bkOpts}</select></div>
+    <div class="r2"><div class="field"><label>Shoot start</label><input id="rf-start" type="date" onchange="this.blur()"></div><div class="field"><label>Shoot end</label><input id="rf-end" type="date" onchange="this.blur()"></div></div>
+    <div class="r2"><div class="field"><label>Pickup</label><input id="rf-pickup" type="date" onchange="this.blur()"></div><div class="field"><label>Return</label><input id="rf-return" type="date" onchange="this.blur()"></div></div>
+    <div class="field"><label>Items — one per line: "Item · qty · rate" (qty/rate optional)</label><textarea id="rf-items" style="width:100%;min-height:72px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-family:inherit" placeholder="ARRI Alexa 65 · 1 · 45000&#10;Master Prime Set"></textarea></div>
+    <div class="field"><label>Notes (mount, accessories, condition…)</label><textarea id="rf-notes" style="width:100%;min-height:50px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-family:inherit" placeholder="PL mount, with batteries + charger"></textarea></div>
     <button class="btn btn-primary" style="width:100%" onclick="doNewRFQ()">Create RFQ</button>`);
 }
+function rfDatesFromBooking(){ const o=$("#rf-bk").selectedOptions[0]; if(!o||!o.dataset.s)return; $("#rf-start").value=o.dataset.s; $("#rf-end").value=o.dataset.e; }
 async function doNewRFQ(){
-  const supplierId=$("#rf-sup").value; const bkCode=$("#rf-bk").value;
-  const items=$("#rf-items").value.split('\n').map(s=>s.trim()).filter(Boolean).map(line=>{ const p=line.split('·'); return { item:(p[0]||'').trim(), requestedRate:p[1]?(+p[1].replace(/[^0-9]/g,'')||null):null }; }).filter(it=>it.item);
-  if(!supplierId) return toast('Pick a supplier');
+  const supplierId=$("#rf-sup").value; if(!supplierId) return toast('Pick a supplier');
+  const bkCode=$("#rf-bk").value;
+  const items=$("#rf-items").value.split('\n').map(s=>s.trim()).filter(Boolean).map(line=>{ const p=line.split('·').map(x=>x.trim());
+    return { item:p[0], qty:p[1]?(parseInt(p[1])||1):1, requestedRate:p[2]?(+p[2].replace(/[^0-9]/g,'')||null):null }; }).filter(it=>it.item);
+  const start=$("#rf-start").value||null, end=$("#rf-end").value||null, pickup=$("#rf-pickup").value||null, ret=$("#rf-return").value||null, notes=$("#rf-notes").value.trim();
   const code='RFQ-'+Date.now().toString().slice(-6);
   const bookingId=bkCode?SDB.ids.bookingByCode[bkCode]:null;
-  await SDB.createRFQ({code,supplierId,bookingId,status:'draft',items});
+  await SDB.createRFQ({code,supplierId,bookingId,status:'draft',items,start,end,pickup,ret,notes});
   const sup=(DATA.suppliers||[]).find(s=>s.id===supplierId)||{};
-  (DATA.rfqs=DATA.rfqs||[]).unshift({id:'local-'+code,code,supplierId,supplierName:sup.name||'—',bookingCode:bkCode||null,status:'draft',items:items.map((it,i)=>({id:'li-'+code+'-'+i,item:it.item,requestedRate:it.requestedRate,quotedRate:null}))});
+  (DATA.rfqs=DATA.rfqs||[]).unshift({id:'local-'+code,code,supplierId,supplierName:sup.name||'—',supplierContact:sup.contact||'',bookingCode:bkCode||null,status:'draft',start,end,pickup,ret,notes,items:items.map((it,i)=>({id:'li-'+code+'-'+i,item:it.item,qty:it.qty,requestedRate:it.requestedRate,quotedRate:null}))});
   closeModal(); toast('RFQ '+code+' created'); go('hirein');
+}
+function openRFQ(id){ CUR='hirein'; buildNav(); $("#pageTitle").textContent='RFQ letter'; $("#content").innerHTML=rfqLetter(id); window.scrollTo(0,0); }
+function rfqLetter(id){
+  const q=(DATA.rfqs||[]).find(x=>x.id===id); if(!q) return VIEWS.hirein();
+  const sup=(DATA.suppliers||[]).find(s=>s.id===q.supplierId)||{name:q.supplierName,contact:q.supplierContact};
+  const days=rfqDays(q);
+  const rows=q.items.map((it,i)=>`<tr><td class="c">${i+1}</td><td><b>${it.item}</b></td><td class="r">${it.qty||1}</td><td class="r" style="min-width:130px">${it.quotedRate!=null?money(it.quotedRate):'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</td></tr>`).join('');
+  return `<div class="rc-actions no-print">
+    <button class="btn btn-ghost" onclick="go('hirein')">← Hire-In</button>
+    <button class="btn btn-ghost" onclick="rfqWA('${q.id}')">💬 Send to supplier</button>
+    <button class="btn btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button></div>
+  <div class="receipt" id="receipt">
+    <div class="rc-head">
+      <div class="rc-brand"><img src="logo.png" alt="SRC"><div><b>${STUDIO.name}</b><span>${STUDIO.tagline}<br>${STUDIO.addr}<br>${STUDIO.phone} · ${STUDIO.web}</span></div></div>
+      <div class="rc-meta"><h2>REQUEST FOR QUOTATION</h2><div>${q.code}</div><div>Date: ${fmtDate(TODAY)}</div></div>
+    </div>
+    <div class="rc-parties">
+      <div><label>To</label><div class="v"><b>${sup.name||q.supplierName}</b><br>${sup.contact||q.supplierContact||''}</div></div>
+      <div style="text-align:right"><label>Rental period</label><div class="v">${q.start?fmtDate(q.start)+' – '+fmtDate(q.end)+(days?' · '+days+' days':''):'—'}<br>${q.pickup?'Pickup: '+fmtDate(q.pickup):''}${q.ret?' · Return: '+fmtDate(q.ret):''}${q.bookingCode?'<br>Ref: '+q.bookingCode:''}</div></div>
+    </div>
+    <p style="font-size:13.5px;color:#333;margin:6px 0 10px">Dear Sir/Madam, we wish to hire the following equipment for an upcoming production. Kindly confirm availability and your best rate per day.</p>
+    <table class="rc-table"><thead><tr><th>#</th><th>Equipment</th><th class="r">Qty</th><th class="r">Your rate ₹/day</th></tr></thead><tbody>${rows}</tbody></table>
+    ${q.notes?`<div style="margin-top:14px;font-size:13px;color:#333"><b>Notes:</b> ${q.notes.replace(/</g,'&lt;')}</div>`:''}
+    <div style="margin-top:34px;font-size:13px;color:#333">Please reply with rates &amp; availability at the earliest. Thank you.<br><br>Regards,<br><b style="color:#1a1a1a">${STUDIO.name}</b> — ${STUDIO.sign}</div>
+  </div>`;
 }
 VIEWS.receipts=()=>{
   const done=DATA.bookings.filter(b=>["returned","checked_out","overdue"].includes(b.status));
@@ -1065,7 +1102,7 @@ function receiptView(code){
   </div>
   <div class="receipt" id="receipt">
     <div class="rc-head">
-      <div class="rc-brand"><img src="logo.png" alt="SRC"><div><b>Sri Cine Hub</b><span>Cinema Equipment Rental · Chennai · +91 00000 00000</span></div></div>
+      <div class="rc-brand"><img src="logo.png" alt="SRC"><div><b>${STUDIO.name}</b><span>${STUDIO.tagline}<br>${STUDIO.addr}<br>${STUDIO.phone} · ${STUDIO.web}</span></div></div>
       <div class="rc-meta"><h2>RECEIPT</h2><div>${rc}</div><div>Issued: ${fmtDate(TODAY)}</div><div>Booking: ${b.code}</div></div>
     </div>
     <div class="rc-parties">

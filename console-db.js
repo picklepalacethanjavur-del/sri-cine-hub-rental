@@ -130,8 +130,10 @@ window.SDB = (function () {
       const rfqItemsByRfq = {}; rfqItemRows.data.forEach(it => (rfqItemsByRfq[it.rfq_id] ||= []).push(it));
       const rfqs = rfqRows.data.map(q => ({
         id: q.id, code: q.rfq_code, supplierId: q.supplier_id, supplierName: (ids.supplierById[q.supplier_id] || {}).name || "—",
+        supplierContact: (ids.supplierById[q.supplier_id] || {}).contact || "",
         bookingCode: bookingCodeById[q.booking_id] || null, status: q.status, notes: q.notes || "",
-        items: (rfqItemsByRfq[q.id] || []).map(it => ({ id: it.id, item: it.item, requestedRate: it.requested_rate_inr != null ? Number(it.requested_rate_inr) : null, quotedRate: it.quoted_rate_inr != null ? Number(it.quoted_rate_inr) : null }))
+        start: q.start_at, end: q.end_at, pickup: q.pickup_at, ret: q.return_at,
+        items: (rfqItemsByRfq[q.id] || []).map(it => ({ id: it.id, item: it.item, qty: it.qty || 1, requestedRate: it.requested_rate_inr != null ? Number(it.requested_rate_inr) : null, quotedRate: it.quoted_rate_inr != null ? Number(it.quoted_rate_inr) : null }))
       }));
       window.DATA = { cameras, accessories, customers, bookings, requests, suppliers, payouts, settlements, config, optionRates, optionCats, rfqs };
       console.info("SDB live — loaded from Supabase.");
@@ -212,9 +214,9 @@ window.SDB = (function () {
   const createRFQ = async (rfq) => {
     if (!ON) return null;
     try {
-      const { data: q, error } = await sb.from("supplier_rfqs").insert({ rfq_code: rfq.code, supplier_id: rfq.supplierId || null, booking_id: rfq.bookingId || null, status: rfq.status || "draft", notes: rfq.notes || null }).select("id").single();
+      const { data: q, error } = await sb.from("supplier_rfqs").insert({ rfq_code: rfq.code, supplier_id: rfq.supplierId || null, booking_id: rfq.bookingId || null, status: rfq.status || "draft", notes: rfq.notes || null, start_at: rfq.start || null, end_at: rfq.end || null, pickup_at: rfq.pickup || null, return_at: rfq.ret || null }).select("id").single();
       if (error) throw error;
-      if (rfq.items && rfq.items.length) await sb.from("supplier_rfq_items").insert(rfq.items.map(it => ({ rfq_id: q.id, item: it.item, requested_rate_inr: it.requestedRate || null, quoted_rate_inr: it.quotedRate || null })));
+      if (rfq.items && rfq.items.length) await sb.from("supplier_rfq_items").insert(rfq.items.map(it => ({ rfq_id: q.id, item: it.item, qty: it.qty || 1, requested_rate_inr: it.requestedRate || null, quoted_rate_inr: it.quotedRate || null })));
       return q.id;
     } catch (e) { fail(e, "create rfq"); return null; }
   };
@@ -275,8 +277,8 @@ window.SDB = (function () {
       // hire-in RFQs — one per supplier
       const bySup = {}; items.filter(l => l.kind === "hirein" && l.supplierId).forEach(l => { (bySup[l.supplierId] = bySup[l.supplierId] || []).push(l); });
       for (const sid in bySup) {
-        const { data: rfq } = await sb.from("supplier_rfqs").insert({ rfq_code: "RFQ-" + String(Date.now()).slice(-6), supplier_id: sid, booking_id: b.id, status: "draft" }).select("id").single();
-        if (rfq) await sb.from("supplier_rfq_items").insert(bySup[sid].map(l => ({ rfq_id: rfq.id, item: l.name, requested_rate_inr: l.cost || null })));
+        const { data: rfq } = await sb.from("supplier_rfqs").insert({ rfq_code: "RFQ-" + String(Date.now()).slice(-6), supplier_id: sid, booking_id: b.id, status: "draft", start_at: req.start, end_at: req.end }).select("id").single();
+        if (rfq) await sb.from("supplier_rfq_items").insert(bySup[sid].map(l => ({ rfq_id: rfq.id, item: l.name, qty: l.qty || 1, requested_rate_inr: l.cost || null })));
       }
       if (reqUuid) await sb.from("quote_requests").update({ status: "converted" }).eq("id", reqUuid);
       return { code, customer_id: c.id };
