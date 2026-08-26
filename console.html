@@ -483,19 +483,27 @@ VIEWS.requests.after=param=>{ if(!param) return; qbFromRequest(DATA.requests.fin
 /* ---- quote builder engine: match to catalogue + own / hire-in lines ---- */
 let QB=[]; const QB_MARKUP=25;
 const QB_ALIASES={
- 'ARRI Cameras':['arri','alexa','amira','mini lf'],'RED Helium (DCSM2) 8K':['helium','dcsm2'],
+ 'ARRI S35':['arri','s35','alexa','amira'],'RED Raptor 8K':['raptor'],'RED Helium (DCSM2) 8K':['helium','dcsm2'],
  'RED Gemini 5K':['gemini'],'RED Komodo 6K':['komodo'],'Sony FX3 4K':['fx3','fx 3'],
  'Canon R5':['r5','eos r5'],'Sony A7S III':['a7s','a7siii','a7s iii'],
- 'Ultra Prime':['ultra prime','ultra primes'],'CP3 / CP2 Zoom':['cp3','cp2'],'Otus':['otus'],'Alura':['alura'],
+ 'Ultra Prime':['ultra prime','ultra primes'],'CP3':['cp3'],'CP2':['cp2'],'CP2 Zoom':['cp2 zoom'],'Otus':['otus'],'Alura':['alura'],
  'Canon Lens':['canon lens','ef lens','rf lens'],'Sony G-Master Lens':['g master','gmaster','g-master'],
- 'Tokina 11–16':['tokina','11-16','11 16'],'100 Micro Lens':['macro','micro lens'],'Carl Zeiss':['zeiss'],'Samyang':['samyang','rokinon'],
- 'M40 / M18 / M8':['m40','m18','m8','hmi'],'SkyPanel S60':['skypanel','sky panel','s60'],'4 Bank LED':['4 bank','four bank','kino'],
- 'RGB Pavo Tube':['pavo','pavotube','tube light','rgb tube'],'Aputure 1200d / 600c / 300c':['aputure','1200d','600c','300c'],
- 'Forza 500 / Forza 60B':['forza','nanlite','60b'],'Wireless Nucleus M / N':['nucleus','follow focus'],
- 'Hollyland Mars':['hollyland','mars','wireless video','transmitter'],'Crane 3S Pro':['crane','gimbal','ronin'],
- 'Lapel Mic E4':['lapel','lav','collar mic'],'Wireless S02 Mic':['wireless mic','sennheiser','boom mic','s02'],
- 'Track & Trolley':['track','trolley'],'Slider':['slider'],'C-Stands / Flags / Frames / Apple Boxes':['c stand','c-stand','cstand','apple box','flag','floppy','frame'],
- 'Tempo Traveller with 40KV Genset':['tempo','traveller'],'Eeco Vehicle':['eeco','eco van'],'7KV / 45KV Genset Options':['genset','generator','kv gen','honda']
+ 'Tokina 11-16':['tokina','11-16','11 16'],'100 Micro Lens':['macro','micro lens'],'Carl Zeiss':['zeiss'],'Samyang':['samyang','rokinon'],
+ '2x Extender Lens':['extender','teleconverter','2x extender'],'Sirui Anamorphic (RF mount)':['sirui','anamorphic'],'Blaser Anamorphic (PL mount)':['blaser'],
+ 'M40':['m40'],'M18':['m18'],'M8':['m8'],'SkyPanel S60':['skypanel','sky panel','s60'],
+ '4-Bank LED 4ft':['4 bank','four bank','kino'],'2KW Soft Box':['soft box','softbox'],
+ 'RGB Pavo Tube 30C':['pavo 30c'],'RGB Pavo Tube 30X':['pavo 30x'],'RGB Pavo Tube 15X':['pavo 15x','pavo','pavotube','tube light'],
+ 'LED Panel':['led panel'],'Forza 500':['forza 500','forza'],'Forza 60B':['forza 60','60b'],'Senior':['senior'],
+ 'Par Can':['par can','parcan'],'LED Spot Light':['spot light','led spot'],'SL200':['sl200'],'Colour Reds':['colour red','color red'],
+ 'Amaran 300c':['amaran','amran','300c'],'Aputure 600c':['aputure 600','600c'],'Aputure Nova P600c':['nova','p600c'],'Aputure 1200d':['aputure 1200','1200d','aputure'],
+ 'Wireless Nucleus M':['nucleus m','nucleus','follow focus'],'Wireless Nucleus N':['nucleus n'],
+ 'Hollyland Mars 400':['hollyland mars','mars 400','hollyland'],'Hollyland 300':['hollyland 300'],'Crane 3S Pro':['crane','gimbal','ronin'],
+ 'Track & Trolley':['track','trolley'],'Slider':['slider'],'Lapel Mic E4':['lapel','lav','collar mic'],'Wireless S02 Mic':['wireless mic','sennheiser','boom mic','s02'],
+ 'Tempo Traveller + 40KW Genset':['tempo','traveller'],'Eeco':['eeco','eco van'],
+ '7KV (Honda Mini)':['7kv','honda','honda mini'],'45KV (with Tempo Traveller)':['45kv','genset','generator'],
+ 'C-Stand':['c stand','c-stand','cstand'],'Par Stand':['par stand'],'Boom Rod':['boom rod','boom'],
+ 'Frame 10x10':['10x10','10 x 10','frame 10'],'Frame 12x12':['12x12','frame 12'],'Lolly Board':['lolly board','loob board','lolly'],
+ 'Green Screen':['green screen','chroma'],'Silver Ladder':['ladder'],'Stand Bag':['stand bag','sandbag'],'Flag':['flag','floppy']
 };
 const QB_HEADERWORDS=new Set('lights light grip girp accessories accessory camera cameras lens lenses audio sound electrical electricals misc others other list requirement requirements'.split(' '));
 function qbIsHeader(s){const t=qbNorm(s).split(' ').filter(Boolean);return t.length>0&&t.length<=3&&t.every(w=>QB_HEADERWORDS.has(w));}
