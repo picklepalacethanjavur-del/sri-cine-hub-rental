@@ -1015,6 +1015,7 @@ VIEWS.hirein=()=>{
     <div style="padding:14px 16px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);flex-wrap:wrap;margin-top:8px">
       ${q.bookingCode?`<span class="muted" style="font-size:12px">for <span class="lnk gold" style="cursor:pointer" onclick="openBooking('${q.bookingCode}')">${q.bookingCode}</span></span>`:'<span class="muted" style="font-size:12px">standalone</span>'}
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="editRFQ('${q.id}')">✏️ Edit</button>
         <button class="btn btn-ghost btn-sm" onclick="openRFQ('${q.id}')">📄 RFQ letter</button>
         <button class="btn btn-ghost btn-sm" onclick="rfqWA('${q.id}')">💬 Send</button>
         <select onchange="rfqStatus('${q.id}',this.value)" style="${inpS};padding:7px">${['draft','sent','responded','accepted','declined'].map(s=>`<option value="${s}" ${s===q.status?'selected':''}>${s}</option>`).join('')}</select>
@@ -1030,20 +1031,28 @@ function rfqWA(id){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(!q) return;
   waSend(q.supplierContact,msg); if(q.status==='draft') rfqStatus(id,'sent');
 }
 let RF={custom:[]};
-function newRFQ(){
-  RF={custom:[]};
-  const supOpts=(DATA.suppliers||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-  const bkOpts='<option value="">— none —</option>'+(DATA.bookings||[]).filter(b=>b.status!=='returned').map(b=>`<option value="${b.code}" data-s="${b.start}" data-e="${b.end}">${b.code} · ${b.project}</option>`).join('');
-  openModal(`<h3>New hire-in RFQ</h3><p class="mut">Request gear from a supplier — tick what you need from their catalogue.</p>
+function newRFQ(existing){
+  RF={custom:[], editId: existing?existing.id:null, editUuid: existing?(existing._uuid||existing.id):null};
+  const supOpts=(DATA.suppliers||[]).map(s=>`<option value="${s.id}" ${existing&&existing.supplierId===s.id?'selected':''}>${s.name}</option>`).join('');
+  const bkOpts='<option value="">— none —</option>'+(DATA.bookings||[]).filter(b=>b.status!=='returned').map(b=>`<option value="${b.code}" data-s="${b.start}" data-e="${b.end}" ${existing&&existing.bookingCode===b.code?'selected':''}>${b.code} · ${b.project}</option>`).join('');
+  openModal(`<h3>${existing?'Edit':'New'} hire-in RFQ</h3><p class="mut">${existing?'Update items, dates or notes, then re-save.':'Request gear from a supplier — tick what you need from their catalogue.'}</p>
     <div class="field"><label>Supplier</label><select id="rf-sup" onchange="rfRenderItems()">${supOpts}</select></div>
     <div class="field"><label>Link to booking (optional)</label><select id="rf-bk" onchange="rfDatesFromBooking()">${bkOpts}</select></div>
     <div class="r2"><div class="field"><label>Shoot start</label><input id="rf-start" type="date" onchange="this.blur()"></div><div class="field"><label>Shoot end</label><input id="rf-end" type="date" onchange="this.blur()"></div></div>
     <div class="r2"><div class="field"><label>Pickup</label><input id="rf-pickup" type="date" onchange="this.blur()"></div><div class="field"><label>Return</label><input id="rf-return" type="date" onchange="this.blur()"></div></div>
     <div class="field"><label>Items</label><div id="rf-items-box" style="border:1px solid var(--line);border-radius:10px;padding:12px;max-height:280px;overflow:auto"></div></div>
     <div class="field"><label>Notes (mount, accessories, condition…)</label><textarea id="rf-notes" style="width:100%;min-height:48px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-family:inherit" placeholder="PL mount, with batteries + charger"></textarea></div>
-    <button class="btn btn-primary" style="width:100%" onclick="doNewRFQ()">Create RFQ</button>`);
+    <button class="btn btn-primary" style="width:100%" onclick="doNewRFQ()">${existing?'Save changes':'Create RFQ'}</button>`);
   rfRenderItems();
+  if(existing) rfPrefill(existing);
 }
+function rfPrefill(ex){
+  $("#rf-start").value=ex.start||''; $("#rf-end").value=ex.end||''; $("#rf-pickup").value=ex.pickup||''; $("#rf-return").value=ex.ret||''; $("#rf-notes").value=ex.notes||'';
+  (ex.items||[]).forEach(it=>{ const ck=[...document.querySelectorAll('.rf-ck')].find(c=>qbNorm(c.dataset.item)===qbNorm(it.item));
+    if(ck){ ck.checked=true; const q=ck.parentNode.querySelector('.rf-qty'); q.disabled=false; q.value=it.qty||1; } else RF.custom.push({item:it.item,qty:it.qty||1}); });
+  rfRenderCustom();
+}
+function editRFQ(id){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(q) newRFQ(q); }
 function rfRenderItems(){
   const sup=(DATA.suppliers||[]).find(s=>s.id===$("#rf-sup").value)||{catalog:[]};
   const box=$("#rf-items-box"); if(!box) return; const cat=sup.catalog||[];
@@ -1064,17 +1073,26 @@ function rfDatesFromBooking(){ const o=$("#rf-bk").selectedOptions[0]; if(!o||!o
 async function doNewRFQ(){
   const supplierId=$("#rf-sup").value; if(!supplierId) return toast('Pick a supplier');
   const items=[];
-  document.querySelectorAll('.rf-ck').forEach(ck=>{ if(ck.checked){ const qty=+ck.parentNode.querySelector('.rf-qty').value||1; items.push({item:ck.dataset.item,qty,requestedRate:null}); } });
-  RF.custom.forEach(c=>items.push({item:c.item,qty:c.qty,requestedRate:null}));
+  document.querySelectorAll('.rf-ck').forEach(ck=>{ if(ck.checked){ const qty=+ck.parentNode.querySelector('.rf-qty').value||1; items.push({item:ck.dataset.item,qty}); } });
+  RF.custom.forEach(c=>items.push({item:c.item,qty:c.qty}));
   if(!items.length) return toast('Tick at least one item');
   const bkCode=$("#rf-bk").value;
   const start=$("#rf-start").value||null, end=$("#rf-end").value||null, pickup=$("#rf-pickup").value||null, ret=$("#rf-return").value||null, notes=$("#rf-notes").value.trim();
-  const code='RFQ-'+Date.now().toString().slice(-6);
   const bookingId=bkCode?SDB.ids.bookingByCode[bkCode]:null;
-  await SDB.createRFQ({code,supplierId,bookingId,status:'draft',items,start,end,pickup,ret,notes});
   const sup=(DATA.suppliers||[]).find(s=>s.id===supplierId)||{};
-  (DATA.rfqs=DATA.rfqs||[]).unshift({id:'local-'+code,code,supplierId,supplierName:sup.name||'—',supplierContact:sup.contact||'',bookingCode:bkCode||null,status:'draft',start,end,pickup,ret,notes,items:items.map((it,i)=>({id:'li-'+code+'-'+i,item:it.item,qty:it.qty,requestedRate:null,quotedRate:null}))});
-  closeModal(); toast('RFQ '+code+' created'); openRFQ('local-'+code);
+  if(RF.editId){
+    const q=(DATA.rfqs||[]).find(x=>x.id===RF.editId);
+    const prev={}; if(q) q.items.forEach(it=>prev[qbNorm(it.item)]=it.quotedRate);
+    const litems=items.map((it,i)=>({id:(q&&q.items[i]&&q.items[i].id)||'li-e-'+i,item:it.item,qty:it.qty,requestedRate:null,quotedRate:(prev[qbNorm(it.item)]!=null?prev[qbNorm(it.item)]:null)}));
+    await SDB.updateRFQ(RF.editUuid,{supplier_id:supplierId,booking_id:bookingId,notes,start_at:start,end_at:end,pickup_at:pickup,return_at:ret},litems);
+    if(q) Object.assign(q,{supplierId,supplierName:sup.name||'—',supplierContact:sup.contact||'',bookingCode:bkCode||null,start,end,pickup,ret,notes,items:litems});
+    closeModal(); toast('RFQ updated'); openRFQ(RF.editId); return;
+  }
+  const code='RFQ-'+Date.now().toString().slice(-6);
+  const uuid=await SDB.createRFQ({code,supplierId,bookingId,status:'draft',items,start,end,pickup,ret,notes});
+  const localId=uuid||('local-'+code);
+  (DATA.rfqs=DATA.rfqs||[]).unshift({id:localId,_uuid:uuid,code,supplierId,supplierName:sup.name||'—',supplierContact:sup.contact||'',bookingCode:bkCode||null,status:'draft',start,end,pickup,ret,notes,items:items.map((it,i)=>({id:'li-'+code+'-'+i,item:it.item,qty:it.qty,requestedRate:null,quotedRate:null}))});
+  closeModal(); toast('RFQ '+code+' created'); openRFQ(localId);
 }
 function openRFQ(id){ CUR='hirein'; buildNav(); $("#pageTitle").textContent='RFQ letter'; $("#content").innerHTML=rfqLetter(id); window.scrollTo(0,0); }
 function rfqLetter(id){
@@ -1084,6 +1102,7 @@ function rfqLetter(id){
   const rows=q.items.map((it,i)=>`<tr><td class="c">${i+1}</td><td><b>${it.item}</b></td><td class="r">${it.qty||1}</td><td class="r" style="min-width:130px">${it.quotedRate!=null?money(it.quotedRate):'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</td></tr>`).join('');
   return `<div class="rc-actions no-print">
     <button class="btn btn-ghost" onclick="go('hirein')">← Hire-In</button>
+    <button class="btn btn-ghost" onclick="editRFQ('${q.id}')">✏️ Edit items</button>
     <button class="btn btn-ghost" onclick="rfqWA('${q.id}')">💬 Send to supplier</button>
     <button class="btn btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button></div>
   <div class="receipt" id="receipt">

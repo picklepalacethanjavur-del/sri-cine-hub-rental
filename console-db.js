@@ -221,6 +221,11 @@ window.SDB = (function () {
     } catch (e) { fail(e, "create rfq"); return null; }
   };
   const updateRFQStatus = guard(async (rfqId, status) => { const { error } = await sb.from("supplier_rfqs").update({ status }).eq("id", rfqId); if (error) throw error; });
+  const updateRFQ = guard(async (rfqId, patch, items) => {
+    const { error } = await sb.from("supplier_rfqs").update(patch).eq("id", rfqId); if (error) throw error;
+    await sb.from("supplier_rfq_items").delete().eq("rfq_id", rfqId);
+    if (items && items.length) await sb.from("supplier_rfq_items").insert(items.map(it => ({ rfq_id: rfqId, item: it.item, qty: it.qty || 1, quoted_rate_inr: it.quotedRate != null ? it.quotedRate : null })));
+  });
   const setRFQItemRate = guard(async (itemId, quoted) => { const { error } = await sb.from("supplier_rfq_items").update({ quoted_rate_inr: quoted }).eq("id", itemId); if (error) throw error; });
   // assign a real serial unit to an option-level booking line (at checkout)
   const assignUnit = guard(async (lineId, unitCode) => {
@@ -302,5 +307,5 @@ window.SDB = (function () {
     return { error:null };
   }
 
-  return { on: ON, bootstrap, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQStatus, setRFQItemRate };
+  return { on: ON, bootstrap, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
 })();
