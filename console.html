@@ -515,7 +515,7 @@ function qbPick(src,name,rate,supplierId){
   const idx=QB.findIndex(l=>l.type==='item'&&qbNorm(l.name)===qbNorm(name));
   if(idx>=0){ QB.splice(idx,1); }
   else{ const days=(QCTX.start&&QCTX.end)?daysBetween(QCTX.start,QCTX.end):1;
-    if(src==='sup'){ const l=qbLine(name,Math.round(rate*(1+QB_MARKUP/100)),days,'hirein'); l.cost=rate; l.supplierId=supplierId||null; l.offers=matchSuppliers(name); QB.push(l); }
+    if(src==='sup'){ const l=qbLine(name,Math.round(rate*(1+QB_MARKUP/100)),days,'hirein'); l.cost=rate; l.supplierId=supplierId||null; l.offers=matchSuppliers(name); QB.push(l); QB_OPEN=l._uid; }
     else QB.push(qbLine(name,rate,days,'own'));
   }
   renderQB(); renderQcatalog();
@@ -532,7 +532,9 @@ async function ensureRequest(){
 }
 
 /* ---- quote builder engine: match to catalogue + own / hire-in lines ---- */
-let QB=[]; const QB_MARKUP=25;
+let QB=[]; const QB_MARKUP=25; let QB_UID=0, QB_OPEN=null;
+function qbOpen(uid){ QB_OPEN = (QB_OPEN===uid?null:uid); renderQB(); }
+function qbFirstAttention(){ const l=QB.find(x=>x.type==='item'&&(x.kind==='custom'||!x.rate||!x.name)); return l?l._uid:null; }
 const QB_ALIASES={
  'ARRI S35':['arri','s35','alexa','amira'],'RED Raptor 8K':['raptor'],'RED Helium (DCSM2) 8K':['helium','dcsm2'],
  'RED Gemini 5K':['gemini'],'RED Komodo 6K':['komodo'],'Sony FX3 4K':['fx3','fx 3'],
@@ -617,7 +619,7 @@ function parseRows(text){                       // classifies every line; drops 
   return rows;
 }
 let QB_SOURCE='';
-function qbLine(name,rate,days,kind){return {type:'item',name,rate:rate||0,days:days||1,qty:1,kind:kind||'own',cost:null,supplierId:null,markup:QB_MARKUP,offers:[],spec:'',raw:name||'',suggest:null,include:true};}
+function qbLine(name,rate,days,kind){return {type:'item',_uid:++QB_UID,name,rate:rate||0,days:days||1,qty:1,kind:kind||'own',cost:null,supplierId:null,markup:QB_MARKUP,offers:[],spec:'',raw:name||'',suggest:null,include:true};}
 function qbRowToLine(row,days){
   if(row.type==='header') return {type:'header',name:row.name,raw:row.raw};
   if(row.type==='sep') return {type:'sep',raw:row.raw};
@@ -648,8 +650,8 @@ function qbFromRequest(r){
 function qbParse(){ const t=$("#qb-paste").value; if(!t.trim()) return toast('Paste a message first');
   const days=(QB.find(l=>l.days)||{days:1}).days; QB_SOURCE=(QB_SOURCE?QB_SOURCE+'\n':'')+t.trim();
   let n=0; parseRows(t).forEach(row=>{ QB.push(qbRowToLine(row,days)); if(row.type==='item')n++; });
-  const m=qbMergeDupes(); $("#qb-paste").value=''; renderQB(); toast('Added '+n+' item'+(n===1?'':'s')+(m?', merged '+m+' dup'+(m>1?'s':''):'')); }
-function qbAdd(){ QB.push(qbLine('',0,(QB.find(l=>l.days)||{days:1}).days,'custom')); renderQB(); }
+  const m=qbMergeDupes(); $("#qb-paste").value=''; QB_OPEN=qbFirstAttention(); renderQB(); toast('Added '+n+' item'+(n===1?'':'s')+(m?', merged '+m+' dup'+(m>1?'s':''):'')); }
+function qbAdd(){ const l=qbLine('',0,(QB.find(x=>x.days)||{days:1}).days,'custom'); QB.push(l); QB_OPEN=l._uid; renderQB(); }
 function qbName(i,v){QB[i].name=v;}
 function qbNum(i,f,v){QB[i][f]=+v||0; if(QB[i].kind==='hirein'&&(f==='cost'||f==='markup')) QB[i].rate=Math.round((QB[i].cost||0)*(1+(QB[i].markup||0)/100)); renderQB();}
 function qbDel(i){QB.splice(i,1);renderQB();}
@@ -672,23 +674,32 @@ function renderQB(){
     if(l.type==='sep') return `<div style="border-top:1px dashed var(--line);margin:8px 0"></div>`;
     if(l.type==='header') return `<div style="display:flex;align-items:center;gap:8px;margin:12px 0 4px"><span style="font-family:var(--font-display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)">${(l.name||'').replace(/"/g,'&quot;')}</span><span class="cart-x" style="margin-left:auto" onclick="qbDel(${i})">×</span></div>`;
     const qty=l.qty||1, bd=isEquip(l.kind)?billedDays(l.days):l.days, lt=l.rate*bd*qty;
+    const badgeH=badge(l.kind);
+    if(l._uid!==QB_OPEN){   // collapsed — one compact row
+      const attn=(!l.name||!l.rate)?'<span title="needs input" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warn);flex-shrink:0"></span>':'';
+      return `<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:9px 10px;margin-bottom:6px;opacity:${l.include?1:.5};cursor:pointer" onclick="qbOpen(${l._uid})">
+        <input type="checkbox" ${l.include?'checked':''} onclick="event.stopPropagation()" onchange="qbToggleInclude(${i})" style="cursor:pointer">
+        ${attn}${badgeH}<span style="flex:1;font-size:13.5px;${l.name?'':'color:var(--mut)'}">${(l.name||'(unnamed)').replace(/</g,'&lt;')}</span>
+        <span class="muted" style="font-size:12px;white-space:nowrap">×${qty} · ₹${(l.rate||0).toLocaleString('en-IN')}×${bd}</span>
+        <b class="gold" style="font-size:13px;white-space:nowrap;min-width:60px;text-align:right">${money(lt)}</b><span class="muted">▸</span></div>`;
+    }
+    // expanded — full editor
     const numi=(f,w)=>`<input type="number" value="${l[f]||''}" onchange="qbNum(${i},'${f}',this.value)" style="${inp(w)}">`;
     let hire='';
     if(l.kind==='hirein'){
       const opts=(l.offers&&l.offers.length)? l.offers.map((o,idx)=>`<option value="o:${idx}" ${o.supplierId===l.supplierId&&o.rate===l.cost?'selected':''}>${o.supplier} · ₹${o.rate} (${o.item})</option>`).join('') : (DATA.suppliers||[]).map(s=>`<option value="s:${s.id}" ${s.id===l.supplierId?'selected':''}>${s.name}</option>`).join('');
       hire=`<div style="display:flex;align-items:center;gap:7px;font-size:12px;margin-top:8px;color:var(--mut);flex-wrap:wrap"><span>via</span><select onchange="qbSupplier(${i},this.value)" style="background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px;color:var(--text);max-width:190px">${opts}</select><span>cost ₹</span>${numi('cost',58)}<span>markup</span>${numi('markup',40)}<span>%</span><span class="gold">margin ${money((l.rate-(l.cost||0))*bd*qty)}</span></div>`;
     }
-    const bdNote='';
     const specNote=l.spec?`<div class="muted" style="font-size:11.5px;margin-top:3px">📎 ${l.spec.replace(/</g,'&lt;')}</div>`:'';
     const rawNote=(l.raw&&qbNorm(l.raw)!==qbNorm(l.name))?`<div class="muted" style="font-size:11px;margin-top:2px;opacity:.7">from: “${(l.raw||'').replace(/</g,'&lt;')}”</div>`:'';
     const suggest=l.suggest?`<div style="font-size:11.5px;margin-top:4px">🤔 did you mean <b class="gold">${l.suggest}</b>? <span class="lnk gold" style="cursor:pointer" onclick="qbAccept(${i})">use it →</span></div>`:'';
-    return `<div style="border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:8px;opacity:${l.include?1:.5}">
+    return `<div style="border:1px solid var(--gold-dim);border-radius:9px;padding:10px;margin-bottom:8px;opacity:${l.include?1:.5}">
       <div style="display:flex;align-items:center;gap:8px">
-        <input type="checkbox" ${l.include?'checked':''} onchange="qbToggleInclude(${i})" title="include" style="cursor:pointer">${badge(l.kind)}
+        <input type="checkbox" ${l.include?'checked':''} onchange="qbToggleInclude(${i})" title="include" style="cursor:pointer">${badgeH}
         <input value="${(l.name||'').replace(/"/g,'&quot;')}" placeholder="Item" oninput="qbName(${i},this.value)" style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px;color:var(--text)">
-        ${kindSel(i,l.kind)}<span class="cart-x" onclick="qbDel(${i})">×</span></div>
+        ${kindSel(i,l.kind)}<span class="muted" style="cursor:pointer" onclick="qbOpen(${l._uid})" title="collapse">▾</span><span class="cart-x" onclick="qbDel(${i})">×</span></div>
       <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;margin-top:8px;flex-wrap:wrap">
-        qty ${numi('qty',40)} × ₹${numi('rate',66)}/day × ${numi('days',44)} days${bdNote} = <b class="gold">${money(lt)}</b></div>
+        qty ${numi('qty',40)} × ₹${numi('rate',66)}/day × ${numi('days',44)} days = <b class="gold">${money(lt)}</b></div>
       ${specNote}${rawNote}${suggest}${hire}
     </div>`;
   }).join("");
