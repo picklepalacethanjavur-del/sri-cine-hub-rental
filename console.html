@@ -1239,15 +1239,16 @@ function renderUserChip(){
 function showLogin(msg){
   let ov=document.getElementById('loginOverlay');
   if(!ov){ ov=document.createElement('div'); ov.id='loginOverlay'; document.body.appendChild(ov); }
-  ov.setAttribute('style','position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:var(--bg)');
-  ov.innerHTML=`<div style="width:340px;max-width:90vw;text-align:center">
-    <img src="logo.png" style="width:64px;height:64px;border-radius:12px;margin-bottom:16px">
-    <div style="font-family:var(--font-display);font-size:22px;margin-bottom:2px">Sri Cine Hub</div>
-    <p style="color:var(--mut);font-size:13px;margin-bottom:20px">Studio console — staff sign in</p>
-    <input id="li-email" placeholder="Email" autocomplete="username" style="width:100%;margin-bottom:10px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--text)">
-    <input id="li-pw" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;margin-bottom:14px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--text)">
-    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Sign in</button>
-    <div id="li-msg" style="color:var(--bad);font-size:12.5px;margin-top:10px">${msg||''}</div>
+  ov.setAttribute('style','position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:20px');
+  const fld='width:100%;margin-bottom:14px;padding:16px 16px;font-size:16px;background:var(--bg);border:1px solid var(--line);border-radius:11px;color:var(--text)';
+  ov.innerHTML=`<div style="width:420px;max-width:100%;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:44px 40px;box-shadow:var(--shadow)">
+    <img src="logo.png" style="width:84px;height:84px;border-radius:16px;margin-bottom:22px">
+    <div style="font-family:var(--font-display);font-size:30px;margin-bottom:6px">Sri Cine Hub</div>
+    <p style="color:var(--mut);font-size:15px;margin-bottom:30px">Studio console — staff sign in</p>
+    <input id="li-email" placeholder="Email" autocomplete="username" style="${fld}">
+    <input id="li-pw" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="${fld}">
+    <button class="btn btn-primary" style="width:100%;padding:15px;font-size:16px;margin-top:4px" onclick="doLogin()">Sign in</button>
+    <div id="li-msg" style="color:var(--bad);font-size:13.5px;margin-top:14px;min-height:18px">${msg||''}</div>
   </div>`;
 }
 async function doLogin(){
