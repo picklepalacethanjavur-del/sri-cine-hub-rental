@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRC Studio — Cinematic Noir</title>
+<style>
+  :root{
+    --bg:#080808; --bg2:#0f0d09; --card:#141210; --line:#26221a;
+    --gold:#d8b45a; --gold-dim:#8a7538; --text:#f4f1ea; --mut:#8f887c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .display{font-family:"Georgia","Times New Roman",serif;letter-spacing:-.01em}
+  /* top bar */
+  header{position:sticky;top:0;z-index:40;background:rgba(8,8,8,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .bar{max-width:1200px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;gap:24px}
+  .logo{display:flex;align-items:center;gap:12px;font-family:Georgia,serif;font-weight:700;font-size:22px;letter-spacing:.24em;color:var(--gold)}
+  .logo img{width:42px;height:42px;border-radius:8px;display:block}
+  .logo small{display:block;font-size:9px;letter-spacing:.5em;color:var(--mut);font-weight:400;margin-top:2px}
+  .logo .txt{display:flex;flex-direction:column;line-height:1}
+  nav.top{margin-left:auto;display:flex;gap:26px;font-size:13px;letter-spacing:.08em;color:var(--mut);text-transform:uppercase}
+  nav.top a:hover{color:var(--gold)}
+  .cta{border:1px solid var(--gold-dim);color:var(--gold);padding:9px 16px;border-radius:2px;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+  .cta:hover{background:var(--gold);color:#000}
+  /* hero */
+  .hero{max-width:1200px;margin:0 auto;padding:96px 24px 72px;position:relative}
+  .hero:before{content:"";position:absolute;inset:0;background:
+     radial-gradient(60% 90% at 80% 10%,rgba(216,180,90,.10),transparent 60%);pointer-events:none}
+  .kicker{color:var(--gold);letter-spacing:.35em;font-size:12px;text-transform:uppercase;margin-bottom:22px}
+  h1.display{font-size:clamp(40px,7vw,88px);line-height:1.02;max-width:14ch}
+  h1 em{color:var(--gold);font-style:italic}
+  .sub{color:var(--mut);font-size:18px;max-width:52ch;margin:26px 0 34px;line-height:1.6}
+  .hero-actions{display:flex;gap:14px;flex-wrap:wrap}
+  .btn{padding:14px 24px;border-radius:2px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border:1px solid transparent}
+  .btn-primary{background:var(--gold);color:#000;font-weight:600}
+  .btn-primary:hover{background:#e7c977}
+  .btn-ghost{border-color:var(--line);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--gold-dim)}
+  .stats{display:flex;gap:48px;margin-top:64px;flex-wrap:wrap}
+  .stat b{font-family:Georgia,serif;font-size:34px;color:var(--gold);display:block}
+  .stat span{color:var(--mut);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  /* category nav */
+  .catnav{position:sticky;top:65px;z-index:30;background:rgba(8,8,8,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .catnav-inner{max-width:1200px;margin:0 auto;padding:12px 24px;display:flex;gap:8px;overflow-x:auto}
+  .chip{white-space:nowrap;padding:8px 16px;border:1px solid var(--line);border-radius:999px;font-size:12px;letter-spacing:.06em;color:var(--mut);cursor:pointer}
+  .chip:hover,.chip.active{border-color:var(--gold-dim);color:var(--gold)}
+  /* sections */
+  main{max-width:1200px;margin:0 auto;padding:24px}
+  .sec{padding:44px 0 8px}
+  .sec-h{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:26px}
+  .sec-h h2{font-family:Georgia,serif;font-size:30px}
+  .sec-h span{color:var(--mut);font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;transition:.2s;cursor:pointer;position:relative}
+  .card:hover{border-color:var(--gold-dim);transform:translateY(-3px)}
+  .thumb{height:120px;background:linear-gradient(135deg,#241d0f,#0c0a07 70%);position:relative}
+  .thumb:after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 20% 0%,rgba(216,180,90,.16),transparent 55%)}
+  .flag{position:absolute;top:10px;left:10px;z-index:2;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:var(--gold);color:#000;padding:3px 8px;border-radius:2px;font-weight:700}
+  .card-b{padding:18px}
+  .card-b h3{font-size:16px;margin-bottom:8px}
+  .card-b p{color:var(--mut);font-size:13px;line-height:1.5;min-height:38px}
+  .add{margin-top:14px;display:flex;align-items:center;justify-content:space-between}
+  .add small{color:var(--gold-dim);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+  .add-btn{border:1px solid var(--gold-dim);color:var(--gold);border-radius:2px;padding:7px 12px;font-size:12px;letter-spacing:.06em;background:none;cursor:pointer}
+  .add-btn:hover{background:var(--gold);color:#000}
+  .card.in .add-btn{background:var(--gold);color:#000}
+  /* kit bar */
+  .kitbar{position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:.28s;background:linear-gradient(180deg,rgba(8,8,8,.4),var(--bg2));border-top:1px solid var(--gold-dim);backdrop-filter:blur(14px)}
+  .kitbar.show{transform:none}
+  .kitbar-in{max-width:1200px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;gap:18px}
+  .kitbar b{color:var(--gold);font-family:Georgia,serif;font-size:20px}
+  .kit-names{color:var(--mut);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:48px 24px;color:var(--mut);font-size:13px;text-align:center}
+  footer .logo{justify-content:center;margin-bottom:14px}
+  /* modal */
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:60;display:none;align-items:center;justify-content:center;padding:20px}
+  .ov.show{display:flex}
+  .modal{background:var(--bg2);border:1px solid var(--gold-dim);border-radius:10px;max-width:440px;width:100%;padding:30px}
+  .modal h3{font-family:Georgia,serif;font-size:24px;margin-bottom:6px}
+  .modal p.mut{color:var(--mut);font-size:13px;margin-bottom:20px}
+  .fld{margin-bottom:14px}
+  .fld label{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+  .fld input{width:100%;background:#0c0a07;border:1px solid var(--line);border-radius:4px;padding:11px;color:var(--text);font-size:14px}
+  .fld input:focus{outline:none;border-color:var(--gold-dim)}
+  .row2{display:flex;gap:12px}.row2 .fld{flex:1}
+  .step{color:var(--gold-dim);font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo"><img src="logo.png" alt="SRC Studio"><span class="txt">SRC<small>STUDIO</small></span></div>
+    <nav class="top">
+      <a href="#cat">Equipment</a><a href="#">Packages</a><a href="#">Studio Floor</a><a href="#">About</a>
+    </nav>
+    <a class="cta" href="#" onclick="openQuote();return false">Request a Quote</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="kicker">Chennai · Cinema Equipment Rental</div>
+  <h1 class="display">Gear that earns its place <em>on set.</em></h1>
+  <p class="sub">ARRI, RED, Sony and Canon systems — lenses, lighting, grip, transport and genset. Build your kit, send one request, and we'll confirm availability and a quote for your shoot dates.</p>
+  <div class="hero-actions">
+    <button class="btn btn-primary" onclick="document.querySelector('#cat').scrollIntoView({behavior:'smooth'})">Browse Equipment</button>
+    <button class="btn btn-ghost" onclick="openQuote()">Talk to us on WhatsApp</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>35+</b><span>Rental options</span></div>
+    <div class="stat"><b>7</b><span>Categories</span></div>
+    <div class="stat"><b>24h</b><span>Quote turnaround</span></div>
+  </div>
+</section>
+
+<div class="catnav" id="cat"><div class="catnav-inner" id="chips"></div></div>
+<main id="sections"></main>
+
+<div class="kitbar" id="kitbar">
+  <div class="kitbar-in">
+    <b><span id="kitcount">0</span> in kit</b>
+    <div class="kit-names" id="kitnames"></div>
+    <button class="btn btn-ghost" onclick="clearKit()">Clear</button>
+    <button class="btn btn-primary" onclick="openQuote()">Request Quote →</button>
+  </div>
+</div>
+
+<div class="ov" id="ov">
+  <div class="modal">
+    <div class="step">Step 4 of 4 · almost done</div>
+    <h3 class="display">Request your quote</h3>
+    <p class="mut">No account needed. We'll confirm availability for your dates and send pricing on WhatsApp.</p>
+    <div class="fld"><label>Your name *</label><input placeholder="e.g. Arjun / DOP"></div>
+    <div class="row2">
+      <div class="fld"><label>Phone / WhatsApp *</label><input placeholder="+91"></div>
+      <div class="fld"><label>Production (optional)</label><input placeholder="Company / project"></div>
+    </div>
+    <div class="row2">
+      <div class="fld"><label>Shoot start</label><input type="date"></div>
+      <div class="fld"><label>Shoot end</label><input type="date"></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="alert('Demo: this creates a Quote Request in the internal console.');closeQuote()">Send request →</button>
+  </div>
+</div>
+
+<footer>
+  <img src="logo.png" alt="SRC Studio" style="width:72px;height:72px;border-radius:12px;margin-bottom:14px">
+  <div>Cinema equipment rental · Chennai · +91 00000 00000 · Direction A — “Cinematic Noir”</div>
+</footer>
+
+<script src="catalog-data.js"></script>
+<script>
+const kit=new Set();
+function render(){
+  const chips=document.getElementById('chips'), secs=document.getElementById('sections');
+  SRC_CATALOG.forEach((c,i)=>{
+    const chip=document.createElement('div');chip.className='chip'+(i===0?' active':'');chip.textContent=c.category+' · '+c.items.length;
+    chip.onclick=()=>{document.getElementById('sec-'+i).scrollIntoView({behavior:'smooth',block:'start'});[...chips.children].forEach(x=>x.classList.remove('active'));chip.classList.add('active');};
+    chips.appendChild(chip);
+    const sec=document.createElement('section');sec.className='sec';sec.id='sec-'+i;
+    sec.innerHTML=`<div class="sec-h"><h2 class="display">${c.category}</h2><span>${c.items.length} options</span></div>`;
+    const g=document.createElement('div');g.className='grid';
+    c.items.forEach(it=>{
+      const key=c.category+'|'+it.n;
+      const card=document.createElement('div');card.className='card';
+      card.innerHTML=`<div class="thumb">${it.flag?`<span class="flag">${it.flag}</span>`:''}</div>
+        <div class="card-b"><h3>${it.n}</h3><p>${it.d}</p>
+        <div class="add"><small>Availability on request</small>
+        <button class="add-btn">＋ Add to kit</button></div></div>`;
+      const btn=card.querySelector('.add-btn');
+      btn.onclick=e=>{e.stopPropagation();toggle(key,card,btn);};
+      g.appendChild(card);
+    });
+    sec.appendChild(g);secs.appendChild(sec);
+  });
+}
+function toggle(key,card,btn){
+  if(kit.has(key)){kit.delete(key);card.classList.remove('in');btn.textContent='＋ Add to kit';}
+  else{kit.add(key);card.classList.add('in');btn.textContent='✓ In kit';}
+  updateBar();
+}
+function updateBar(){
+  document.getElementById('kitcount').textContent=kit.size;
+  document.getElementById('kitnames').textContent=[...kit].map(k=>k.split('|')[1]).join('  ·  ');
+  document.getElementById('kitbar').classList.toggle('show',kit.size>0);
+}
+function clearKit(){kit.clear();document.querySelectorAll('.card.in').forEach(c=>{c.classList.remove('in');c.querySelector('.add-btn').textContent='＋ Add to kit';});updateBar();}
+function openQuote(){document.getElementById('ov').classList.add('show');}
+function closeQuote(){document.getElementById('ov').classList.remove('show');}
+document.getElementById('ov').addEventListener('click',e=>{if(e.target.id==='ov')closeQuote();});
+render();
+</script>
+</body>
+</html>

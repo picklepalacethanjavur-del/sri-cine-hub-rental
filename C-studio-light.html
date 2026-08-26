@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRC Studio — Studio Light</title>
+<style>
+  :root{
+    --bg:#f6f4ef; --card:#ffffff; --line:#e7e2d8; --ink:#1c1a17;
+    --gold:#a9822b; --gold-soft:#f0e6cf; --mut:#7a746a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+  a{color:inherit;text-decoration:none}
+  header{position:sticky;top:0;z-index:40;background:rgba(246,244,239,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .bar{max-width:1200px;margin:0 auto;padding:16px 28px;display:flex;align-items:center;gap:28px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:.02em}
+  .logo .mark{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--gold),#d8b45a);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800;letter-spacing:.02em}
+  .logo small{color:var(--mut);font-weight:500;letter-spacing:.28em;font-size:10px}
+  nav.top{margin-left:auto;display:flex;gap:28px;font-size:14px;color:var(--mut);font-weight:500}
+  nav.top a:hover{color:var(--ink)}
+  .cta{background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600}
+  .cta:hover{background:var(--gold)}
+  /* hero */
+  .hero{max-width:1200px;margin:0 auto;padding:80px 28px 60px;text-align:center}
+  .pill{display:inline-block;background:var(--gold-soft);color:var(--gold);font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;margin-bottom:24px}
+  h1{font-size:clamp(38px,6vw,68px);line-height:1.05;letter-spacing:-.025em;max-width:16ch;margin:0 auto}
+  h1 span{color:var(--gold)}
+  .sub{color:var(--mut);font-size:19px;max-width:56ch;margin:24px auto 32px;line-height:1.6}
+  .hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn{padding:14px 26px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;border:1px solid transparent}
+  .btn-primary{background:var(--ink);color:#fff}.btn-primary:hover{background:var(--gold)}
+  .btn-ghost{background:var(--card);border-color:var(--line);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--gold)}
+  .trust{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:44px;color:var(--mut);font-size:14px}
+  .trust b{color:var(--ink)}
+  .catnav{position:sticky;top:65px;z-index:30;background:rgba(246,244,239,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .catnav-inner{max-width:1200px;margin:0 auto;padding:12px 28px;display:flex;gap:8px;overflow-x:auto}
+  .chip{white-space:nowrap;padding:9px 16px;border:1px solid var(--line);background:var(--card);border-radius:999px;font-size:13.5px;font-weight:600;color:var(--mut);cursor:pointer}
+  .chip .n{color:var(--gold);margin-left:6px}
+  .chip:hover,.chip.active{border-color:var(--gold);color:var(--ink);background:var(--gold-soft)}
+  main{max-width:1200px;margin:0 auto;padding:28px}
+  .sec{padding:46px 0 8px}
+  .sec-h{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+  .sec-h h2{font-size:30px;letter-spacing:-.02em}
+  .sec-h .cnt{background:var(--gold-soft);color:var(--gold);font-size:13px;font-weight:700;padding:3px 11px;border-radius:999px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;transition:.18s;cursor:pointer;box-shadow:0 1px 2px rgba(28,26,23,.04)}
+  .card:hover{border-color:var(--gold);box-shadow:0 8px 24px rgba(169,130,43,.12);transform:translateY(-2px)}
+  .thumb{height:130px;background:linear-gradient(135deg,#efe9db,#f6f4ef);position:relative;display:flex;align-items:center;justify-content:center}
+  .thumb .ico{font-size:34px;opacity:.35}
+  .flag{position:absolute;top:12px;left:12px;font-size:11px;font-weight:700;background:var(--gold);color:#fff;padding:3px 10px;border-radius:999px}
+  .card-b{padding:18px}
+  .card-b h3{font-size:16.5px;margin-bottom:7px}
+  .card-b p{color:var(--mut);font-size:13.5px;line-height:1.55;min-height:42px}
+  .add{margin-top:14px;display:flex;align-items:center;justify-content:space-between}
+  .add small{color:var(--mut);font-size:12px}
+  .add-btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:8px 14px;font-size:13.5px;font-weight:600;cursor:pointer}
+  .add-btn:hover{border-color:var(--gold);color:var(--gold)}
+  .card.in{border-color:var(--gold)}
+  .card.in .add-btn{background:var(--gold);color:#fff;border-color:var(--gold)}
+  .kitbar{position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:.28s}
+  .kitbar.show{transform:none}
+  .kitbar-in{max-width:1000px;margin:16px auto;padding:14px 20px;display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 40px rgba(28,26,23,.18)}
+  .kitbar b{font-size:16px}.kitbar b span{color:var(--gold)}
+  .kit-names{color:var(--mut);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:48px 28px;color:var(--mut);font-size:14px;text-align:center}
+  .ov{position:fixed;inset:0;background:rgba(28,26,23,.45);backdrop-filter:blur(3px);z-index:60;display:none;align-items:center;justify-content:center;padding:20px}
+  .ov.show{display:flex}
+  .modal{background:var(--card);border-radius:18px;max-width:450px;width:100%;padding:32px;box-shadow:0 24px 60px rgba(28,26,23,.28)}
+  .modal h3{font-size:25px;letter-spacing:-.02em;margin-bottom:6px}
+  .modal p.mut{color:var(--mut);font-size:14px;margin-bottom:22px}
+  .fld{margin-bottom:15px}
+  .fld label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
+  .fld input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:12px;color:var(--ink);font-size:14px}
+  .fld input:focus{outline:none;border-color:var(--gold);background:var(--card)}
+  .row2{display:flex;gap:12px}.row2 .fld{flex:1}
+  .step{color:var(--gold);font-size:12px;font-weight:700;margin-bottom:12px}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo"><img src="logo.png" alt="SRC Studio" style="width:38px;height:38px;border-radius:9px;display:block"><span>Studio<small style="display:block">CINEMA RENTALS</small></span></div>
+    <nav class="top"><a href="#cat">Equipment</a><a href="#">Packages</a><a href="#">How it works</a><a href="#">About</a></nav>
+    <a class="cta" href="#" onclick="openQuote();return false">Request a Quote</a>
+  </div>
+</header>
+
+<section class="hero">
+  <span class="pill">🎬 Chennai's cinema rental house</span>
+  <h1>Rent set-ready <span>cinema gear</span> in a few taps.</h1>
+  <p class="sub">Cameras, lenses, lighting, grip, transport and genset — build your kit and send one request. We confirm availability for your shoot dates and reply with a quote.</p>
+  <div class="hero-actions">
+    <button class="btn btn-primary" onclick="document.querySelector('#cat').scrollIntoView({behavior:'smooth'})">Browse equipment</button>
+    <button class="btn btn-ghost" onclick="openQuote()">💬 WhatsApp us</button>
+  </div>
+  <div class="trust">
+    <span><b>35+</b> rental options</span>·<span><b>7</b> categories</span>·<span><b>24-hour</b> quote turnaround</span>·<span>No account needed</span>
+  </div>
+</section>
+
+<div class="catnav" id="cat"><div class="catnav-inner" id="chips"></div></div>
+<main id="sections"></main>
+
+<div class="kitbar" id="kitbar"><div class="kitbar-in">
+  <b><span id="kitcount">0</span> in your kit</b>
+  <div class="kit-names" id="kitnames"></div>
+  <button class="btn btn-ghost" style="padding:10px 16px" onclick="clearKit()">Clear</button>
+  <button class="btn btn-primary" style="padding:10px 18px" onclick="openQuote()">Request Quote →</button>
+</div></div>
+
+<div class="ov" id="ov"><div class="modal">
+  <div class="step">STEP 4 OF 4 · ALMOST DONE</div>
+  <h3>Request your quote</h3>
+  <p class="mut">No account needed. We'll confirm availability for your dates and send pricing on WhatsApp.</p>
+  <div class="fld"><label>Your name *</label><input placeholder="e.g. Arjun / DOP"></div>
+  <div class="row2"><div class="fld"><label>Phone / WhatsApp *</label><input placeholder="+91"></div>
+  <div class="fld"><label>Production (optional)</label><input placeholder="Company / project"></div></div>
+  <div class="row2"><div class="fld"><label>Shoot start</label><input type="date"></div>
+  <div class="fld"><label>Shoot end</label><input type="date"></div></div>
+  <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="alert('Demo: creates a Quote Request in the internal console.');closeQuote()">Send request →</button>
+</div></div>
+
+<footer><img src="logo.png" alt="SRC Studio" style="width:64px;height:64px;border-radius:12px;margin-bottom:12px"><br>
+Cinema equipment rental · Chennai · +91 00000 00000 · Direction C — “Studio Light”</footer>
+
+<script src="catalog-data.js"></script>
+<script>
+const ICONS={Cameras:"🎥",Lenses:"🔭",Lights:"💡",Accessories:"🎚️",Grip:"🎬",Transport:"🚐",Genset:"⚡"};
+const kit=new Set();
+function render(){
+  const chips=document.getElementById('chips'), secs=document.getElementById('sections');
+  SRC_CATALOG.forEach((c,i)=>{
+    const chip=document.createElement('div');chip.className='chip'+(i===0?' active':'');
+    chip.innerHTML=`${c.category}<span class="n">${c.items.length}</span>`;
+    chip.onclick=()=>{document.getElementById('sec-'+i).scrollIntoView({behavior:'smooth'});[...chips.children].forEach(x=>x.classList.remove('active'));chip.classList.add('active');};
+    chips.appendChild(chip);
+    const sec=document.createElement('section');sec.className='sec';sec.id='sec-'+i;
+    sec.innerHTML=`<div class="sec-h"><h2>${c.category}</h2><span class="cnt">${c.items.length} options</span></div>`;
+    const g=document.createElement('div');g.className='grid';
+    c.items.forEach(it=>{
+      const key=c.category+'|'+it.n;
+      const card=document.createElement('div');card.className='card';
+      card.innerHTML=`<div class="thumb"><span class="ico">${ICONS[c.category]||"🎬"}</span>${it.flag?`<span class="flag">${it.flag}</span>`:''}</div>
+        <div class="card-b"><h3>${it.n}</h3><p>${it.d}</p>
+        <div class="add"><small>Availability on request</small><button class="add-btn">＋ Add to kit</button></div></div>`;
+      const btn=card.querySelector('.add-btn');
+      btn.onclick=e=>{e.stopPropagation();toggle(key,card,btn);};
+      g.appendChild(card);
+    });
+    sec.appendChild(g);secs.appendChild(sec);
+  });
+}
+function toggle(key,card,btn){
+  if(kit.has(key)){kit.delete(key);card.classList.remove('in');btn.textContent='＋ Add to kit';}
+  else{kit.add(key);card.classList.add('in');btn.textContent='✓ In kit';}
+  updateBar();
+}
+function updateBar(){
+  document.getElementById('kitcount').textContent=kit.size;
+  document.getElementById('kitnames').textContent=[...kit].map(k=>k.split('|')[1]).join('   ·   ');
+  document.getElementById('kitbar').classList.toggle('show',kit.size>0);
+}
+function clearKit(){kit.clear();document.querySelectorAll('.card.in').forEach(c=>{c.classList.remove('in');c.querySelector('.add-btn').textContent='＋ Add to kit';});updateBar();}
+function openQuote(){document.getElementById('ov').classList.add('show');}
+function closeQuote(){document.getElementById('ov').classList.remove('show');}
+document.getElementById('ov').addEventListener('click',e=>{if(e.target.id==='ov')closeQuote();});
+render();
+</script>
+</body>
+</html>

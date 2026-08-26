@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sri Cine Hub — Studio Console</title>
+<style>
+  [data-theme="dark"]{
+    --bg:#080808; --bg2:#0f0d09; --panel:#141210; --panel2:#191510; --line:#26221a;
+    --gold:#d8b45a; --gold-dim:#8a7538; --gold-soft:#241d0f;
+    --text:#f4f1ea; --mut:#8f887c;
+    --font-display:Georgia,"Times New Roman",serif; --radius:10px;
+    --sidebar:#0c0a07; --hover:#1c1710;
+    --ok:#4caf7d; --ok-bg:#12261c; --warn:#e0a83a; --warn-bg:#2a2110; --bad:#e06a5a; --bad-bg:#2a1512; --info:#6ea8d8; --info-bg:#12202a;
+    --shadow:0 10px 34px rgba(0,0,0,.5);
+  }
+  [data-theme="light"]{
+    --bg:#f4f2ec; --bg2:#eceae2; --panel:#ffffff; --panel2:#faf8f2; --line:#e4dfd4;
+    --gold:#a9822b; --gold-dim:#c9a24a; --gold-soft:#f2e8d0;
+    --text:#1c1a17; --mut:#7a746a;
+    --font-display:-apple-system,"Segoe UI",Roboto,sans-serif; --radius:12px;
+    --sidebar:#1a1712; --hover:#f0ece2;
+    --ok:#1f8a5b; --ok-bg:#e3f3ea; --warn:#a9791a; --warn-bg:#f7edd6; --bad:#c0472f; --bad-bg:#f7e3de; --info:#2c6fa0; --info-bg:#e0edf6;
+    --shadow:0 10px 28px rgba(28,26,23,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.45}
+  a{color:inherit;text-decoration:none}
+  .disp{font-family:var(--font-display)}
+  .app{display:flex;min-height:100vh}
+  /* sidebar */
+  .sidebar{width:236px;flex-shrink:0;background:var(--sidebar);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;color:#eee}
+  .sb-logo{display:flex;align-items:center;gap:11px;padding:18px 18px 16px}
+  .sb-logo img{width:40px;height:40px;border-radius:9px}
+  .sb-logo b{font-family:var(--font-display);font-size:16px;letter-spacing:.02em;color:#f4f1ea;line-height:1.1}
+  .sb-logo span{display:block;font-size:9px;letter-spacing:.34em;color:#8f887c;margin-top:3px}
+  .nav{padding:6px 10px;flex:1}
+  .nav a{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;color:#cfc9bd;font-size:13.5px;font-weight:500;margin-bottom:2px;cursor:pointer}
+  .nav a .ic{width:18px;text-align:center;font-size:15px;opacity:.9}
+  .nav a:hover{background:rgba(255,255,255,.05);color:#fff}
+  .nav a.active{background:var(--gold);color:#000;font-weight:600}
+  .nav .grp{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#6a6459;padding:14px 12px 6px}
+  .sb-foot{padding:14px 16px;border-top:1px solid rgba(255,255,255,.08)}
+  .sb-foot label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#6a6459;display:block;margin-bottom:6px}
+  .sb-foot select{width:100%;background:#000;border:1px solid rgba(255,255,255,.12);color:#eee;border-radius:8px;padding:8px;font-size:13px}
+  /* main */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:14px 26px;display:flex;align-items:center;gap:16px}
+  .topbar h1{font-family:var(--font-display);font-size:22px;font-weight:700}
+  .topbar .crumb{color:var(--mut);font-size:13px}
+  .spacer{flex:1}
+  .tsearch{position:relative}
+  .tsearch input{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:9px 14px 9px 32px;color:var(--text);font-size:13px;width:210px}
+  .tsearch input:focus{outline:none;border-color:var(--gold)}
+  .tsearch .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--mut)}
+  .toggle{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:none;color:var(--text);padding:8px 12px;border-radius:999px;cursor:pointer;font-size:12.5px;font-weight:600}
+  .toggle:hover{border-color:var(--gold)}
+  .who{display:flex;align-items:center;gap:9px}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+  .content{padding:24px 26px 60px;max-width:1240px;width:100%;margin:0 auto}
+  /* generic */
+  .btn{padding:10px 16px;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:inherit}
+  .btn-primary{background:var(--gold);color:#000}.btn-primary:hover{filter:brightness(1.08)}
+  .btn-ghost{background:transparent;border-color:var(--line);color:var(--text)}.btn-ghost:hover{border-color:var(--gold)}
+  .btn-sm{padding:6px 11px;font-size:12.5px;border-radius:7px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+  .metric{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .metric .l{color:var(--mut);font-size:12px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px}
+  .metric .v{font-family:var(--font-display);font-size:34px;line-height:1}
+  .metric .v.gold{color:var(--gold)}
+  .metric .s{color:var(--mut);font-size:12px;margin-top:6px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .card-h{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .card-h h3{font-family:var(--font-display);font-size:17px}
+  .card-h .lnk{color:var(--gold);font-size:13px;font-weight:600;cursor:pointer}
+  .list-row{padding:13px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;cursor:pointer}
+  .list-row:last-child{border-bottom:none}
+  .list-row:hover{background:var(--hover)}
+  .list-row .grow{flex:1;min-width:0}
+  .list-row .t{font-weight:600;font-size:14px}
+  .list-row .sub{color:var(--mut);font-size:12.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;letter-spacing:.03em;padding:4px 9px;border-radius:999px;text-transform:capitalize;white-space:nowrap}
+  .b-ok{background:var(--ok-bg);color:var(--ok)} .b-warn{background:var(--warn-bg);color:var(--warn)}
+  .b-bad{background:var(--bad-bg);color:var(--bad)} .b-info{background:var(--info-bg);color:var(--info)}
+  .b-mut{background:var(--gold-soft);color:var(--gold)}
+  .amt{font-variant-numeric:tabular-nums;font-weight:600}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);padding:12px 16px;border-bottom:1px solid var(--line);font-weight:600}
+  td{padding:12px 16px;border-bottom:1px solid var(--line);font-size:13.5px}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--hover)}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .tab{padding:8px 15px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer;background:var(--panel)}
+  .tab.active,.tab:hover{border-color:var(--gold);color:var(--text);background:var(--gold-soft)}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);margin-bottom:6px;font-weight:600}
+  .field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:11px;color:var(--text);font-size:14px;font-family:inherit}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--gold)}
+  .r2{display:flex;gap:11px}.r2 .field{flex:1}
+  .muted{color:var(--mut)} .gold{color:var(--gold)}
+  .sec-title{font-family:var(--font-display);font-size:18px;margin:26px 0 12px;display:flex;align-items:center;gap:10px}
+  .pill{font-size:11px;font-weight:700;color:var(--gold);background:var(--gold-soft);padding:3px 9px;border-radius:999px}
+  .empty{color:var(--mut);text-align:center;padding:30px;font-size:13.5px}
+  /* modal */
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);z-index:60;display:none;align-items:center;justify-content:center;padding:20px}
+  .ov.show{display:flex}
+  .modal{background:var(--bg2);border:1px solid var(--gold-dim);border-radius:14px;max-width:440px;width:100%;padding:26px;max-height:92vh;overflow:auto;box-shadow:var(--shadow)}
+  .modal h3{font-family:var(--font-display);font-size:21px;margin-bottom:4px}
+  .modal .mut{color:var(--mut);font-size:13px;margin-bottom:18px}
+  .preview{background:var(--gold-soft);border-radius:9px;padding:11px 13px;font-size:13px;color:var(--gold);margin:6px 0 16px;font-weight:600}
+  /* toast */
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(140%);background:var(--gold);color:#000;padding:12px 20px;border-radius:10px;font-weight:600;font-size:13.5px;z-index:70;transition:.28s;box-shadow:var(--shadow)}
+  .toast.show{transform:translateX(-50%)}
+  /* quick rent */
+  .qr{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start}
+  @media(max-width:980px){.qr{grid-template-columns:1fr}}
+  .qr-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;cursor:pointer;background:var(--panel)}
+  .qr-item:hover{border-color:var(--gold)}
+  .qr-item.added{border-color:var(--gold);background:var(--gold-soft)}
+  .qr-item.dim{opacity:.4;cursor:not-allowed}
+  .qr-item .grow{flex:1}
+  .qr-thumb{width:42px;height:42px;border-radius:8px;background:var(--gold-soft);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .cart-line{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .cart-line input{width:92px;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px;color:var(--text);font-size:13px;text-align:right}
+  .cart-x{cursor:pointer;color:var(--mut);font-weight:700;width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .cart-x:hover{color:var(--bad);background:var(--bad-bg)}
+  /* amount fields as plain text boxes (no spinner arrows) */
+  input[type=number]{-moz-appearance:textfield;appearance:textfield}
+  input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .total-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0 4px;font-family:var(--font-display);font-size:20px}
+  /* calendar timeline (Gantt) */
+  .cal-wrap{position:relative}
+  .cal-head,.cal-row{display:flex;border-bottom:1px solid var(--line)}
+  .cal-row:last-child{border-bottom:none}
+  .cal-label{width:190px;flex-shrink:0;padding:10px 14px;border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:center;background:var(--panel)}
+  .cal-track{position:relative;height:50px;flex-shrink:0}
+  .cal-head .cal-track{height:42px;display:flex}
+  .cal-day{flex-shrink:0;text-align:center;font-size:11px;color:var(--mut);padding-top:7px;border-right:1px solid var(--line)}
+  .cal-day span{display:block;font-size:9px;opacity:.7}
+  .cal-day.we{background:var(--panel2)}
+  .cal-bar{position:absolute;top:8px;height:34px;border-radius:8px;font-size:11.5px;font-weight:700;padding:0 9px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;cursor:pointer}
+  .cal-bar:hover{filter:brightness(1.06);z-index:3}
+  .bar-conf{background:var(--info-bg);color:var(--info);border:1px solid var(--info)}
+  .bar-out{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok)}
+  .bar-res{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+  .bar-bad{background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad)}
+  .cal-todayline{position:absolute;top:0;bottom:0;width:2px;background:var(--gold);z-index:4;pointer-events:none}
+  .cal-todayline:before{content:"today";position:absolute;top:-2px;left:4px;font-size:9px;color:var(--gold);font-weight:700}
+  /* receipt / invoice — always a white paper sheet */
+  .rc-actions{display:flex;gap:10px;margin-bottom:16px}
+  .receipt{max-width:820px;margin:0 auto;background:#fff;color:#1a1a1a;border-radius:10px;box-shadow:var(--shadow);padding:44px 48px}
+  .rc-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1a1a1a;padding-bottom:20px;gap:20px}
+  .rc-brand{display:flex;gap:14px;align-items:center}
+  .rc-brand img{width:54px;height:54px;border-radius:10px}
+  .rc-brand b{font-size:20px;font-family:Georgia,serif;display:block}
+  .rc-brand span{color:#666;font-size:12.5px}
+  .rc-meta{text-align:right;flex-shrink:0}
+  .rc-meta h2{font-size:24px;letter-spacing:.12em;color:#a9822b;margin-bottom:4px}
+  .rc-meta div{font-size:12.5px;color:#444}
+  .rc-parties{display:flex;justify-content:space-between;gap:30px;margin:24px 0}
+  .rc-parties label{display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#999;margin-bottom:5px}
+  .rc-parties b{font-size:15px} .rc-parties .v{font-size:13.5px;color:#333;line-height:1.6}
+  .rc-table{width:100%;border-collapse:collapse;margin:8px 0 4px}
+  .rc-table th{background:#f4efe2;color:#7a5f1a;font-size:11px;letter-spacing:.04em;text-transform:uppercase;padding:10px 12px;text-align:left}
+  .rc-table th.r,.rc-table td.r{text-align:right}
+  .rc-table td{padding:11px 12px;border-bottom:1px solid #eee;font-size:13px;color:#222}
+  .rc-table td .c{color:#999;font-size:11px}
+  .rc-totals{width:300px;margin-left:auto;margin-top:14px}
+  .rc-totals .row{display:flex;justify-content:space-between;padding:7px 0;font-size:14px;color:#333}
+  .rc-totals .row.grand{border-top:2px solid #1a1a1a;margin-top:6px;padding-top:12px;font-weight:700;font-size:17px;color:#1a1a1a}
+  .rc-totals .due{color:#c0472f} .rc-totals .paid{color:#1f8a5b}
+  .rc-pay{margin-top:26px}
+  .rc-pay h4{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#999;margin-bottom:8px}
+  .rc-pay .p{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid #f0f0f0;color:#333}
+  .rc-foot{margin-top:30px;padding-top:18px;border-top:1px solid #eee;color:#888;font-size:12px;text-align:center;line-height:1.6}
+  .rc-stamp{display:inline-block;border:2px solid #1f8a5b;color:#1f8a5b;font-weight:800;letter-spacing:.1em;padding:6px 16px;border-radius:8px;transform:rotate(-6deg);font-size:15px}
+  @media print{
+    .sidebar,.topbar,.rc-actions,.toast,.kitbar,.ov{display:none!important}
+    .app,.main,.content{display:block!important;margin:0!important;padding:0!important;max-width:none!important}
+    body{background:#fff!important}
+    .receipt{box-shadow:none;border-radius:0;margin:0;max-width:none;padding:0}
+  }
+  @page{margin:16mm}
+  @media(max-width:760px){.sidebar{display:none}}
+  /* investor portal */
+  .eyebrow-inv{color:var(--gold);letter-spacing:.2em;font-size:12px;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+  .cam-badges{display:flex;gap:8px;flex-wrap:wrap}
+  .cam-badge{border:1px solid var(--gold-dim);color:var(--gold);background:var(--gold-soft);padding:7px 12px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .cam-badge:not(.active){opacity:.45;background:transparent}
+  .cam-badge:hover{opacity:1}
+  .ks-chip2{background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold-dim);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600}
+  .metric.tint{background:var(--gold-soft);border-color:var(--gold-dim)}
+  .wf{display:grid;grid-template-columns:1fr 66px 140px;gap:12px;align-items:center;padding:13px 16px;border-radius:8px;margin-bottom:8px;background:var(--panel2)}
+  .wf .p{color:var(--mut);font-size:13px;text-align:right}
+  .wf .a{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+  .wf.good{background:var(--gold-soft)} .wf.good b{color:var(--gold)}
+  .wf.pool{background:var(--ok-bg)} .wf.pool b{color:var(--ok)}
+</style>
+</head>
+<body data-theme="dark">
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-logo"><img src="logo.png" alt="SRC"><div><b>Sri Cine Hub</b><span>STUDIO CONSOLE</span></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sb-foot" id="sbfoot"></div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <div><h1 id="pageTitle">Dashboard</h1></div>
+      <div class="spacer"></div>
+      <div class="tsearch"><span class="ic">🔍</span><input placeholder="Search bookings, gear…"></div>
+      <button class="toggle" onclick="toggleTheme()"><span id="themeIcon">☀</span><span id="themeLabel">Light</span></button>
+      <div class="who"><div class="avatar" id="avatar">M</div></div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="console-data.js"></script>
+<script src="console-db.js"></script>
+<script>
+/* ============ helpers ============ */
+const $=s=>document.querySelector(s);
+const money=n=>"₹"+Number(n||0).toLocaleString("en-IN");
+const parseD=s=>new Date(s+"T00:00:00");
+const daysBetween=(s,e)=>Math.max(1,Math.ceil((parseD(e)-parseD(s))/86400000));
+const fmtDate=s=>parseD(s).toLocaleDateString("en-IN",{day:"numeric",month:"short"});
+const cust=id=>DATA.customers.find(c=>c.id===id)||{name:"—"};
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),2200);}
+/* ---- WhatsApp (Phase 1: click-to-chat, staff taps send) ---- */
+const waEsc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+function waSend(phone,msg){const d=(phone||"").replace(/[^0-9]/g,"");if(!d)return toast("No phone number on file");window.open(`https://wa.me/${d}?text=${encodeURIComponent(msg)}`,"_blank");}
+function sendQuoteWA(id){const r=DATA.requests.find(x=>x.id===id);
+  const items=QB.filter(l=>l.type==='item'&&l.include&&l.name);
+  const bdOf=l=>isEquip(l.kind)?billedDays(l.days):l.days;
+  const lines=items.map(l=>`• ${l.qty>1?l.qty+'× ':''}${l.name} — ₹${l.rate.toLocaleString("en-IN")}/day × ${bdOf(l)}d${l.qty>1?' × '+l.qty:''} = ₹${(l.rate*bdOf(l)*l.qty).toLocaleString("en-IN")}`);
+  const subtotal=items.reduce((a,l)=>a+l.rate*bdOf(l)*l.qty,0);
+  const discount=qbDiscount(subtotal);
+  const total=Math.max(0,subtotal-discount);
+  let msg=`Hi ${r.name}, thanks for your enquiry with Sri Cine Hub.\n\nQuote for ${fmtDate(r.start)}–${fmtDate(r.end)}:\n${lines.join("\n")||"(add items first)"}\n`;
+  if(discount>0) msg+=`\nSubtotal: ₹${subtotal.toLocaleString("en-IN")}\nDiscount: −₹${discount.toLocaleString("en-IN")}`;
+  msg+=`\nTotal: ₹${total.toLocaleString("en-IN")}`;
+  if(QB_OPTS.depositFlat>0) msg+=`\nRefundable deposit: ₹${QB_OPTS.depositFlat.toLocaleString("en-IN")}`;
+  if(QB_OPTS.validDays) msg+=`\n(Valid ${QB_OPTS.validDays} days)`;
+  msg+=`\n\nShall we confirm?`;
+  const code='QT-'+Date.now().toString().slice(-8);SDB.saveQuotation(r._uuid,code,QB,'sent',QB_SOURCE,qbOptsPayload());
+  r.status="quoted";SDB.setRequestStatus(r._uuid,"quoted");waSend(r.phone,msg);}
+function sendReceiptWA(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const bal=Math.max(0,t.outstanding);
+  const msg=`Hi ${b.contact}, here is your receipt RC-${b.code.slice(3)} from Sri Cine Hub for "${b.project}" (${fmtDate(b.start)}–${fmtDate(b.end)}).\n\nTotal: ${money(t.charges)}\nPaid: ${money(t.paid)}\n${bal>0?"Balance due: "+money(bal):"Status: PAID IN FULL ✅"}\n\nThank you for renting with us!`;
+  waSend(b.phone,msg);}
+function sendReminderWA(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const bal=Math.max(0,t.outstanding);
+  const msg=`Hi ${b.contact}, a gentle reminder from Sri Cine Hub regarding "${b.project}".\n\nOutstanding balance: ${money(bal)} (of ${money(t.charges)} total).\nKindly clear it at your convenience. Thank you!`;
+  waSend(b.phone,msg);}
+function waRFQ(contact,item,rate){const rl=rate?`\nWe have it noted at ₹${Number(rate).toLocaleString("en-IN")}/day — please confirm your rate.`:"";
+  const msg=`Hi, this is Sri Cine Hub. Do you have "${item}" available for an upcoming shoot?${rl}\nPlease confirm availability and dates. Thank you.`;waSend(contact,msg);}
+function waSupplierGeneric(contact){waSend(contact,"Hi, this is Sri Cine Hub. We would like to check availability and rates for an upcoming shoot — could you share what you currently have? Thank you.");}
+
+const STATUS={
+  reserved:{g:"Active",c:"b-mut"}, confirmed:{g:"Active",c:"b-info"}, preparing:{g:"Active",c:"b-info"},
+  checked_out:{g:"Out",c:"b-ok"}, overdue:{g:"Out",c:"b-bad"}, returned:{g:"Completed",c:"b-mut"}
+};
+const badge=s=>`<span class="badge ${STATUS[s]?.c||'b-mut'}">${s.replace("_"," ")}</span>`;
+
+function lineDays(b,l){const s=l.start||b.start;const e=l.returnedAt||l.end||b.end;return daysBetween(s,e);}
+function bookingTotals(b){
+  let charges=0;
+  [...b.cameras,...b.accessories].forEach(l=>{charges+=l.rate*lineDays(b,l)*(l.qty||1);});
+  charges += (b.otherCharges||0) - (b.discount||0);
+  const paid=b.payments.reduce((a,p)=>a+p.amount,0);
+  return {charges,paid,outstanding:charges-paid,deposit:b.deposit||0};
+}
+
+/* ============ nav / router ============ */
+const NAV=[
+  {grp:"Operations"},
+  {v:"dashboard",i:"📊",t:"Dashboard"},
+  {v:"quickrent",i:"⚡",t:"Quick Rent"},
+  {v:"requests",i:"📥",t:"Quote Requests"},
+  {v:"bookings",i:"📚",t:"Bookings"},
+  {v:"checkout",i:"🔁",t:"Checkout / Return"},
+  {v:"calendar",i:"🗓",t:"Calendar"},
+  {grp:"Catalogue"},
+  {v:"inventory",i:"📦",t:"Inventory"},
+  {v:"hirein",i:"🚚",t:"Hire-In"},
+  {v:"suppliers",i:"🏢",t:"Suppliers"},
+  {v:"customers",i:"👤",t:"Customers"},
+  {grp:"Finance"},
+  {v:"receipts",i:"🧾",t:"Receipts"},
+  {v:"investor",i:"📈",t:"Investor Portal"},
+  {grp:"Admin"},
+  {v:"users",i:"👥",t:"Users"}
+];
+let ROLE="manager", CUR="dashboard";
+const ALLOWED={admin:"*",manager:["dashboard","quickrent","requests","bookings","checkout","calendar","inventory","hirein","suppliers","customers","receipts","investor"],investor:["investor"]};
+function canSee(v){const a=ALLOWED[ROLE];return a==="*"||a.includes(v);}
+function buildNav(){
+  const el=$("#nav");el.innerHTML="";
+  NAV.forEach(n=>{
+    if(n.grp){const d=document.createElement("div");d.className="grp";d.textContent=n.grp;el.appendChild(d);return;}
+    if(!canSee(n.v))return;
+    const a=document.createElement("a");a.dataset.v=n.v;a.innerHTML=`<span class="ic">${n.i}</span>${n.t}`;
+    a.onclick=()=>go(n.v);if(n.v===CUR)a.classList.add("active");el.appendChild(a);
+  });
+  // hide empty group headers
+  [...el.children].forEach((c,i)=>{if(c.className==="grp"){const nx=el.children[i+1];if(!nx||nx.className==="grp")c.style.display="none";}});
+}
+function setRole(r){ROLE=r;$("#avatar").textContent=r[0].toUpperCase();if(!canSee(CUR))CUR=(ALLOWED[r]==="*"?"dashboard":ALLOWED[r][0]);buildNav();go(CUR);}
+function go(v,param){CUR=v;buildNav();const V=VIEWS[v];$("#pageTitle").textContent=(NAV.find(n=>n.v===v)||{}).t||"";$("#content").innerHTML=V?V(param):"<div class='empty'>Coming soon.</div>";if(V&&V.after)V.after(param);window.scrollTo(0,0);}
+
+/* ============ VIEWS ============ */
+const VIEWS={};
+
+/* ---- Dashboard ---- */
+VIEWS.dashboard=()=>{
+  const outUnits=new Set();
+  DATA.bookings.filter(b=>["checked_out","overdue"].includes(b.status)).forEach(b=>b.cameras.forEach(c=>outUnits.add(c.code)));
+  const overdue=DATA.bookings.filter(b=>b.status==="overdue");
+  const pending=DATA.requests.filter(r=>r.status==="new");
+  const coDue=DATA.bookings.filter(b=>b.start===TODAY&&["reserved","confirmed","preparing"].includes(b.status));
+  const rtDue=DATA.bookings.filter(b=>b.end===TODAY&&["checked_out","overdue"].includes(b.status));
+  const active=DATA.bookings.filter(b=>b.status!=="returned");
+  const m=(l,v,s,gold)=>`<div class="metric"><div class="l">${l}</div><div class="v ${gold?'gold':''}">${v}</div><div class="s">${s}</div></div>`;
+  return `
+  <div class="metrics">
+    ${m("Cameras out",outUnits.size,"physically on set",true)}
+    ${m("Overdue",overdue.length,overdue.length?"needs a call":"all clear")}
+    ${m("Pending requests",pending.length,"awaiting a quote")}
+    ${m("Checkouts due today",coDue.length,"handover pending")}
+    ${m("Returns due today",rtDue.length,"expected back")}
+  </div>
+  <div class="cols">
+    <div class="card">
+      <div class="card-h"><h3>Pending quote requests</h3><span class="lnk" onclick="go('requests')">View all →</span></div>
+      ${pending.length?pending.map(r=>`<div class="list-row" onclick="go('requests','${r.id}')">
+        <div class="grow"><div class="t">${r.name} · ${r.company}</div><div class="sub">${fmtDate(r.start)}–${fmtDate(r.end)} · ${r.desc}</div></div>
+        <span class="badge b-warn">new</span></div>`).join(""):`<div class="empty">No pending requests.</div>`}
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Active bookings</h3><span class="lnk" onclick="go('bookings')">View all →</span></div>
+      ${active.map(b=>{const t=bookingTotals(b);return `<div class="list-row" onclick="openBooking('${b.code}')">
+        <div class="grow"><div class="t">${b.project}</div><div class="sub">${b.production} · ${fmtDate(b.start)}–${fmtDate(b.end)} · ${money(t.outstanding)} due</div></div>
+        ${badge(b.status)}</div>`;}).join("")}
+    </div>
+  </div>`;
+};
+
+/* ---- Quick Rent ---- */
+let QR={cart:[],start:TODAY,end:"",tab:"all",q:""};
+VIEWS.quickrent=()=>{
+  return `<div class="qr">
+    <div>
+      <div class="tabs">
+        ${["all","cameras","accessories"].map(t=>`<div class="tab ${QR.tab===t?'active':''}" onclick="QR.tab='${t}';go('quickrent')">${t[0].toUpperCase()+t.slice(1)}</div>`).join("")}
+        <div class="tsearch" style="margin-left:auto"><input placeholder="Search catalogue…" value="${QR.q}" oninput="QR.q=this.value;renderQRcatalog()" style="padding-left:14px"></div>
+      </div>
+      <div id="qrcatalog"></div>
+    </div>
+    <div class="card" style="position:sticky;top:80px">
+      <div class="card-h"><h3>New booking</h3><span class="pill">under 60 sec</span></div>
+      <div style="padding:16px">
+        <div class="field"><label>Customer name *</label><input id="qr-name" placeholder="Walk-in / caller name"></div>
+        <div class="r2"><div class="field"><label>Phone</label><input id="qr-phone" placeholder="+91"></div>
+        <div class="field"><label>Production</label><input id="qr-prod" placeholder="Company"></div></div>
+        <div class="r2"><div class="field"><label>Checkout</label><input type="date" id="qr-start" value="${QR.start}" onchange="QR.start=this.value;renderCart()"></div>
+        <div class="field"><label>Return</label><input type="date" id="qr-end" value="${QR.end}" onchange="QR.end=this.value;renderCart()"></div></div>
+        <div id="qr-dur" class="muted" style="font-size:12.5px;margin:-4px 0 12px"></div>
+        <div id="qr-cart"></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="checkoutQR()">Check Out →</button>
+      </div>
+    </div>
+  </div>`;
+};
+VIEWS.quickrent.after=()=>{renderQRcatalog();renderCart();};
+function renderQRcatalog(){
+  const q=QR.q.toLowerCase();
+  let items=[];
+  if(QR.tab!=="accessories")items=items.concat(DATA.cameras.map(c=>({...c,type:"camera",ic:"🎥"})));
+  if(QR.tab!=="cameras")items=items.concat(DATA.accessories.map(a=>({...a,type:"accessory",ic:"🎚️"})));
+  items=items.filter(i=>!q||(i.name+i.code+(i.manufacturer||"")+(i.category||"")).toLowerCase().includes(q));
+  $("#qrcatalog").innerHTML=items.map(i=>{
+    const added=QR.cart.some(c=>c.code===i.code);
+    const avail=i.status==="available"||i.status==="booked"; // booked shown but flagged
+    const unavailable=i.status==="maintenance"||i.status==="retired";
+    return `<div class="qr-item ${added?'added':''} ${unavailable?'dim':''}" ${unavailable?'':`onclick="toggleQR('${i.code}','${i.type}')"`}>
+      <div class="qr-thumb">${i.ic}</div>
+      <div class="grow"><div class="t">${i.name} <span class="muted" style="font-weight:400">· ${i.code}</span></div>
+        <div class="sub">${i.manufacturer||i.category} · ${money(i.dailyRate)}/day ${i.status==='booked'?'· <span class="gold">currently booked</span>':''}${unavailable?'· in '+i.status:''}</div></div>
+      <div>${added?'<span class="badge b-ok">✓ added</span>':`<button class="btn btn-ghost btn-sm">＋ Add</button>`}</div>
+    </div>`;
+  }).join("")||`<div class="empty">No matches.</div>`;
+}
+function toggleQR(code,type){
+  const src=type==="camera"?DATA.cameras:DATA.accessories;
+  const it=src.find(x=>x.code===code);
+  const i=QR.cart.findIndex(c=>c.code===code);
+  if(i>=0)QR.cart.splice(i,1);else QR.cart.push({code,name:it.name,rate:it.dailyRate,type});
+  renderQRcatalog();renderCart();
+}
+function renderCart(){
+  const el=$("#qr-cart");if(!el)return;
+  const dur=$("#qr-dur");
+  const days=QR.end?daysBetween(QR.start,QR.end):0;
+  if(dur)dur.textContent=QR.end?`Duration: ${days} day${days>1?'s':''}`:"Set a return date to price the booking.";
+  if(!QR.cart.length){el.innerHTML=`<div class="empty" style="padding:18px">Tap gear to build the kit.</div>`;return;}
+  let total=0;
+  el.innerHTML=QR.cart.map((c,idx)=>{const line=c.rate*(days||1);if(QR.end)total+=line;return `<div class="cart-line">
+    <div class="grow"><div class="t" style="font-size:13.5px">${c.name}</div><div class="sub">${money(c.rate)}/day × ${days||'?'}</div></div>
+    <input type="number" value="${c.rate}" onchange="QR.cart[${idx}].rate=+this.value;renderCart()">
+    <div class="amt" style="width:78px;text-align:right">${QR.end?money(line):'—'}</div>
+    <span class="cart-x" onclick="QR.cart.splice(${idx},1);renderQRcatalog();renderCart()">×</span></div>`;}).join("")
+    +`<div class="total-row"><span>Total</span><span class="gold">${QR.end?money(total):'—'}</span></div>`;
+}
+function checkoutQR(){
+  const name=$("#qr-name").value.trim();
+  if(!name)return toast("Enter a customer name");
+  if(!QR.cart.length)return toast("Add at least one item");
+  if(!QR.end)return toast("Set a return date");
+  const n=101+DATA.bookings.length;
+  const code="BK-2026-"+String(200+n).padStart(6,"0");
+  const b={code,customer:"CUS-new",production:$("#qr-prod").value||name,project:$("#qr-prod").value||"Walk-in booking",
+    contact:name,phone:$("#qr-phone").value,status:"confirmed",start:QR.start,end:QR.end,pickup:"Studio floor",operator:"",
+    cameras:QR.cart.filter(c=>c.type==="camera").map(c=>({code:c.code,name:c.name,rate:c.rate})),
+    accessories:QR.cart.filter(c=>c.type==="accessory").map(c=>({code:c.code,name:c.name,rate:c.rate})),
+    payments:[]};
+  DATA.customers.push({id:"CUS-new",name,company:$("#qr-prod").value||"",phone:$("#qr-phone").value});
+  DATA.bookings.unshift(b);SDB.createBooking(b,{name:b.contact,company:b.production,phone:b.phone});
+  QR={cart:[],start:TODAY,end:"",tab:"all",q:""};
+  toast("Booking "+code+" created");openBooking(code);
+}
+
+/* ---- Requests ---- */
+VIEWS.requests=()=>{
+  return `<button class="btn btn-primary" style="margin-bottom:16px" onclick="newRequest()">＋ New request</button>
+  <div class="card">${DATA.requests.map(r=>`<div class="list-row" onclick="go('requests','${r.id}')">
+    <div class="grow"><div class="t">${r.name} · ${r.company}</div><div class="sub">${fmtDate(r.start)}–${fmtDate(r.end)} · ${r.desc}</div></div>
+    <span class="badge ${r.status==='new'?'b-warn':'b-info'}">${r.status}</span></div>`).join("")}</div>`;
+};
+VIEWS.requests.detail=id=>{
+  const r=DATA.requests.find(x=>x.id===id);if(!r)return go("requests");
+  return r;
+};
+// request detail routed via param
+const _requests=VIEWS.requests;
+VIEWS.requests=param=>{
+  if(!param)return _requests();
+  const r=DATA.requests.find(x=>x.id===param);if(!r)return _requests();
+  return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('requests')">← All requests</div>
+  <div class="cols">
+    <div class="card"><div class="card-h"><h3>${r.name}</h3>${r.status==='new'?'<span class="badge b-warn">new</span>':'<span class="badge b-info">quoted</span>'}</div>
+      <div style="padding:16px">
+        <div class="field"><label>Company</label><div>${r.company}</div></div>
+        <div class="field"><label>Phone / WhatsApp</label><div>${r.phone}</div></div>
+        <div class="field"><label>Shoot dates</label><div>${fmtDate(r.start)} – ${fmtDate(r.end)} · ${daysBetween(r.start,r.end)} days</div></div>
+        <div class="field"><label>Requirement</label><div>${r.desc}</div></div>
+        ${r.notes?`<div class="field"><label>Notes</label><div class="muted">${r.notes}</div></div>`:''}
+      </div></div>
+    <div class="card"><div class="card-h"><h3>Quote builder</h3></div>
+      <div style="padding:16px">
+        <label class="muted" style="font-size:12px;display:block;margin-bottom:6px">Paste a WhatsApp / email list — we'll match it to your catalogue &amp; suggest hire-ins</label>
+        <textarea id="qb-paste" placeholder="e.g.&#10;2x Sony FX3&#10;SkyPanel S60&#10;Ultra Prime set&#10;Arri Alexa 65&#10;slider" style="width:100%;min-height:64px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-size:13px;font-family:inherit"></textarea>
+        <button class="btn btn-ghost btn-sm" style="margin:8px 0 14px" onclick="qbParse()">⇊ Parse &amp; match</button>
+        <div id="qb-original"></div>
+        <div id="qb-lines"></div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="qbAdd()">＋ Add line</button>
+        <div id="qb-summary"></div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn btn-ghost" style="flex:1" onclick="qbSave('${r.id}')">Save draft</button>
+          <button class="btn btn-ghost" style="flex:1" onclick="sendQuoteWA('${r.id}')">💬 Send</button>
+          <button class="btn btn-primary" style="flex:1" onclick="convertReq('${r.id}')">Convert →</button>
+        </div>
+      </div></div>
+  </div>`;
+};
+VIEWS.requests.after=param=>{ if(!param) return; qbFromRequest(DATA.requests.find(x=>x.id===param)); };
+
+/* ---- quote builder engine: match to catalogue + own / hire-in lines ---- */
+let QB=[]; const QB_MARKUP=25;
+const QB_ALIASES={
+ 'ARRI Cameras':['arri','alexa','amira','mini lf'],'RED Helium (DCSM2) 8K':['helium','dcsm2'],
+ 'RED Gemini 5K':['gemini'],'RED Komodo 6K':['komodo'],'Sony FX3 4K':['fx3','fx 3'],
+ 'Canon R5':['r5','eos r5'],'Sony A7S III':['a7s','a7siii','a7s iii'],
+ 'Ultra Prime':['ultra prime','ultra primes'],'CP3 / CP2 Zoom':['cp3','cp2'],'Otus':['otus'],'Alura':['alura'],
+ 'Canon Lens':['canon lens','ef lens','rf lens'],'Sony G-Master Lens':['g master','gmaster','g-master'],
+ 'Tokina 11–16':['tokina','11-16','11 16'],'100 Micro Lens':['macro','micro lens'],'Carl Zeiss':['zeiss'],'Samyang':['samyang','rokinon'],
+ 'M40 / M18 / M8':['m40','m18','m8','hmi'],'SkyPanel S60':['skypanel','sky panel','s60'],'4 Bank LED':['4 bank','four bank','kino'],
+ 'RGB Pavo Tube':['pavo','pavotube','tube light','rgb tube'],'Aputure 1200d / 600c / 300c':['aputure','1200d','600c','300c'],
+ 'Forza 500 / Forza 60B':['forza','nanlite','60b'],'Wireless Nucleus M / N':['nucleus','follow focus'],
+ 'Hollyland Mars':['hollyland','mars','wireless video','transmitter'],'Crane 3S Pro':['crane','gimbal','ronin'],
+ 'Lapel Mic E4':['lapel','lav','collar mic'],'Wireless S02 Mic':['wireless mic','sennheiser','boom mic','s02'],
+ 'Track & Trolley':['track','trolley'],'Slider':['slider'],'C-Stands / Flags / Frames / Apple Boxes':['c stand','c-stand','cstand','apple box','flag','floppy','frame'],
+ 'Tempo Traveller with 40KV Genset':['tempo','traveller'],'Eeco Vehicle':['eeco','eco van'],'7KV / 45KV Genset Options':['genset','generator','kv gen','honda']
+};
+const QB_HEADERWORDS=new Set('lights light grip girp accessories accessory camera cameras lens lenses audio sound electrical electricals misc others other list requirement requirements'.split(' '));
+function qbIsHeader(s){const t=qbNorm(s).split(' ').filter(Boolean);return t.length>0&&t.length<=3&&t.every(w=>QB_HEADERWORDS.has(w));}
+const qbNorm=s=>(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+function lev(a,b){const m=a.length,n=b.length;if(Math.abs(m-n)>1)return 2;const d=[...Array(m+1)].map(()=>Array(n+1).fill(0));for(let i=0;i<=m;i++)d[i][0]=i;for(let j=0;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n];}
+const QB_CREW=/\b(camera ?m[ae]n|operators?|dop|focus pullers?|assistants?|spot ?boys?|light ?m[ae]n|gaffers?|grip boys?|crew|technicians?|drivers?|helpers?)\b/i;
+const QB_SERVICE=/\b(transport|logistics|travel|food|lunch|catering|accommodation|stay|hotel|fuel|diesel|petrol|toll|permit|location fee|makeup)\b/i;
+function classifyNonGear(name){ if(QB_SERVICE.test(name))return 'service'; if(QB_CREW.test(name))return 'crew'; return null; }
+// pricing state + weekly ("long-rental") billing rule
+let QB_OPTS={discountVal:0,discountMode:'flat',depositFlat:0,validDays:7};
+function billedDays(days){ return days; }
+function qbDiscount(subtotal){ return QB_OPTS.discountMode==='pct'?Math.round(subtotal*(QB_OPTS.discountVal||0)/100):(QB_OPTS.discountVal||0); }
+const isEquip=k=>k==='own'||k==='hirein'||k==='custom';
+function qbMergeDupes(){ const seen={}; let merged=0; for(let i=0;i<QB.length;i++){const l=QB[i]; if(l.type!=='item'||!l.name){continue;} const key=(l.kind||'')+'|'+qbNorm(l.name); if(seen[key]!=null){QB[seen[key]].qty=(QB[seen[key]].qty||1)+(l.qty||1);QB.splice(i,1);i--;merged++;} else seen[key]=i; } return merged; }
+function matchOption(text){
+  const norm=qbNorm(text), n=' '+norm+' ', words=[...new Set(norm.split(' '))].filter(Boolean);
+  let bestName=null,bestScore=0,bestAlias=false,second=0;
+  for(const name in (DATA.optionRates||{})){ let s=0,alias=false;
+    const aliases=QB_ALIASES[name]||[];
+    aliases.forEach(k=>{ if(n.includes(qbNorm(k))){ s+=3; alias=true; } });                 // aliases: substring (curated)
+    const nameToks=qbNorm(name).split(' ').filter(t=>t.length>2);
+    nameToks.forEach(t=>{ if(words.includes(t)) s+=1; });                                     // name tokens: word-boundary
+    const keys=aliases.filter(k=>!k.includes(' ')).map(qbNorm).concat(nameToks).filter(k=>k.length>=4);
+    for(const w of words){ if(w.length>=4){ for(const k of keys){ if(w!==k && lev(w,k)===1){ s+=2; alias=true; break; } } } }  // fuzzy typo
+    if(s>bestScore){ second=bestScore; bestScore=s; bestName=name; bestAlias=alias; }
+    else if(s>second){ second=s; }
+  }
+  if(!bestName) return {name:null,suggest:null};
+  // confident only on a distinctive alias hit, or a clear lead over the runner-up.
+  // ambiguous ("sony camera", "red camera") → not confident → caller keeps it as a plain line.
+  const confident = bestAlias ? (bestScore>=3) : (bestScore>=2 && bestScore>second);
+  return confident ? {name:bestName,rate:(DATA.optionRates||{})[bestName]||0,confident:true}
+                   : {name:null,suggest:(bestScore>0?bestName:null)};
+}
+function matchSuppliers(text){
+  const words=new Set(qbNorm(text).split(' ')),out=[];
+  (DATA.suppliers||[]).forEach(sp=>(sp.catalog||[]).forEach(c=>{ const toks=qbNorm(c.item).split(' ').filter(t=>t.length>2); const hits=toks.filter(t=>words.has(t)).length;
+    if(hits>0) out.push({supplier:sp.name,supplierId:sp.id,item:c.item,rate:c.rate,hits}); }));
+  return out.sort((a,b)=>b.hits-a.hits||a.rate-b.rate);
+}
+function parseRows(text){                       // classifies every line; drops nothing
+  const rows=[];
+  (text||'').split(/\r?\n/).forEach(line=>{
+    const trimmed=line.trim();
+    if(trimmed==='') return;                                    // blank (kept in source_text)
+    if(/^[\s\-–—_=*.#]+$/.test(trimmed)){ rows.push({type:'sep',raw:line}); return; }
+    if(qbIsHeader(trimmed)){ rows.push({type:'header',name:trimmed,raw:line}); return; }
+    trimmed.split(/[,;]+/).map(s=>s.trim()).filter(Boolean).forEach(seg=>{
+      const specs=[...seg.matchAll(/\(([^)]*)\)?/g)].map(m=>m[1].trim()).filter(Boolean);   // keep parenthetical spec
+      let s=seg.replace(/\([^)]*\)?/g,' ');
+      s=s.replace(/^\s*\d{1,2}[.)](?=[^0-9])\s*/,'').replace(/^[\-–•*#]+\s*/,'').replace(/\s+/g,' ').trim();
+      let qty=1,m;
+      if((m=s.match(/(?:[-–=:]\s*)?(\d+)\s*(?:no'?s?|nos|pcs|pieces?|units?)\b/i))){qty=+m[1];s=s.replace(m[0],' ');}
+      else if((m=s.match(/^(\d+)\s*x\s+/i))){qty=+m[1];s=s.replace(m[0],' ');}
+      else if((m=s.match(/[-–=]\s*(\d+)\s*$/))){qty=+m[1];s=s.replace(m[0],' ');}
+      s=s.replace(/[-–=:#]+\s*$/,'').replace(/^\s*#\s*/,'').replace(/\s+/g,' ').trim();
+      rows.push({type:'item',name:s||seg,spec:specs.join('; '),qty:qty||1,raw:seg});
+    });
+  });
+  return rows;
+}
+let QB_SOURCE='';
+function qbLine(name,rate,days,kind){return {type:'item',name,rate:rate||0,days:days||1,qty:1,kind:kind||'own',cost:null,supplierId:null,markup:QB_MARKUP,offers:[],spec:'',raw:name||'',suggest:null,include:true};}
+function qbRowToLine(row,days){
+  if(row.type==='header') return {type:'header',name:row.name,raw:row.raw};
+  if(row.type==='sep') return {type:'sep',raw:row.raw};
+  const ng=classifyNonGear(row.name);                                    // crew / service (non-gear)
+  if(ng){ const l=qbLine(row.name,0,days,ng); l.qty=row.qty||1; l.spec=row.spec||''; l.raw=row.raw||row.name; return l; }
+  let base=row.name, altNote='';                                         // "FX3 or A7S", "Alexa/Amira"
+  const alts=row.name.split(/\s+or\s+|\s*\/\s*/i).map(s=>s.trim()).filter(Boolean);
+  if(alts.length>1){ base=alts[0]; altNote='or '+alts.slice(1).join(' / '); }
+  const opt=matchOption(base); let l;
+  if(opt && opt.confident){ l=qbLine(base,opt.rate,days,'own'); l.name=opt.name; }   // confident → own, normalised name
+  else { const offers=matchSuppliers(base);
+    if(offers.length){ const o=offers[0]; l=qbLine(base,Math.round(o.rate*(1+QB_MARKUP/100)),days,'hirein'); l.cost=o.rate; l.supplierId=o.supplierId; l.offers=offers; }
+    else { l=qbLine(base,0,days,'custom'); l.suggest=(opt&&opt.suggest)||null; }        // low confidence → plain line item
+  }
+  l.qty=row.qty||1; l.spec=[row.spec,altNote].filter(Boolean).join(' · '); l.raw=row.raw||row.name;
+  return l;
+}
+function qbFromRequest(r){
+  const days=daysBetween(r.start,r.end); QB=[]; QB_SOURCE=''; QB_OPTS={discountVal:0,discountMode:'flat',depositFlat:0,validDays:7};
+  const kit=r.kit||[];
+  if(kit.length){ kit.forEach(k=>{ const rate=(DATA.optionRates||{})[k.name]; QB.push(qbLine(k.name, rate!=null?rate:0, days, rate!=null?'own':'custom')); });
+    QB_SOURCE='Kit selected on website:\n'+kit.map(k=>'• '+k.name).join('\n'); }
+  else if(r.desc){ QB_SOURCE=r.desc; parseRows(r.desc).forEach(row=>QB.push(qbRowToLine(row,days))); }
+  qbMergeDupes();
+  if(!QB.filter(l=>l.type==='item').length) QB.push(qbLine('',0,days,'custom'));
+  renderQB();
+}
+function qbParse(){ const t=$("#qb-paste").value; if(!t.trim()) return toast('Paste a message first');
+  const days=(QB.find(l=>l.days)||{days:1}).days; QB_SOURCE=(QB_SOURCE?QB_SOURCE+'\n':'')+t.trim();
+  let n=0; parseRows(t).forEach(row=>{ QB.push(qbRowToLine(row,days)); if(row.type==='item')n++; });
+  const m=qbMergeDupes(); $("#qb-paste").value=''; renderQB(); toast('Added '+n+' item'+(n===1?'':'s')+(m?', merged '+m+' dup'+(m>1?'s':''):'')); }
+function qbAdd(){ QB.push(qbLine('',0,(QB.find(l=>l.days)||{days:1}).days,'custom')); renderQB(); }
+function qbName(i,v){QB[i].name=v;}
+function qbNum(i,f,v){QB[i][f]=+v||0; if(QB[i].kind==='hirein'&&(f==='cost'||f==='markup')) QB[i].rate=Math.round((QB[i].cost||0)*(1+(QB[i].markup||0)/100)); renderQB();}
+function qbDel(i){QB.splice(i,1);renderQB();}
+function qbAccept(i){ const l=QB[i]; if(!l.suggest) return; const rate=(DATA.optionRates||{})[l.suggest]||0; l.name=l.suggest; l.rate=rate; l.kind='own'; l.suggest=null; renderQB(); }
+function qbSetKind(i,kind){const l=QB[i]; if(l.type!=='item')return; l.kind=kind;
+  if(kind==='hirein'){ l.offers=matchSuppliers(l.name); const o=l.offers[0]; if(o){l.cost=o.rate;l.supplierId=o.supplierId;} l.markup=l.markup||QB_MARKUP; if(l.cost)l.rate=Math.round(l.cost*(1+l.markup/100)); }
+  else { l.supplierId=null; l.cost=null; }
+  renderQB();}
+function qbToggleInclude(i){ QB[i].include=!QB[i].include; renderQB(); }
+function qbSetOpt(f,v){ QB_OPTS[f]=+v||0; renderQB(); }
+function qbSupplier(i,val){const l=QB[i];
+  if(val.startsWith('o:')){const o=l.offers[+val.slice(2)];l.supplierId=o.supplierId;l.cost=o.rate;l.rate=Math.round(o.rate*(1+(l.markup||0)/100));}
+  else if(val.startsWith('s:')){l.supplierId=val.slice(2);} renderQB();}
+function renderQB(){
+  const el=$("#qb-lines"); if(!el) return;
+  const inp=(w)=>`width:${w}px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px;color:var(--text);text-align:right`;
+  const badge=k=>({hirein:'<span class="badge b-info">hire-in</span>',custom:'<span class="badge b-warn">custom</span>',crew:'<span class="badge b-mut">crew</span>',service:'<span class="badge b-mut">service</span>',own:'<span class="badge b-ok">own</span>'})[k]||'';
+  const kindSel=(i,k)=>`<select onchange="qbSetKind(${i},this.value)" style="background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px;color:var(--text);font-size:12px">${['own','hirein','custom','crew','service'].map(o=>`<option value="${o}" ${o===k?'selected':''}>${o==='hirein'?'hire-in':o}</option>`).join('')}</select>`;
+  el.innerHTML=QB.map((l,i)=>{
+    if(l.type==='sep') return `<div style="border-top:1px dashed var(--line);margin:8px 0"></div>`;
+    if(l.type==='header') return `<div style="display:flex;align-items:center;gap:8px;margin:12px 0 4px"><span style="font-family:var(--font-display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)">${(l.name||'').replace(/"/g,'&quot;')}</span><span class="cart-x" style="margin-left:auto" onclick="qbDel(${i})">×</span></div>`;
+    const qty=l.qty||1, bd=isEquip(l.kind)?billedDays(l.days):l.days, lt=l.rate*bd*qty;
+    const numi=(f,w)=>`<input type="number" value="${l[f]||''}" onchange="qbNum(${i},'${f}',this.value)" style="${inp(w)}">`;
+    let hire='';
+    if(l.kind==='hirein'){
+      const opts=(l.offers&&l.offers.length)? l.offers.map((o,idx)=>`<option value="o:${idx}" ${o.supplierId===l.supplierId&&o.rate===l.cost?'selected':''}>${o.supplier} · ₹${o.rate} (${o.item})</option>`).join('') : (DATA.suppliers||[]).map(s=>`<option value="s:${s.id}" ${s.id===l.supplierId?'selected':''}>${s.name}</option>`).join('');
+      hire=`<div style="display:flex;align-items:center;gap:7px;font-size:12px;margin-top:8px;color:var(--mut);flex-wrap:wrap"><span>via</span><select onchange="qbSupplier(${i},this.value)" style="background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px;color:var(--text);max-width:190px">${opts}</select><span>cost ₹</span>${numi('cost',58)}<span>markup</span>${numi('markup',40)}<span>%</span><span class="gold">margin ${money((l.rate-(l.cost||0))*bd*qty)}</span></div>`;
+    }
+    const bdNote='';
+    const specNote=l.spec?`<div class="muted" style="font-size:11.5px;margin-top:3px">📎 ${l.spec.replace(/</g,'&lt;')}</div>`:'';
+    const rawNote=(l.raw&&qbNorm(l.raw)!==qbNorm(l.name))?`<div class="muted" style="font-size:11px;margin-top:2px;opacity:.7">from: “${(l.raw||'').replace(/</g,'&lt;')}”</div>`:'';
+    const suggest=l.suggest?`<div style="font-size:11.5px;margin-top:4px">🤔 did you mean <b class="gold">${l.suggest}</b>? <span class="lnk gold" style="cursor:pointer" onclick="qbAccept(${i})">use it →</span></div>`:'';
+    return `<div style="border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:8px;opacity:${l.include?1:.5}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" ${l.include?'checked':''} onchange="qbToggleInclude(${i})" title="include" style="cursor:pointer">${badge(l.kind)}
+        <input value="${(l.name||'').replace(/"/g,'&quot;')}" placeholder="Item" oninput="qbName(${i},this.value)" style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px;color:var(--text)">
+        ${kindSel(i,l.kind)}<span class="cart-x" onclick="qbDel(${i})">×</span></div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;margin-top:8px;flex-wrap:wrap">
+        qty ${numi('qty',40)} × ₹${numi('rate',66)}/day × ${numi('days',44)} days${bdNote} = <b class="gold">${money(lt)}</b></div>
+      ${specNote}${rawNote}${suggest}${hire}
+    </div>`;
+  }).join("");
+  let equip=0,svc=0,margin=0;
+  QB.forEach(l=>{ if(l.type!=='item'||!l.include||!l.name)return; const qty=l.qty||1;
+    if(isEquip(l.kind)){ const bd=billedDays(l.days); equip+=l.rate*bd*qty; if(l.kind==='hirein')margin+=(l.rate-(l.cost||0))*bd*qty; }
+    else svc+=l.rate*l.days*qty; });
+  const subtotal=equip+svc;
+  const discount=qbDiscount(subtotal);
+  const total=Math.max(0,subtotal-discount);
+  const sum=$("#qb-summary"); if(sum) sum.innerHTML=`<div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;font-size:12px;color:var(--mut);margin-bottom:10px">
+      <span>Discount <input type="number" placeholder="0" value="${QB_OPTS.discountVal||''}" onchange="qbSetOpt('discountVal',this.value)" style="${inp(70)}"> <select onchange="QB_OPTS.discountMode=this.value;renderQB()" style="background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px;color:var(--text)"><option value="flat" ${QB_OPTS.discountMode==='flat'?'selected':''}>₹ off</option><option value="pct" ${QB_OPTS.discountMode==='pct'?'selected':''}>% off</option></select></span>
+      <span>deposit ₹<input type="number" value="${QB_OPTS.depositFlat||''}" onchange="qbSetOpt('depositFlat',this.value)" style="${inp(66)}"></span>
+      <span>valid <input type="number" value="${QB_OPTS.validDays}" onchange="qbSetOpt('validDays',this.value)" style="${inp(34)}">d</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0"><span class="muted">Subtotal</span><span>${money(subtotal)}</span></div>
+    ${discount>0?`<div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0"><span class="muted">Discount</span><span style="color:var(--bad)">− ${money(discount)}</span></div>`:''}
+    <div style="display:flex;justify-content:space-between;font-family:var(--font-display);font-size:19px;padding:6px 0;border-top:1px solid var(--line);margin-top:4px"><span>Total payable</span><span class="gold">${money(total)}</span></div>
+    ${QB_OPTS.depositFlat>0?`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0;color:var(--mut)"><span>+ Refundable deposit</span><span>${money(QB_OPTS.depositFlat)}</span></div>`:''}
+    ${margin>0?`<div class="muted" style="font-size:12px;text-align:right;margin-top:2px">incl. <span class="gold">${money(margin)}</span> hire-in margin</div>`:''}
+  </div>`;
+  const orig=$("#qb-original"); if(orig) orig.innerHTML = QB_SOURCE? `<details style="margin:4px 0 12px"><summary style="cursor:pointer;color:var(--mut);font-size:12px">📄 Original request (as received — nothing dropped)</summary><pre style="white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;color:var(--text);margin-top:6px;font-family:inherit">${(QB_SOURCE||'').replace(/</g,'&lt;')}</pre></details>` : '';
+}
+function newRequest(){
+  openModal(`<h3>New quote request</h3><p class="mut">Walk-in or phone enquiry. Paste their WhatsApp list into Requirement if you have it.</p>
+    <div class="field"><label>Customer name *</label><input id="nr-name"></div>
+    <div class="r2"><div class="field"><label>Phone</label><input id="nr-phone" placeholder="+91"></div><div class="field"><label>Company</label><input id="nr-co"></div></div>
+    <div class="r2"><div class="field"><label>Shoot start</label><input id="nr-start" type="date" value="${TODAY}" onchange="this.blur()"></div><div class="field"><label>Shoot end</label><input id="nr-end" type="date" onchange="this.blur()"></div></div>
+    <div class="field"><label>Requirement (paste WhatsApp list)</label><textarea id="nr-desc" style="width:100%;min-height:80px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-family:inherit"></textarea></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doNewRequest()">Create request</button>`);
+}
+async function doNewRequest(){
+  const name=$("#nr-name").value.trim(); if(!name) return toast('Enter a customer name');
+  const code='REQ-'+Date.now().toString().slice(-8);
+  const req={ id:code,_uuid:null,name,company:$("#nr-co").value.trim(),phone:$("#nr-phone").value.trim(),
+    start:$("#nr-start").value||TODAY,end:$("#nr-end").value||$("#nr-start").value||TODAY,
+    desc:$("#nr-desc").value.trim(),status:'new',notes:'',kit:[] };
+  req._uuid=await SDB.createRequest(code,req);
+  DATA.requests.unshift(req); closeModal(); toast('Request '+code+' created'); go('requests',code);
+}
+function addDays(d,n){ const x=parseD(d); x.setDate(x.getDate()+(+n||0)); return x.toISOString().slice(0,10); }
+function qbOptsPayload(){ let equip=0,svc=0; QB.forEach(l=>{ if(l.type!=='item'||!l.include||!l.name)return; const qty=l.qty||1; if(isEquip(l.kind))equip+=l.rate*billedDays(l.days)*qty; else svc+=l.rate*l.days*qty; });
+  const subtotal=equip+svc; const discount=qbDiscount(subtotal);
+  return { discount_inr:discount, deposit_inr:QB_OPTS.depositFlat||0, other_charges_inr:svc, valid_until:(QB_OPTS.validDays?addDays(TODAY,QB_OPTS.validDays):null) }; }
+function qbSave(id){const r=DATA.requests.find(x=>x.id===id);const code='QT-'+Date.now().toString().slice(-8);SDB.saveQuotation(r._uuid,code,QB,'draft',QB_SOURCE,qbOptsPayload());toast('Quote saved · '+code);}
+async function convertReq(id){
+  const r=DATA.requests.find(x=>x.id===id); const qcode='QT-'+Date.now().toString().slice(-8); const opts=qbOptsPayload();
+  const res=await SDB.convertQuote(r._uuid,{name:r.name,company:r.company,phone:r.phone,start:r.start,end:r.end},qcode,QB,QB_SOURCE,opts);
+  const eq=QB.filter(l=>l.type==='item'&&l.include&&l.name&&isEquip(l.kind)); const cd=daysBetween(r.start,r.end);
+  const toLine=l=>{ const effRate=l.rate;
+    return {code:l.kind==='hirein'?'(hire-in)':'(assign at checkout)',name:l.name,rate:effRate,qty:l.qty||1,lineKind:l.kind,supplierId:l.supplierId,cost:l.cost}; };
+  const b={code:res.code,customer:res.customer_id||'',production:r.company||r.name,project:'Booking — '+r.name,contact:r.name,phone:r.phone,status:'confirmed',start:r.start,end:r.end,pickup:'Studio floor',operator:'',
+    otherCharges:opts.other_charges_inr||0,discount:opts.discount_inr||0,deposit:opts.deposit_inr||0,
+    cameras:eq.filter(l=>(DATA.optionCats||{})[l.name]==='Cameras').map(toLine),
+    accessories:eq.filter(l=>(DATA.optionCats||{})[l.name]!=='Cameras').map(toLine),payments:[]};
+  DATA.bookings.unshift(b); r.status='converted';
+  toast('Booking '+res.code+' created'); openBooking(res.code);
+}
+
+/* ---- Bookings ---- */
+VIEWS.bookings=()=>{
+  const groups={Active:[],Out:[],Completed:[]};
+  DATA.bookings.forEach(b=>groups[STATUS[b.status].g].push(b));
+  const sec=(name,arr)=>`<div class="sec-title">${name} <span class="pill">${arr.length}</span></div>
+    <div class="card">${arr.length?arr.map(b=>{const t=bookingTotals(b);return `<div class="list-row" onclick="openBooking('${b.code}')">
+      <div class="grow"><div class="t">${b.project} <span class="muted" style="font-weight:400">· ${b.code}</span></div>
+        <div class="sub">${b.production} · ${fmtDate(b.start)}–${fmtDate(b.end)} · ${b.cameras.length+b.accessories.length} items · ${money(t.charges)} · ${t.outstanding>0?`<span class="gold">${money(t.outstanding)} due</span>`:'paid up'}</div></div>
+      ${badge(b.status)}</div>`;}).join(""):`<div class="empty">None.</div>`}</div>`;
+  return sec("Active",groups.Active)+sec("Out",groups.Out)+sec("Completed",groups.Completed);
+};
+function openBooking(code){go("bookings");setTimeout(()=>{$("#content").innerHTML=bookingDetail(code);},0);}
+function bookingDetail(code){
+  const b=DATA.bookings.find(x=>x.code===code);if(!b)return VIEWS.bookings();
+  const t=bookingTotals(b);
+  const isOut=["checked_out","overdue"].includes(b.status);
+  const line=(l,type)=>{const days=lineDays(b,l);const ret=!!l.returnedAt;
+    let meter="";
+    if(type==="cameras"&&(l.checkoutHours!=null||l.returnHours!=null)){
+      const used=(l.checkoutHours!=null&&l.returnHours!=null)?` (${l.returnHours-l.checkoutHours}h used)`:"";
+      meter=`<div class="sub" style="color:var(--gold)">⏱ meter ${l.checkoutHours!=null?l.checkoutHours+"h":"—"} → ${l.returnHours!=null?l.returnHours+"h":"—"}${used}</div>`;
+    }
+    const qty=l.qty||1;
+    const kb=l.lineKind==='hirein'?' <span class="badge b-info">hire-in</span>':l.lineKind==='custom'?' <span class="badge b-warn">custom</span>':'';
+    return `<div class="list-row" style="cursor:default;opacity:${ret?.55:1}">
+    <div class="grow"><div class="t">${l.name} <span class="muted" style="font-weight:400">· ${l.code}</span>${kb} ${ret?'<span class="badge b-ok">✓ returned</span>':''}</div>
+      <div class="sub">${fmtDate(l.start||b.start)}–${fmtDate(l.returnedAt||l.end||b.end)} · ${money(l.rate)}/day × ${days}${qty>1?' × '+qty:''} = <span class="amt">${money(l.rate*days*qty)}</span></div>${meter}</div>
+    ${!ret&&isOut&&l.code&&l.code.indexOf('(')<0?`<button class="btn btn-ghost btn-sm" onclick="returnEarly('${code}','${type}','${l.code}')">Return early</button>`:''}</div>`;};
+  return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('bookings')">← All bookings</div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><h1 class="disp" style="font-size:26px">${b.project}</h1>${badge(b.status)}
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openReceipt('${code}')">🧾 Receipt</button></div>
+  <div class="muted" style="margin-bottom:20px">${b.code} · ${b.production} · ${b.contact} · ${b.phone} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div>
+  <div class="metrics" style="grid-template-columns:repeat(3,1fr)">
+    <div class="metric"><div class="l">Total charges</div><div class="v">${money(t.charges)}</div></div>
+    <div class="metric"><div class="l">Paid</div><div class="v">${money(t.paid)}</div></div>
+    <div class="metric"><div class="l">Outstanding</div><div class="v ${t.outstanding>0?'gold':''}">${money(t.outstanding)}</div></div>
+  </div>
+  <div class="cols">
+    <div class="card"><div class="card-h"><h3>Equipment</h3><button class="btn btn-ghost btn-sm" onclick="addEquip('${code}')">＋ Add equipment</button></div>
+      ${b.cameras.map(l=>line(l,"cameras")).join("")}
+      ${b.accessories.map(l=>line(l,"accessories")).join("")}
+    </div>
+    <div class="card"><div class="card-h"><h3>Payments</h3><div style="display:flex;gap:8px">${t.outstanding>0?`<button class="btn btn-ghost btn-sm" onclick="sendReminderWA('${code}')">💬 Reminder</button>`:''}<button class="btn btn-ghost btn-sm" onclick="addPayment('${code}')">＋ Add payment</button></div></div>
+      <div style="padding:6px 0">${b.payments.length?b.payments.map(p=>`<div class="list-row" style="cursor:default">
+        <div class="grow"><div class="t">${money(p.amount)} <span class="badge b-mut">${p.type}</span></div>
+          <div class="sub">${p.method} · ${fmtDate(p.date)}${p.ref?' · '+p.ref:''}</div></div></div>`).join(""):`<div class="empty">No payments yet.</div>`}</div>
+      ${isOut?`<div style="padding:14px"><button class="btn btn-primary" style="width:100%" onclick="go('checkout','${code}')">Go to Return →</button></div>`:''}
+    </div>
+  </div>`;
+}
+function returnEarly(code,type,lcode){
+  const b=DATA.bookings.find(x=>x.code===code);const l=b[type].find(x=>x.code===lcode);
+  openModal(`<h3>Return early — ${l.name}</h3><p class="mut">Billing stops on the return date. Other items continue.</p>
+    <div class="field"><label>Return date</label><input type="date" id="re-date" value="${TODAY}"></div>
+    <div class="field"><label>Condition in</label><select id="re-cond"><option>good</option><option>fair</option><option>damaged</option><option>missing</option></select></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doReturnEarly('${code}','${type}','${lcode}')">Confirm return</button>`);
+}
+function doReturnEarly(code,type,lcode){const b=DATA.bookings.find(x=>x.code===code);const l=b[type].find(x=>x.code===lcode);l.returnedAt=$("#re-date").value;l.conditionIn=$("#re-cond").value;SDB.returnEarly(code,lcode,l.returnedAt,l.conditionIn);closeModal();$("#content").innerHTML=bookingDetail(code);toast(l.name+" returned");}
+function addPayment(code){
+  const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);
+  openModal(`<h3>Add payment</h3><p class="mut">Outstanding before: ${money(t.outstanding)}</p>
+    <div class="r2"><div class="field"><label>Amount ₹</label><input type="number" id="pay-amt" oninput="payPreview('${code}')"></div>
+    <div class="field"><label>Date</label><input type="date" id="pay-date" value="${TODAY}"></div></div>
+    <div class="r2"><div class="field"><label>Type</label><select id="pay-type"><option>advance</option><option>intermediate</option><option>final</option></select></div>
+    <div class="field"><label>Method</label><select id="pay-method"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Cheque</option></select></div></div>
+    <div class="field"><label>Reference / UTR</label><input id="pay-ref"></div>
+    <div class="preview" id="pay-prev">After this: outstanding = ${money(t.outstanding)}</div>
+    <button class="btn btn-primary" style="width:100%" onclick="doAddPayment('${code}')">Record payment</button>`);
+}
+function payPreview(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const a=+($("#pay-amt").value||0);$("#pay-prev").textContent=`After this: outstanding = ${money(t.outstanding-a)}`;}
+function doAddPayment(code){const b=DATA.bookings.find(x=>x.code===code);const a=+($("#pay-amt").value||0);if(!a)return toast("Enter an amount");
+  const pay={amount:a,type:$("#pay-type").value,method:$("#pay-method").value,date:$("#pay-date").value,ref:$("#pay-ref").value};
+  b.payments.push(pay);SDB.addPayment(code,pay);
+  closeModal();$("#content").innerHTML=bookingDetail(code);toast("Payment recorded");}
+function addEquip(code){
+  const b=DATA.bookings.find(x=>x.code===code);
+  const opts=DATA.cameras.concat(DATA.accessories).filter(i=>i.status==="available").map(i=>`<option value="${i.code}">${i.name} — ${money(i.dailyRate)}/day</option>`).join("");
+  openModal(`<h3>Add equipment</h3><p class="mut">Adds mid-booking with its own date range.</p>
+    <div class="field"><label>Item</label><select id="ae-item">${opts}</select></div>
+    <div class="r2"><div class="field"><label>From</label><input type="date" id="ae-from" value="${TODAY}"></div>
+    <div class="field"><label>To</label><input type="date" id="ae-to" value="${b.end}"></div></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doAddEquip('${code}')">Add to booking</button>`);
+}
+function doAddEquip(code){const b=DATA.bookings.find(x=>x.code===code);const it=DATA.cameras.concat(DATA.accessories).find(i=>i.code===$("#ae-item").value);
+  const isCam=DATA.cameras.some(c=>c.code===it.code);const l={code:it.code,name:it.name,rate:it.dailyRate,start:$("#ae-from").value,end:$("#ae-to").value};
+  (isCam?b.cameras:b.accessories).push(l);SDB.addEquip(code,l,isCam);closeModal();$("#content").innerHTML=bookingDetail(code);toast(it.name+" added");}
+
+/* ---- Checkout / Return ---- */
+VIEWS.checkout=param=>{
+  const outs=DATA.bookings.filter(b=>["checked_out","overdue"].includes(b.status));
+  const readies=DATA.bookings.filter(b=>["reserved","confirmed","preparing"].includes(b.status));
+  if(param){const b=DATA.bookings.find(x=>x.code===param);if(b)return checkoutPanel(b);}
+  return `<div class="cols">
+    <div class="card"><div class="card-h"><h3>Ready to check out</h3></div>
+      ${readies.length?readies.map(b=>`<div class="list-row" onclick="go('checkout','${b.code}')"><div class="grow"><div class="t">${b.project}</div><div class="sub">${b.production} · ${fmtDate(b.start)}</div></div>${badge(b.status)}</div>`).join(""):`<div class="empty">Nothing waiting.</div>`}</div>
+    <div class="card"><div class="card-h"><h3>Out — awaiting return</h3></div>
+      ${outs.map(b=>`<div class="list-row" onclick="go('checkout','${b.code}')"><div class="grow"><div class="t">${b.project}</div><div class="sub">${b.production} · due ${fmtDate(b.end)}</div></div>${badge(b.status)}</div>`).join("")}</div>
+  </div>`;
+};
+function candidateUnits(line,cam){
+  const pool=cam?DATA.cameras:DATA.accessories;
+  return pool.filter(u=>u.status==='available' && (u.optionName===line.optionName || u.optionName===line.name || (!u.optionName && u.name===line.name)));
+}
+function checkoutPanel(b){
+  const isOut=["checked_out","overdue"].includes(b.status);
+  const mode=isOut?"Return":"Checkout";
+  const inpS='padding:7px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--text)';
+  const rowFor=(l,type,idx,cam)=>{
+    const isUnassigned=l.unassigned||(l.code&&l.code.indexOf('(')===0);
+    const unit=cam?DATA.cameras.find(c=>c.code===l.code):DATA.accessories.find(a=>a.code===l.code);
+    // Unit cell
+    let unitCell;
+    if(l.lineKind==='hirein'){ unitCell=`<td class="muted">hire-in${l.supplierId?' · '+((DATA.suppliers.find(s=>s.id===l.supplierId)||{}).name||''):''}</td>`; }
+    else if(l.lineKind==='custom'){ unitCell='<td class="muted">custom</td>'; }
+    else if(isUnassigned){
+      const cands=candidateUnits(l,cam);
+      unitCell=cands.length
+        ? `<td><select id="asn-${type}-${idx}" style="${inpS};max-width:190px"><option value="">— pick unit —</option>${cands.map(u=>`<option value="${u.code}">${u.code} · ${u.name}${cam?' ('+u.meterHours+'h)':''}</option>`).join('')}</select></td>`
+        : `<td class="muted" style="color:var(--bad)">none available →<br><span style="font-size:11px">hire-in?</span></td>`;
+    } else { unitCell=`<td><b>${l.code}</b></td>`; }
+    // Meter cell (cameras only)
+    let hoursCell='<td class="muted">—</td>';
+    if(cam && l.lineKind==='own'){
+      if(isOut){ const outH=(l.checkoutHours!=null)?l.checkoutHours:(unit?unit.meterHours:0);
+        hoursCell=`<td><span class="muted" style="font-size:11px">out at ${outH}h</span><br><input id="mh-${type}-${idx}" type="number" placeholder="return reading" value="${(l.returnHours!=null)?l.returnHours:outH}" style="width:120px;margin-top:4px;${inpS}"></td>`;
+      } else { const outH=unit?unit.meterHours:'';
+        hoursCell=`<td><input id="mh-${type}-${idx}" type="number" placeholder="reading" value="${(l.checkoutHours!=null)?l.checkoutHours:outH}" style="width:120px;${inpS}"><div class="muted" style="font-size:11px;margin-top:3px">${unit?'current '+unit.meterHours+'h':'set after assigning'}</div></td>`;
+      }
+    }
+    const cond=`<td><select id="cond-${type}-${idx}" style="${inpS}"><option>good</option><option>fair</option><option>damaged</option>${isOut?'<option>missing</option>':''}</select></td>`;
+    return `<tr><td><b>${l.name}</b>${l.qty>1?` <span class="muted">×${l.qty}</span>`:''}</td>${unitCell}${hoursCell}${cond}</tr>`;
+  };
+  const rows=b.cameras.map((l,i)=>rowFor(l,'cam',i,true)).join("")+b.accessories.map((l,i)=>rowFor(l,'acc',i,false)).join("");
+  return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('checkout')">← All ops</div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px"><h1 class="disp" style="font-size:24px">${mode} · ${b.project}</h1>${badge(b.status)}</div>
+  <div class="card"><table><thead><tr><th>Item</th><th>Unit</th><th>Meter hours ${isOut?'(in)':'(out)'}</th><th>Condition ${isOut?'in':'out'}</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <p class="muted" style="font-size:12.5px;margin-top:10px">${isOut?"Return reading updates each camera's lifetime meter hours.":"Assign the actual serial unit for each line, then log the checkout meter reading."}</p>
+  <div style="display:flex;gap:10px;margin-top:14px">
+    <button class="btn btn-ghost" onclick="openBooking('${b.code}')">Open booking detail</button>
+    <button class="btn btn-primary" onclick="confirmOps('${b.code}','${isOut?'returned':'checked_out'}')">Confirm ${mode.toLowerCase()} →</button>
+  </div>`;
+}
+function confirmOps(code,newStatus){
+  const b=DATA.bookings.find(x=>x.code===code);
+  const handle=(list,type,cam)=>list.forEach((l,idx)=>{
+    if(l.lineKind==='own' && (l.unassigned||(l.code&&l.code.indexOf('(')===0))){
+      const sel=$("#asn-"+type+"-"+idx);
+      if(sel&&sel.value){ const uc=sel.value; l.code=uc; l.unassigned=false; const unit=(cam?DATA.cameras:DATA.accessories).find(u=>u.code===uc); if(unit)unit.status='booked'; SDB.assignUnit(l._lineId,uc); }
+    }
+    const mh=$("#mh-"+type+"-"+idx), cond=$("#cond-"+type+"-"+idx);
+    if(cam&&mh){ const v=+mh.value||0; if(newStatus==="checked_out")l.checkoutHours=v; else {l.returnHours=v; const unit=DATA.cameras.find(u=>u.code===l.code); if(unit)unit.meterHours=v;} }
+    if(cond){ if(newStatus==="checked_out")l.conditionOut=cond.value; else l.conditionIn=cond.value; }
+  });
+  handle(b.cameras,'cam',true); handle(b.accessories,'acc',false);
+  b.status=newStatus;SDB.confirmOps(b,newStatus);toast("Marked "+newStatus.replace("_"," "));go(newStatus==="returned"?"receipts":"checkout");
+}
+
+/* ---- Calendar — booking timeline (Gantt) ---- */
+VIEWS.calendar=()=>{
+  const START="2026-08-16", DAYS=28, CELL=40, LABEL=190;
+  const start=parseD(START);
+  const dayList=[...Array(DAYS)].map((_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i);return d;});
+  const offset=ds=>Math.round((parseD(ds)-start)/86400000);
+  const todayOff=offset(TODAY);
+  const barCls=s=>s==="overdue"?"bar-bad":s==="reserved"?"bar-res":s==="checked_out"?"bar-out":"bar-conf";
+  const header=dayList.map(d=>{const we=d.getDay()===0||d.getDay()===6;return `<div class="cal-day ${we?'we':''}" style="width:${CELL}px">${d.getDate()}<span>${d.toLocaleDateString("en-IN",{month:"short"})}</span></div>`;}).join("");
+  const rows=DATA.cameras.map(cam=>{
+    const bars=DATA.bookings.filter(b=>b.status!=="returned"&&b.cameras.some(c=>c.code===cam.code)).map(b=>{
+      let s=offset(b.start), e=offset(b.end);
+      if(e<0||s>DAYS-1)return "";
+      s=Math.max(0,s);e=Math.min(DAYS-1,e);
+      const left=s*CELL, width=(e-s+1)*CELL-5;
+      return `<div class="cal-bar ${barCls(b.status)}" style="left:${left}px;width:${width}px" onclick="openBooking('${b.code}')">${b.contact.split(" ")[0]} · ${b.project}</div>`;
+    }).join("");
+    return `<div class="cal-row"><div class="cal-label"><b>${cam.name}</b><div class="muted" style="font-size:11px">${cam.code}</div></div>
+      <div class="cal-track" style="width:${DAYS*CELL}px">${bars||''}</div></div>`;
+  }).join("");
+  const todayLine=(todayOff>=0&&todayOff<DAYS)?`<div class="cal-todayline" style="left:${LABEL+todayOff*CELL}px"></div>`:"";
+  return `<p class="muted" style="margin-bottom:14px">Booking timeline — each bar is a booking across its dates; click to open it.
+    <span class="badge b-info" style="margin-left:8px">confirmed</span> <span class="badge b-ok">out</span> <span class="badge b-warn">reserved</span> <span class="badge b-bad">overdue</span></p>
+  <div class="card" style="overflow-x:auto"><div class="cal-wrap" style="min-width:${LABEL+DAYS*CELL}px">
+    <div class="cal-head"><div class="cal-label" style="font-weight:600">Camera</div><div class="cal-track" style="width:${DAYS*CELL}px">${header}</div></div>
+    ${rows}
+    ${todayLine}
+  </div></div>`;
+};
+
+/* ---- Inventory ---- */
+let INV={tab:"cameras",status:"all",q:""};
+VIEWS.inventory=()=>{
+  return `<div class="tabs">
+    <div class="tab ${INV.tab==='cameras'?'active':''}" onclick="INV.tab='cameras';go('inventory')">Cameras <span class="pill">${DATA.cameras.length}</span></div>
+    <div class="tab ${INV.tab==='accessories'?'active':''}" onclick="INV.tab='accessories';go('inventory')">Accessories <span class="pill">${DATA.accessories.length}</span></div>
+    <div class="tsearch" style="margin-left:auto"><input placeholder="Search…" value="${INV.q}" oninput="INV.q=this.value;renderInvTable()" style="padding-left:14px"></div>
+    <button class="btn btn-primary btn-sm" onclick="toast('Demo: add item form')">＋ Add</button>
+  </div>
+  <div class="tabs">${["all","available","booked","maintenance"].map(s=>`<div class="tab ${INV.status===s?'active':''}" onclick="INV.status='${s}';renderInvTable()">${s[0].toUpperCase()+s.slice(1)}</div>`).join("")}</div>
+  <div class="card" id="invtable"></div>`;
+};
+VIEWS.inventory.after=()=>renderInvTable();
+function statusBadge(s){const m={available:"b-ok",booked:"b-info",maintenance:"b-warn",retired:"b-mut"};return `<span class="badge ${m[s]||'b-mut'}">${s}</span>`;}
+function renderInvTable(){
+  const el=$("#invtable");if(!el)return;const q=INV.q.toLowerCase();
+  if(INV.tab==="cameras"){
+    let rows=DATA.cameras.filter(c=>(INV.status==="all"||c.status===INV.status)&&(!q||(c.name+c.code+c.serial+c.manufacturer).toLowerCase().includes(q)));
+    el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Serial</th><th>Meter</th><th>Location</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
+    ${rows.map(c=>`<tr><td>${c.code}${c.investors?' <span class="badge b-mut">investor</span>':''}</td><td><b>${c.name}</b><div class="muted" style="font-size:11px">${c.manufacturer}</div></td>
+      <td class="muted">${c.serial}</td><td>${c.meterHours}h</td><td>${c.location}</td><td class="amt">${money(c.dailyRate)}</td><td>${statusBadge(c.status)}</td>
+      <td><span class="lnk gold" style="cursor:pointer" onclick="toast('Demo: edit ${c.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="8" class="empty">No matches.</td></tr>`}</tbody></table>`;
+  }else{
+    let rows=DATA.accessories.filter(a=>(INV.status==="all"||a.status===INV.status)&&(!q||(a.name+a.code+a.category).toLowerCase().includes(q)));
+    el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
+    ${rows.map(a=>`<tr><td>${a.code}</td><td><b>${a.name}</b></td><td class="muted">${a.category}</td><td class="amt">${money(a.dailyRate)}</td><td>${statusBadge(a.status)}</td>
+      <td><span class="lnk gold" style="cursor:pointer" onclick="toast('Demo: edit ${a.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="6" class="empty">No matches.</td></tr>`}</tbody></table>`;
+  }
+}
+
+/* ---- Suppliers / Customers / Hire-In / Receipts ---- */
+let FIND={q:""};
+VIEWS.suppliers=()=>{
+  return `<div class="card" style="margin-bottom:18px;padding:18px">
+    <div style="font-family:var(--font-display);font-size:18px;margin-bottom:4px">🔎 Find equipment — who has it?</div>
+    <p class="muted" style="font-size:13px;margin-bottom:12px">One search across your own inventory <b>and</b> every supplier's catalogue — so you never hunt for a piece of gear again.</p>
+    <div class="tsearch"><span class="ic">🔍</span><input id="find-q" placeholder="e.g. Alexa, SkyPanel, generator, slider, primes" value="${FIND.q}" oninput="FIND.q=this.value;renderFind()" style="width:100%"></div>
+    <div id="find-res" style="margin-top:14px"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div class="sec-title" style="margin:0">Suppliers <span class="pill">${DATA.suppliers.length}</span></div>
+    <button class="btn btn-primary btn-sm" onclick="toast('Demo: add supplier')">＋ Add supplier</button>
+  </div>
+  <div class="cols">${DATA.suppliers.map(s=>`<div class="card">
+    <div class="card-h"><h3>${s.name}</h3><button class="btn btn-ghost btn-sm" onclick="addSupplierItem('${s.id}')">＋ Add item</button></div>
+    <div style="padding:12px 16px 4px">
+      <div class="muted" style="font-size:13px">${s.specialisation}</div>
+      <div class="muted" style="font-size:13px;margin:4px 0 2px">📞 ${s.contact} · <span class="lnk gold" style="cursor:pointer" onclick="waSupplierGeneric('${waEsc(s.contact)}')">💬 message</span></div>
+    </div>
+    <div>${s.catalog.map((c,i)=>`<div class="list-row" style="cursor:default;padding:10px 16px">
+      <div class="grow"><div class="t" style="font-size:13.5px">${c.item}</div></div>
+      <div class="amt gold" style="margin-right:12px">${money(c.rate)}/day</div>
+      <span class="lnk gold" style="cursor:pointer;font-size:12.5px" onclick="editSupplierRate('${s.id}',${i})">Edit</span></div>`).join("")}</div>
+  </div>`).join("")}</div>`;
+};
+function addSupplierItem(sid){
+  const s=DATA.suppliers.find(x=>x.id===sid);
+  openModal(`<h3>Add equipment · ${s.name}</h3><p class="mut">Log what they carry and their daily hire rate — so you can compare on price later.</p>
+    <div class="field"><label>Equipment</label><input id="si-item" placeholder="e.g. ARRI Alexa 65"></div>
+    <div class="field"><label>Rate per day (₹)</label><input id="si-rate" type="number" placeholder="e.g. 12000"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveSupplierItem('${sid}')">Add to catalogue</button>`);
+}
+function saveSupplierItem(sid){
+  const item=$("#si-item").value.trim(), rate=+($("#si-rate").value||0);
+  if(!item)return toast("Enter an equipment name");
+  DATA.suppliers.find(x=>x.id===sid).catalog.push({item,rate});SDB.addSupplierItem(sid,item,rate);
+  closeModal();go("suppliers");toast("Added "+item);
+}
+function editSupplierRate(sid,i){
+  const s=DATA.suppliers.find(x=>x.id===sid), c=s.catalog[i];
+  openModal(`<h3>Edit rate · ${c.item}</h3><p class="mut">${s.name}</p>
+    <div class="field"><label>Equipment</label><input id="si-item" value="${c.item}"></div>
+    <div class="field"><label>Rate per day (₹)</label><input id="si-rate" type="number" value="${c.rate}"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveSupplierRate('${sid}',${i})">Save</button>`);
+}
+function saveSupplierRate(sid,i){
+  const s=DATA.suppliers.find(x=>x.id===sid);
+  s.catalog[i].item=$("#si-item").value.trim()||s.catalog[i].item;
+  s.catalog[i].rate=+($("#si-rate").value||0);
+  SDB.editSupplierRate(s.catalog[i]._id,s.catalog[i].item,s.catalog[i].rate);
+  closeModal();go("suppliers");toast("Rate updated");
+}
+VIEWS.suppliers.after=()=>renderFind();
+function renderFind(){
+  const el=$("#find-res");if(!el)return;const q=FIND.q.trim().toLowerCase();
+  if(!q){el.innerHTML="";return;}
+  const own=[...DATA.cameras.map(c=>({...c,kind:"camera"})),...DATA.accessories.map(a=>({...a,kind:"accessory"}))]
+    .filter(i=>(i.name+" "+(i.manufacturer||"")+" "+(i.category||"")).toLowerCase().includes(q));
+  const sup=[];DATA.suppliers.forEach(s=>s.catalog.forEach(c=>{if(c.item.toLowerCase().includes(q))sup.push({supplier:s.name,contact:s.contact,item:c.item,rate:c.rate});}));
+  sup.sort((a,b)=>a.item.localeCompare(b.item)||a.rate-b.rate);
+  const cheapest={},count={};sup.forEach(r=>{const k=r.item.toLowerCase();count[k]=(count[k]||0)+1;if(cheapest[k]==null||r.rate<cheapest[k])cheapest[k]=r.rate;});
+  if(!own.length&&!sup.length){el.innerHTML=`<div class="empty" style="padding:16px">No match in your inventory or supplier catalogues — this is a candidate for a hire-in RFQ.</div>`;return;}
+  let html="";
+  if(own.length)html+=`<div class="muted" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin:4px 0 8px">In your studio · ${own.length} unit${own.length>1?'s':''}</div>`+
+    own.map(i=>`<div class="list-row" style="cursor:default"><div class="grow"><div class="t">${i.name} <span class="muted" style="font-weight:400">· ${i.code}</span></div>
+      <div class="sub">${i.kind==="camera"?i.manufacturer:i.category} · ${i.location||"—"} · ${money(i.dailyRate)}/day</div></div>${statusBadge(i.status)}</div>`).join("");
+  if(sup.length)html+=`<div class="muted" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin:14px 0 8px">Available via suppliers · compare on price</div>`+
+    sup.map(r=>{const best=count[r.item.toLowerCase()]>1&&r.rate===cheapest[r.item.toLowerCase()];
+      return `<div class="list-row" style="cursor:default"><div class="grow"><div class="t">${r.item} ${best?'<span class="badge b-ok">best price</span>':''}</div><div class="sub">${r.supplier} · 📞 ${r.contact}</div></div>
+      <div class="amt gold" style="margin-right:12px">${money(r.rate)}/day</div>
+      <button class="btn btn-ghost btn-sm" style="margin-right:8px" onclick="waRFQ('${waEsc(r.contact)}','${waEsc(r.item)}',${r.rate})">💬 Enquire</button>
+      <span class="badge b-info">hire-in</span></div>`;}).join("");
+  el.innerHTML=`<div class="card">${html}</div>`;
+}
+VIEWS.customers=()=>{
+  return `<div class="card"><table><thead><tr><th>Customer</th><th>Company</th><th>Phone</th><th>Bookings</th></tr></thead><tbody>
+  ${DATA.customers.filter(c=>c.id!=="CUS-new").map(c=>{const n=DATA.bookings.filter(b=>b.customer===c.id).length;return `<tr><td><b>${c.name}</b></td><td class="muted">${c.company||'—'}</td><td>${c.phone}</td><td>${n} <span class="muted">rental${n!==1?'s':''}</span></td></tr>`;}).join("")}</tbody></table></div>`;
+};
+VIEWS.hirein=()=>{
+  const rfqs=DATA.rfqs||[];
+  const sb=s=>({draft:'b-mut',sent:'b-info',responded:'b-warn',accepted:'b-ok',declined:'b-bad'})[s]||'b-mut';
+  const inpS='padding:6px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--text)';
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px">
+    <p class="muted" style="margin:0;font-size:13px">Source gear you don't own from suppliers. RFQs from converted quotes appear here automatically.</p>
+    <button class="btn btn-primary btn-sm" style="flex-shrink:0" onclick="newRFQ()">＋ New RFQ</button></div>
+  ${rfqs.length? rfqs.map(q=>`<div class="card" style="margin-bottom:14px">
+    <div class="card-h"><h3>${q.code} · ${q.supplierName}</h3><span class="badge ${sb(q.status)}">${q.status}</span></div>
+    <div style="padding:4px 0">
+      ${q.items.length?q.items.map(it=>`<div class="list-row" style="cursor:default"><div class="grow"><div class="t">${it.item}</div><div class="sub">requested ${it.requestedRate!=null?money(it.requestedRate):'—'}/day</div></div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12.5px">quoted ₹<input type="number" value="${it.quotedRate!=null?it.quotedRate:''}" placeholder="—" onchange="rfqSetRate('${it.id}',this.value)" style="width:84px;text-align:right;${inpS}"></div></div>`).join(''):'<div class="empty" style="padding:14px">No items.</div>'}
+    </div>
+    <div style="padding:12px 16px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);flex-wrap:wrap">
+      ${q.bookingCode?`<span class="muted" style="font-size:12px">for <span class="lnk gold" style="cursor:pointer" onclick="openBooking('${q.bookingCode}')">${q.bookingCode}</span></span>`:'<span class="muted" style="font-size:12px">standalone</span>'}
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="rfqWA('${q.id}')">💬 Send to supplier</button>
+        <select onchange="rfqStatus('${q.id}',this.value)" style="${inpS};padding:7px">${['draft','sent','responded','accepted','declined'].map(s=>`<option value="${s}" ${s===q.status?'selected':''}>${s}</option>`).join('')}</select>
+      </div>
+    </div></div>`).join('') : `<div class="card"><div class="empty">No hire-in RFQs yet. They're created automatically when you convert a quote with hire-in lines — or add one manually with ＋ New RFQ.</div></div>`}`;
+};
+function rfqSetRate(itemId,val){ (DATA.rfqs||[]).forEach(q=>q.items.forEach(it=>{ if(it.id===itemId) it.quotedRate=+val||0; })); SDB.setRFQItemRate(itemId,+val||0); }
+function rfqStatus(id,status){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(q)q.status=status; SDB.updateRFQStatus(id,status); go('hirein'); }
+function rfqWA(id){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(!q) return; const sup=(DATA.suppliers||[]).find(s=>s.id===q.supplierId)||{};
+  const items=q.items.map(it=>`• ${it.item}${it.requestedRate?' (~₹'+it.requestedRate.toLocaleString('en-IN')+'/day)':''}`).join('\n');
+  const b=q.bookingCode?(DATA.bookings||[]).find(x=>x.code===q.bookingCode):null;
+  const dates=b?` for ${fmtDate(b.start)}–${fmtDate(b.end)}`:'';
+  const msg=`Hi ${sup.name||''}, hire-in enquiry from Sri Cine Hub (${q.code}).\nPlease confirm availability & rate${dates}:\n${items||'(items)'}\n\nThank you.`;
+  waSend(sup.contact,msg); if(q.status==='draft') rfqStatus(id,'sent');
+}
+function newRFQ(){
+  const supOpts=(DATA.suppliers||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  const bkOpts='<option value="">— none —</option>'+(DATA.bookings||[]).filter(b=>b.status!=='returned').map(b=>`<option value="${b.code}">${b.code} · ${b.project}</option>`).join('');
+  openModal(`<h3>New hire-in RFQ</h3><p class="mut">Request gear you don't own from a supplier.</p>
+    <div class="field"><label>Supplier</label><select id="rf-sup">${supOpts}</select></div>
+    <div class="field"><label>Link to booking (optional)</label><select id="rf-bk">${bkOpts}</select></div>
+    <div class="field"><label>Items — one per line, optional "· rate"</label><textarea id="rf-items" style="width:100%;min-height:78px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-family:inherit" placeholder="ARRI Alexa 65 · 45000&#10;Master Prime Set"></textarea></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doNewRFQ()">Create RFQ</button>`);
+}
+async function doNewRFQ(){
+  const supplierId=$("#rf-sup").value; const bkCode=$("#rf-bk").value;
+  const items=$("#rf-items").value.split('\n').map(s=>s.trim()).filter(Boolean).map(line=>{ const p=line.split('·'); return { item:(p[0]||'').trim(), requestedRate:p[1]?(+p[1].replace(/[^0-9]/g,'')||null):null }; }).filter(it=>it.item);
+  if(!supplierId) return toast('Pick a supplier');
+  const code='RFQ-'+Date.now().toString().slice(-6);
+  const bookingId=bkCode?SDB.ids.bookingByCode[bkCode]:null;
+  await SDB.createRFQ({code,supplierId,bookingId,status:'draft',items});
+  const sup=(DATA.suppliers||[]).find(s=>s.id===supplierId)||{};
+  (DATA.rfqs=DATA.rfqs||[]).unshift({id:'local-'+code,code,supplierId,supplierName:sup.name||'—',bookingCode:bkCode||null,status:'draft',items:items.map((it,i)=>({id:'li-'+code+'-'+i,item:it.item,requestedRate:it.requestedRate,quotedRate:null}))});
+  closeModal(); toast('RFQ '+code+' created'); go('hirein');
+}
+VIEWS.receipts=()=>{
+  const done=DATA.bookings.filter(b=>["returned","checked_out","overdue"].includes(b.status));
+  return `<p class="muted" style="margin-bottom:14px">Receipts for every booking that has gone out. Open one to print or save it as a PDF. Balance carries over until fully paid.</p>
+  <div class="card"><div class="card-h"><h3>Receipts</h3></div>
+  ${done.map(b=>{const t=bookingTotals(b);return `<div class="list-row" onclick="openReceipt('${b.code}')">
+    <div class="grow"><div class="t">RC-${b.code.slice(3)} · ${b.project}</div><div class="sub">${b.production} · ${money(t.charges)} charged · ${money(t.paid)} paid</div></div>
+    <span class="badge ${t.outstanding<=0?'b-ok':'b-warn'}">${t.outstanding<=0?'settled':money(t.outstanding)+' due'}</span></div>`;}).join("")||`<div class="empty">Receipts appear here once bookings go out.</div>`}</div>`;
+};
+function openReceipt(code){CUR="receipts";buildNav();$("#pageTitle").textContent="Receipt";$("#content").innerHTML=receiptView(code);window.scrollTo(0,0);}
+function receiptView(code){
+  const b=DATA.bookings.find(x=>x.code===code);if(!b)return VIEWS.receipts();
+  const t=bookingTotals(b);const rc="RC-"+b.code.slice(3);
+  const items=[...b.cameras,...b.accessories].map(l=>{const days=lineDays(b,l);const s=l.start||b.start,e=l.returnedAt||l.end||b.end;
+    return `<tr><td><b>${l.name}</b></td><td class="c">${l.code}</td><td>${fmtDate(s)}–${fmtDate(e)}</td><td class="r">${money(l.rate)}</td><td class="r">${days}</td><td class="r">${money(l.rate*days)}</td></tr>`;}).join("");
+  const pays=b.payments.length?b.payments.map(p=>`<div class="p"><span>${fmtDate(p.date)} · ${p.type} · ${p.method}${p.ref?' · '+p.ref:''}</span><span>${money(p.amount)}</span></div>`).join(""):'<div class="p"><span>No payments recorded yet</span><span>₹0</span></div>';
+  return `<div class="rc-actions no-print">
+    <button class="btn btn-ghost" onclick="go('receipts')">← Receipts</button>
+    <button class="btn btn-ghost" onclick="sendReceiptWA('${code}')">💬 Send on WhatsApp</button>
+    <button class="btn btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button>
+  </div>
+  <div class="receipt" id="receipt">
+    <div class="rc-head">
+      <div class="rc-brand"><img src="logo.png" alt="SRC"><div><b>Sri Cine Hub</b><span>Cinema Equipment Rental · Chennai · +91 00000 00000</span></div></div>
+      <div class="rc-meta"><h2>RECEIPT</h2><div>${rc}</div><div>Issued: ${fmtDate(TODAY)}</div><div>Booking: ${b.code}</div></div>
+    </div>
+    <div class="rc-parties">
+      <div><label>Billed to</label><div class="v"><b>${b.contact}</b><br>${b.production}<br>${b.phone}</div></div>
+      <div style="text-align:right"><label>Rental period</label><div class="v">${fmtDate(b.start)} – ${fmtDate(b.end)}<br>${daysBetween(b.start,b.end)} days<br>${b.project}</div></div>
+    </div>
+    <table class="rc-table"><thead><tr><th>Equipment</th><th>Code</th><th>Dates</th><th class="r">Rate/day</th><th class="r">Days</th><th class="r">Amount</th></tr></thead><tbody>${items}</tbody></table>
+    <div class="rc-totals">
+      <div class="row"><span>Total charges</span><span>${money(t.charges)}</span></div>
+      <div class="row paid"><span>Paid</span><span>${money(t.paid)}</span></div>
+      <div class="row grand"><span>${t.outstanding<=0?'Balance':'Balance due'}</span><span class="${t.outstanding<=0?'paid':'due'}">${money(Math.max(0,t.outstanding))}</span></div>
+    </div>
+    <div style="clear:both"></div>
+    <div class="rc-pay"><h4>Payments received</h4>${pays}</div>
+    ${t.outstanding<=0?'<div style="text-align:center;margin-top:24px"><span class="rc-stamp">PAID IN FULL</span></div>':''}
+    <div class="rc-foot">Invoice generated live from current booking data · Thank you for renting with Sri Cine Hub.<br>Equipment remains the property of Sri Cine Hub. Damage or loss chargeable as per rental terms.</div>
+  </div>`;
+}
+
+/* ---- Investor Portal — per-camera investment portfolio ---- */
+const round1=n=>Math.round(n*10)/10;
+let INVEST={cam:null,period:"2026"};
+VIEWS.investor=()=>{
+  const invCams=DATA.cameras.filter(c=>c.investors&&c.investors.length);
+  if(!INVEST.cam||!invCams.some(c=>c.code===INVEST.cam))INVEST.cam=invCams[0].code;
+  const cam=invCams.find(c=>c.code===INVEST.cam);
+  const cfg=DATA.config, poolPct=1-cfg.maintenancePct-cfg.managerPct, dedPct=cfg.maintenancePct+cfg.managerPct;
+  const totalInvested=cam.investors.reduce((a,i)=>a+i.invested,0);
+  const periodLbl=INVEST.period==="all"?"All time":"Jan–Dec "+INVEST.period;
+
+  const shipped=DATA.bookings.filter(b=>["checked_out","overdue","returned"].includes(b.status)
+    && b.cameras.some(c=>c.code===cam.code)
+    && (INVEST.period==="all"||String(parseD(b.start).getFullYear())===INVEST.period));
+  let totalBilled=0,totalReceived=0;const rows=[];
+  shipped.forEach(b=>{const bt=bookingTotals(b);
+    b.cameras.filter(c=>c.code===cam.code).forEach(c=>{
+      const billed=c.rate*lineDays(b,c);
+      const recv=bt.charges>0?Math.round(bt.paid*billed/bt.charges):0;
+      totalBilled+=billed;totalReceived+=recv;rows.push({b,billed,recv});});});
+  const gross=totalReceived;
+  const maint=Math.round(gross*cfg.maintenancePct), mgr=Math.round(gross*cfg.managerPct), pool=gross-maint-mgr;
+  const billedPool=totalBilled*poolPct;
+  const activeNow=shipped.filter(b=>b.status!=="returned").length;
+  const payoutsFor=name=>DATA.payouts.filter(p=>p.cam===cam.code&&p.investor===name).reduce((a,p)=>a+p.amount,0);
+  const tile=(l,v,s,gold)=>`<div class="metric ${gold?'tint':''}"><div class="l">${l}</div><div class="v ${gold?'gold':''}">${v}</div><div class="s">${s}</div></div>`;
+
+  // monthly aggregation for settlement
+  const months={};
+  rows.forEach(r=>{const mk=r.b.start.slice(0,7);(months[mk]||(months[mk]={bookings:0,billed:0,recv:0}));months[mk].bookings++;months[mk].billed+=r.billed;months[mk].recv+=r.recv;});
+  const monthKeys=Object.keys(months).sort().reverse();
+  const settlementFor=mk=>DATA.settlements.find(s=>s.cam===cam.code&&s.month===mk);
+
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px">
+    <div><div class="eyebrow-inv">${cam.manufacturer} Investment Portfolio</div>
+      <h1 class="disp" style="font-size:40px;line-height:1">Booking Performance</h1>
+      <div class="muted" style="margin-top:6px">${periodLbl}</div></div>
+    <div class="cam-badges">${invCams.map(c=>`<span class="cam-badge ${c.code===cam.code?'active':''}" onclick="INVEST.cam='${c.code}';go('investor')">${c.code} · ${c.manufacturer} ${c.model}</span>`).join("")}</div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;margin:22px 0 20px;flex-wrap:wrap">
+    <span class="muted" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-right:4px">Period</span>
+    ${["all","2026","2025","2024","2023"].map(p=>`<div class="tab ${INVEST.period===p?'active':''}" onclick="INVEST.period='${p}';go('investor')">${p==="all"?"All time":p}</div>`).join("")}
+  </div>
+
+  <div class="card" style="margin-bottom:18px"><div class="card-h"><h3>Revenue Waterfall · ${periodLbl}</h3></div>
+    <div style="padding:16px">
+      <div class="wf good"><b>Gross revenue received</b><span class="p">100%</span><span class="a" style="color:var(--gold)">${money(gross)}</span></div>
+      <div class="wf"><span>− Maintenance</span><span class="p">${(cfg.maintenancePct*100).toFixed(1)}%</span><span class="a" style="color:var(--bad)">− ${money(maint)}</span></div>
+      <div class="wf"><span>− Rental Manager</span><span class="p">${(cfg.managerPct*100).toFixed(1)}%</span><span class="a" style="color:var(--bad)">− ${money(mgr)}</span></div>
+      <div class="wf pool"><b>Investor pool (${(poolPct*100).toFixed(1)}% of gross)</b><span class="p">${(poolPct*100).toFixed(1)}%</span><span class="a" style="color:var(--ok)">${money(pool)}</span></div>
+    </div></div>
+
+  <div class="metrics">
+    ${tile("Total booked",shipped.length,"bookings")}
+    ${tile("Active now",activeNow,"in progress")}
+    ${tile("Total billed",money(totalBilled),periodLbl,true)}
+    ${tile("Received",money(totalReceived),"gross payments",true)}
+    ${tile("Investor pool",money(pool),`after ${(dedPct*100).toFixed(1)}% deductions`,true)}
+    ${tile("Camera cost",money(cam.cost),"total investment")}
+  </div>
+
+  <div class="card" style="margin:18px 0"><div class="card-h"><h3>Investor Revenue Share · ${periodLbl}</h3></div>
+    <div class="muted" style="padding:12px 16px 4px;font-size:12px">Pool % = share of investor pool (${(poolPct*100).toFixed(0)}% of gross) · Gross % = effective share of total revenue</div>
+    <table><thead><tr><th>Investor</th><th>Pool %</th><th>Gross %</th><th>Invested</th><th>Billed share</th><th>Received share</th><th>Paid out</th><th>ROI</th></tr></thead><tbody>
+    ${cam.investors.map(iv=>{const ps=iv.invested/totalInvested;const gs=ps*poolPct;const bs=billedPool*ps;const rs=pool*ps;const paid=payoutsFor(iv.name);const roi=iv.invested>0?rs/iv.invested*100:0;
+      return `<tr><td><b>${iv.name}</b>${iv.loc?`<div class="muted" style="font-size:11px">${iv.loc}</div>`:''}</td>
+        <td class="gold">${(ps*100).toFixed(2)}%</td><td class="gold">${(gs*100).toFixed(2)}%</td>
+        <td class="amt">${money(iv.invested)}</td><td class="amt">${money(round1(bs))}</td>
+        <td class="amt" style="color:var(--ok)">${money(round1(rs))}</td>
+        <td>${paid>0?money(paid):'<span class="muted">—</span>'}</td><td>${roi.toFixed(1)}%</td></tr>`;}).join("")}
+    </tbody></table></div>
+
+  <div class="card" style="margin-bottom:18px"><div class="card-h"><h3>Monthly Profit Sharing · ${periodLbl}</h3></div>
+    <div class="muted" style="padding:12px 16px 4px;font-size:12px">Each month's investor pool is ${(poolPct*100).toFixed(0)}% of that month's received revenue. Settle a month once its payments are in — the split is divided by each investor's stake.</div>
+    <table><thead><tr><th>Month</th><th>Bookings</th><th>Gross received</th><th>Investor pool</th><th>Split by investor</th><th style="text-align:right">Settlement</th></tr></thead><tbody>
+    ${monthKeys.length?monthKeys.map(mk=>{const m=months[mk];const mpool=Math.round(m.recv*poolPct);const st=settlementFor(mk);
+      const mlabel=parseD(mk+"-01").toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+      const split=cam.investors.map(iv=>`<div><b>${iv.name.split(" ")[0]}</b> ${money(round1(mpool*iv.invested/totalInvested))}</div>`).join("");
+      return `<tr><td><b>${mlabel}</b></td><td>${m.bookings}</td><td class="amt">${money(m.recv)}</td>
+        <td class="amt" style="color:var(--ok)">${money(mpool)}</td>
+        <td class="muted" style="font-size:12px;line-height:1.7">${split}</td>
+        <td style="text-align:right">${st?`<span class="badge b-ok">✓ settled ${fmtDate(st.date)}</span>`:`<button class="btn btn-primary btn-sm" onclick="settleMonth('${cam.code}','${mk}')">Settle up →</button>`}</td></tr>`;}).join(""):`<tr><td colspan="6" class="empty">No revenue to settle in this period.</td></tr>`}
+    </tbody></table></div>
+
+  <div class="card" style="margin-bottom:18px"><div class="card-h"><h3>All ${cam.manufacturer} bookings · ${periodLbl}</h3></div>
+    ${rows.length?rows.map(r=>`<div class="list-row" onclick="openBooking('${r.b.code}')">
+      <div class="grow"><div class="t">${r.b.code} · ${r.b.contact}</div><div class="sub">${r.b.project} · ${fmtDate(r.b.start)} → ${fmtDate(r.b.end)}</div></div>
+      <div class="amt gold" style="margin-right:12px">${money(r.billed)}</div>${badge(r.b.status)}</div>`).join(""):'<div class="empty">No bookings in this period.</div>'}</div>
+
+  <div class="card"><div class="card-h"><h3>Revenue · Receipts</h3></div>
+    ${rows.filter(r=>r.b.status==="returned").length?rows.filter(r=>r.b.status==="returned").map(r=>`<div class="list-row" style="cursor:default">
+      <div class="grow"><div class="t">RC-${r.b.code.slice(3)} · ${r.b.contact}</div><div class="sub">${r.b.code} · ${r.b.project} · ${fmtDate(r.b.end)}</div></div>
+      <div class="amt gold">${money(r.billed)}</div></div>`).join(""):'<div class="empty">No receipts in this period.</div>'}</div>`;
+};
+function settleMonth(camCode,mk){
+  const cam=DATA.cameras.find(c=>c.code===camCode);
+  const totalInvested=cam.investors.reduce((a,i)=>a+i.invested,0);
+  const poolPct=1-DATA.config.maintenancePct-DATA.config.managerPct;
+  let recv=0;
+  DATA.bookings.filter(b=>["checked_out","overdue","returned"].includes(b.status)&&b.start.slice(0,7)===mk&&b.cameras.some(c=>c.code===camCode))
+    .forEach(b=>{const bt=bookingTotals(b);b.cameras.filter(c=>c.code===camCode).forEach(c=>{const billed=c.rate*lineDays(b,c);recv+=bt.charges>0?Math.round(bt.paid*billed/bt.charges):0;});});
+  const mpool=Math.round(recv*poolPct);
+  DATA.settlements.push({cam:camCode,month:mk,date:mk+"-28",pool:mpool});
+  cam.investors.forEach(iv=>DATA.payouts.push({cam:camCode,investor:iv.name,amount:round1(mpool*iv.invested/totalInvested),date:mk+"-28",mode:"Monthly settlement",month:mk,notes:mk}));
+  SDB.settleMonth(camCode,mk);
+  go("investor");toast("Settled "+parseD(mk+"-01").toLocaleDateString("en-IN",{month:"short",year:"numeric"}));
+}
+
+/* ---- Users (admin) ---- */
+VIEWS.users=()=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px">
+    <p class="muted" style="margin:0;font-size:13px">Studio staff accounts. Admins can add users, change roles, and deactivate.</p>
+    <button class="btn btn-primary btn-sm" style="flex-shrink:0" onclick="addUserForm()">＋ Add user</button></div>
+  <div class="card" id="userlist"><div class="empty">Loading…</div></div>`;
+VIEWS.users.after=async()=>{
+  const el=$("#userlist"); if(!el) return;
+  const profs=await SDB.listProfiles();
+  el.innerHTML=`<table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>
+  ${profs.length?profs.map(p=>`<tr><td><b>${p.full_name||'—'}</b></td>
+    <td><select onchange="userSetRole('${p.id}',this.value)" style="padding:6px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--text)">${['admin','manager','investor'].map(r=>`<option value="${r}" ${r===p.role?'selected':''}>${r}</option>`).join('')}</select></td>
+    <td><span class="badge ${p.is_active?'b-ok':'b-bad'}">${p.is_active?'active':'inactive'}</span></td>
+    <td><span class="lnk gold" style="cursor:pointer" onclick="userToggle('${p.id}',${p.is_active?'false':'true'})">${p.is_active?'deactivate':'activate'}</span></td></tr>`).join(''):'<tr><td colspan="4" class="empty">No users.</td></tr>'}
+  </tbody></table>`;
+};
+function addUserForm(){
+  openModal(`<h3>Add staff user</h3><p class="mut">They can sign in immediately with this email + password.</p>
+    <div class="field"><label>Full name</label><input id="nu-name"></div>
+    <div class="field"><label>Email</label><input id="nu-email" type="email"></div>
+    <div class="field"><label>Temporary password</label><input id="nu-pw" value="cinehub123"></div>
+    <div class="field"><label>Role</label><select id="nu-role"><option value="manager">Manager — operations</option><option value="admin">Admin — full access</option><option value="investor">Investor — read-only</option></select></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doAddUser()">Create user</button>`);
+}
+async function doAddUser(){
+  const name=$("#nu-name").value.trim(), email=$("#nu-email").value.trim(), pw=$("#nu-pw").value, role=$("#nu-role").value;
+  if(!email||!pw) return toast('Email + password required');
+  toast('Creating…');
+  const { error }=await SDB.addUser(email,pw,name,role);
+  if(error){ toast('Error: '+error); return; }
+  closeModal(); toast('User created'); go('users');
+}
+function userSetRole(id,role){ SDB.setProfile(id,{role}); toast('Role updated'); }
+function userToggle(id,active){ SDB.setProfile(id,{is_active:active}); go('users'); }
+
+/* ============ modal / theme ============ */
+function openModal(html){$("#modal").innerHTML=html+'<div style="text-align:right;margin-top:6px"><span class="lnk muted" style="cursor:pointer;font-size:12.5px" onclick="closeModal()">Cancel</span></div>';$("#ov").classList.add("show");}
+function closeModal(){$("#ov").classList.remove("show");}
+$("#ov").addEventListener("click",e=>{if(e.target.id==="ov")closeModal();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+function applyTheme(t){document.body.dataset.theme=t;$("#themeIcon").textContent=t==="dark"?"☀":"☾";$("#themeLabel").textContent=t==="dark"?"Light":"Dark";try{localStorage.setItem("src-theme",t);}catch(e){}}
+function toggleTheme(){applyTheme(document.body.dataset.theme==="dark"?"light":"dark");}
+(function(){let t="dark";try{t=localStorage.getItem("src-theme")||"dark";}catch(e){}applyTheme(t);})();
+let MYNAME='';
+function renderUserChip(){
+  const el=$("#sbfoot"); if(el) el.innerHTML = SDB.on
+    ? `<div style="font-size:13px;color:#eee;font-weight:600">${MYNAME||'Staff'}</div><div style="font-size:11px;color:#8f887c;text-transform:capitalize;margin-bottom:10px">${ROLE}</div><button class="btn btn-ghost btn-sm" style="width:100%;color:#eee;border-color:rgba(255,255,255,.15)" onclick="signOutNow()">Sign out</button>`
+    : `<div style="font-size:12px;color:#8f887c">Offline demo</div>`;
+  const av=$("#avatar"); if(av) av.textContent=(MYNAME||ROLE||'U')[0].toUpperCase();
+}
+function showLogin(msg){
+  let ov=document.getElementById('loginOverlay');
+  if(!ov){ ov=document.createElement('div'); ov.id='loginOverlay'; document.body.appendChild(ov); }
+  ov.setAttribute('style','position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:var(--bg)');
+  ov.innerHTML=`<div style="width:340px;max-width:90vw;text-align:center">
+    <img src="logo.png" style="width:64px;height:64px;border-radius:12px;margin-bottom:16px">
+    <div style="font-family:var(--font-display);font-size:22px;margin-bottom:2px">Sri Cine Hub</div>
+    <p style="color:var(--mut);font-size:13px;margin-bottom:20px">Studio console — staff sign in</p>
+    <input id="li-email" placeholder="Email" autocomplete="username" style="width:100%;margin-bottom:10px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--text)">
+    <input id="li-pw" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;margin-bottom:14px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--text)">
+    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Sign in</button>
+    <div id="li-msg" style="color:var(--bad);font-size:12.5px;margin-top:10px">${msg||''}</div>
+  </div>`;
+}
+async function doLogin(){
+  const email=$("#li-email").value.trim(), pw=$("#li-pw").value;
+  $("#li-msg").textContent='Signing in…';
+  const { error } = await SDB.signIn(email,pw);
+  if(error){ $("#li-msg").textContent=error.message||'Sign in failed'; return; }
+  location.reload();
+}
+async function signOutNow(){ await SDB.signOut(); location.reload(); }
+async function boot(){
+  const app=document.querySelector('.app');
+  if(!SDB.on){ ROLE='admin'; MYNAME='Demo'; await SDB.bootstrap(); app.style.display=''; buildNav(); renderUserChip(); go('dashboard'); return; }
+  const user=await SDB.currentUser();
+  if(!user){ app.style.display='none'; showLogin(); return; }
+  const prof=await SDB.myProfile();
+  if(!prof || !prof.is_active){ await SDB.signOut(); app.style.display='none'; showLogin('No active staff profile for this account. Ask an admin.'); return; }
+  ROLE=prof.role; MYNAME=prof.full_name||user.email;
+  const ov=document.getElementById('loginOverlay'); if(ov) ov.remove();
+  await SDB.bootstrap(); app.style.display=''; buildNav(); renderUserChip(); go('dashboard');
+}
+document.querySelector('.app').style.display='none';
+boot();
+</script>
+</body>
+</html>
