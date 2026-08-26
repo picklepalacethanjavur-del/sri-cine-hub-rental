@@ -1074,7 +1074,7 @@ async function doNewRFQ(){
   await SDB.createRFQ({code,supplierId,bookingId,status:'draft',items,start,end,pickup,ret,notes});
   const sup=(DATA.suppliers||[]).find(s=>s.id===supplierId)||{};
   (DATA.rfqs=DATA.rfqs||[]).unshift({id:'local-'+code,code,supplierId,supplierName:sup.name||'—',supplierContact:sup.contact||'',bookingCode:bkCode||null,status:'draft',start,end,pickup,ret,notes,items:items.map((it,i)=>({id:'li-'+code+'-'+i,item:it.item,qty:it.qty,requestedRate:null,quotedRate:null}))});
-  closeModal(); toast('RFQ '+code+' created'); go('hirein');
+  closeModal(); toast('RFQ '+code+' created'); openRFQ('local-'+code);
 }
 function openRFQ(id){ CUR='hirein'; buildNav(); $("#pageTitle").textContent='RFQ letter'; $("#content").innerHTML=rfqLetter(id); window.scrollTo(0,0); }
 function rfqLetter(id){
