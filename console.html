@@ -996,15 +996,15 @@ VIEWS.customers=()=>{
 const STUDIO={ name:'Sri Cine Hub Pvt Ltd', tagline:'Cinema Equipment Rental · Chennai',
   addr:'104 Brindavan Main Road, Valasaravakkam, Chennai 600087 (opp Reliance Digital)',
   phone:'+91 95000 72167', web:'www.sricinehub.com', sign:'Sridhar / Vijayashanthi' };
-function rfqDays(q){ return q.start&&q.end?daysBetween(q.start,q.end):0; }
+function rfqDays(q){ const p=q.pickup||q.start,r=q.ret||q.end; return p&&r?daysBetween(p,r):0; }
 VIEWS.hirein=()=>{
   const rfqs=DATA.rfqs||[];
   const sbc=s=>({draft:'b-mut',sent:'b-info',responded:'b-warn',accepted:'b-ok',declined:'b-bad'})[s]||'b-mut';
   const inpS='padding:6px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--text)';
-  const dl=q=> q.start? `${fmtDate(q.start)}–${fmtDate(q.end)}${q.pickup?` · pickup ${fmtDate(q.pickup)}`:''}${q.ret?` · return ${fmtDate(q.ret)}`:''}` : 'dates not set';
+  const dl=q=>{ const p=q.pickup||q.start,r=q.ret||q.end; return p?`pickup ${fmtDate(p)} · return ${fmtDate(r)}`:'dates not set'; };
   return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px">
     <p class="muted" style="margin:0;font-size:13px">Source gear you don't own from suppliers. RFQs from converted quotes appear here automatically.</p>
-    <button class="btn btn-primary btn-sm" style="flex-shrink:0" onclick="newRFQ()">＋ New RFQ</button></div>
+    <button class="btn btn-primary btn-sm" style="flex-shrink:0" onclick="openRFQBuilder()">＋ New RFQ</button></div>
   ${rfqs.length? rfqs.map(q=>`<div class="card" style="margin-bottom:16px">
     <div class="card-h" style="align-items:flex-start"><div><h3>${q.supplierName}</h3><div class="muted" style="font-size:12px;margin-top:3px">${q.code} · 📅 ${dl(q)}</div></div><span class="badge ${sbc(q.status)}">${q.status}</span></div>
     <table style="width:100%"><thead><tr><th>Equipment</th><th style="text-align:center">Qty</th><th style="text-align:right">Supplier's rate ₹/day</th></tr></thead><tbody>
@@ -1026,73 +1026,85 @@ function rfqSetRate(itemId,val){ (DATA.rfqs||[]).forEach(q=>q.items.forEach(it=>
 function rfqStatus(id,status){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(q)q.status=status; SDB.updateRFQStatus(id,status); go('hirein'); }
 function rfqWA(id){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(!q) return;
   const items=q.items.map(it=>`• ${it.qty>1?it.qty+'× ':''}${it.item}${it.requestedRate?' (~₹'+it.requestedRate.toLocaleString('en-IN')+'/day)':''}`).join('\n');
-  const dates=q.start?`\nShoot: ${fmtDate(q.start)}–${fmtDate(q.end)}${q.pickup?'  Pickup: '+fmtDate(q.pickup):''}${q.ret?'  Return: '+fmtDate(q.ret):''}`:'';
+  const _p=q.pickup||q.start,_r=q.ret||q.end; const dates=_p?`\nPickup ${fmtDate(_p)} – Return ${fmtDate(_r)}`:'';
   const msg=`Hi ${q.supplierName||''}, hire-in enquiry from ${STUDIO.name} (${q.code}).\nPlease confirm availability & your best rate/day:\n${items||'(items)'}${dates}${q.notes?'\nNote: '+q.notes:''}\n\nThank you.`;
   waSend(q.supplierContact,msg); if(q.status==='draft') rfqStatus(id,'sent');
 }
-let RF={custom:[]};
-function newRFQ(existing){
-  RF={custom:[], editId: existing?existing.id:null, editUuid: existing?(existing._uuid||existing.id):null};
-  const supOpts=(DATA.suppliers||[]).map(s=>`<option value="${s.id}" ${existing&&existing.supplierId===s.id?'selected':''}>${s.name}</option>`).join('');
-  const bkOpts='<option value="">— none —</option>'+(DATA.bookings||[]).filter(b=>b.status!=='returned').map(b=>`<option value="${b.code}" data-s="${b.start}" data-e="${b.end}" ${existing&&existing.bookingCode===b.code?'selected':''}>${b.code} · ${b.project}</option>`).join('');
-  openModal(`<h3>${existing?'Edit':'New'} hire-in RFQ</h3><p class="mut">${existing?'Update items, dates or notes, then re-save.':'Request gear from a supplier — tick what you need from their catalogue.'}</p>
-    <div class="field"><label>Supplier</label><select id="rf-sup" onchange="rfRenderItems()">${supOpts}</select></div>
-    <div class="field"><label>Link to booking (optional)</label><select id="rf-bk" onchange="rfDatesFromBooking()">${bkOpts}</select></div>
-    <div class="r2"><div class="field"><label>Shoot start</label><input id="rf-start" type="date" onchange="this.blur()"></div><div class="field"><label>Shoot end</label><input id="rf-end" type="date" onchange="this.blur()"></div></div>
-    <div class="r2"><div class="field"><label>Pickup</label><input id="rf-pickup" type="date" onchange="this.blur()"></div><div class="field"><label>Return</label><input id="rf-return" type="date" onchange="this.blur()"></div></div>
-    <div class="field"><label>Items</label><div id="rf-items-box" style="border:1px solid var(--line);border-radius:10px;padding:12px;max-height:280px;overflow:auto"></div></div>
-    <div class="field"><label>Notes (mount, accessories, condition…)</label><textarea id="rf-notes" style="width:100%;min-height:48px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-family:inherit" placeholder="PL mount, with batteries + charger"></textarea></div>
-    <button class="btn btn-primary" style="width:100%" onclick="doNewRFQ()">${existing?'Save changes':'Create RFQ'}</button>`);
-  rfRenderItems();
-  if(existing) rfPrefill(existing);
+let RFB=null;
+function openRFQBuilder(existing){
+  RFB={ editId: existing?existing.id:null, editUuid: existing?(existing._uuid||existing.id):null,
+    supplierId: existing?existing.supplierId:((DATA.suppliers[0]||{}).id||''),
+    bookingCode: existing?existing.bookingCode||'':'', pickup: existing?existing.pickup||'':'', ret: existing?existing.ret||'':'',
+    notes: existing?existing.notes||'':'', q:'', lines: existing?(existing.items||[]).map(it=>({item:it.item,qty:it.qty||1})):[] };
+  CUR='hirein'; buildNav(); $("#pageTitle").textContent=existing?'Edit RFQ':'New RFQ'; renderRFB(); window.scrollTo(0,0);
 }
-function rfPrefill(ex){
-  $("#rf-start").value=ex.start||''; $("#rf-end").value=ex.end||''; $("#rf-pickup").value=ex.pickup||''; $("#rf-return").value=ex.ret||''; $("#rf-notes").value=ex.notes||'';
-  (ex.items||[]).forEach(it=>{ const ck=[...document.querySelectorAll('.rf-ck')].find(c=>qbNorm(c.dataset.item)===qbNorm(it.item));
-    if(ck){ ck.checked=true; const q=ck.parentNode.querySelector('.rf-qty'); q.disabled=false; q.value=it.qty||1; } else RF.custom.push({item:it.item,qty:it.qty||1}); });
-  rfRenderCustom();
+function editRFQ(id){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(q) openRFQBuilder(q); }
+function renderRFB(){
+  const sup=(DATA.suppliers||[]).find(s=>s.id===RFB.supplierId)||{};
+  const supOpts=(DATA.suppliers||[]).map(s=>`<option value="${s.id}" ${s.id===RFB.supplierId?'selected':''}>${s.name}</option>`).join('');
+  const bkOpts='<option value="">— none —</option>'+(DATA.bookings||[]).filter(b=>b.status!=='returned').map(b=>`<option value="${b.code}" data-s="${b.start}" data-e="${b.end}" ${b.code===RFB.bookingCode?'selected':''}>${b.code} · ${b.project}</option>`).join('');
+  const dinp='padding:9px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text)';
+  $("#content").innerHTML=`<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('hirein')">← Hire-In</div>
+   <div class="qr">
+    <div class="card"><div class="card-h"><h3>Catalogue</h3></div>
+      <div style="padding:12px 16px">
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <select onchange="RFB.supplierId=this.value;renderRFB()" style="flex:1;${dinp}">${supOpts}</select>
+          <div class="tsearch" style="flex:1"><span class="ic">🔍</span><input value="${RFB.q}" placeholder="Search…" oninput="RFB.q=this.value;renderRfbCatalog()" style="width:100%"></div>
+        </div>
+        <div id="rfb-catalog"></div>
+      </div></div>
+    <div class="card" style="position:sticky;top:80px">
+      <div class="card-h"><h3>${RFB.editId?'Edit RFQ':'New RFQ'}</h3><span class="pill">${sup.name||''}</span></div>
+      <div style="padding:16px">
+        <div class="field"><label>Link to booking (optional)</label><select id="rfb-bk" onchange="rfbBooking(this.value)" style="width:100%;${dinp}">${bkOpts}</select></div>
+        <div class="r2"><div class="field"><label>Pickup</label><input id="rfb-pickup" type="date" value="${RFB.pickup||''}" onchange="RFB.pickup=this.value;this.blur()"></div><div class="field"><label>Return</label><input id="rfb-ret" type="date" value="${RFB.ret||''}" onchange="RFB.ret=this.value;this.blur()"></div></div>
+        <label class="muted" style="font-size:11px;letter-spacing:.06em;text-transform:uppercase">Selected items</label>
+        <div id="rfb-sel" style="margin:6px 0 10px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:12px"><input id="rfb-cust" placeholder="Add item not in list…" style="flex:1;${dinp}" onkeydown="if(event.key==='Enter')rfbAddCustom()"><button class="btn btn-ghost btn-sm" onclick="rfbAddCustom()">＋</button></div>
+        <div class="field"><label>Notes</label><textarea id="rfb-notes" onchange="RFB.notes=this.value" style="width:100%;min-height:56px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-family:inherit" placeholder="PL mount, with batteries + charger">${RFB.notes||''}</textarea></div>
+        <button class="btn btn-primary" style="width:100%" onclick="doCreateRFB()">${RFB.editId?'Save changes':'Create RFQ →'}</button>
+      </div></div>
+   </div>`;
+  renderRfbCatalog(); renderRfbSel();
 }
-function editRFQ(id){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(q) newRFQ(q); }
-function rfRenderItems(){
-  const sup=(DATA.suppliers||[]).find(s=>s.id===$("#rf-sup").value)||{catalog:[]};
-  const box=$("#rf-items-box"); if(!box) return; const cat=sup.catalog||[];
-  const numi='width:52px;padding:5px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--text);text-align:right';
-  box.innerHTML=`<div class="muted" style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">${sup.name||''} catalogue — tick what you need</div>`
-   +(cat.length?cat.map(c=>`<label style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer">
-      <input type="checkbox" class="rf-ck" data-item="${c.item.replace(/"/g,'&quot;')}" onchange="this.parentNode.querySelector('.rf-qty').disabled=!this.checked">
-      <span style="flex:1">${c.item} <span class="muted" style="font-size:11px">₹${c.rate.toLocaleString('en-IN')}/day</span></span>
-      <span class="muted" style="font-size:12px">qty</span><input type="number" class="rf-qty" value="1" min="1" disabled style="${numi}"></label>`).join('')
-     :'<div class="muted" style="font-size:12.5px">No catalogue items for this supplier — add custom items below.</div>')
-   +`<div id="rf-custom" style="margin-top:6px"></div>
-     <div style="display:flex;gap:8px;margin-top:10px"><input id="rf-cust-name" placeholder="Add item not in their list…" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--text)"><input id="rf-cust-qty" type="number" value="1" min="1" style="${numi};padding:8px"><button class="btn btn-ghost btn-sm" onclick="rfAddCustom()">＋</button></div>`;
-  rfRenderCustom();
+function renderRfbCatalog(){
+  const el=$("#rfb-catalog"); if(!el)return;
+  const sup=(DATA.suppliers||[]).find(s=>s.id===RFB.supplierId)||{catalog:[]};
+  const q=(RFB.q||'').toLowerCase();
+  const items=(sup.catalog||[]).filter(c=>!q||c.item.toLowerCase().includes(q));
+  el.innerHTML=items.length?items.map(c=>{ const added=RFB.lines.some(l=>qbNorm(l.item)===qbNorm(c.item));
+    return `<div class="qr-item ${added?'added':''}" onclick="rfbAdd('${c.item.replace(/'/g,"\\'")}')"><div class="grow"><div class="t">${c.item}</div><div class="sub">₹${c.rate.toLocaleString('en-IN')}/day</div></div><div>${added?'<span class="badge b-ok">✓ added</span>':'<button class="btn btn-ghost btn-sm">＋ Add</button>'}</div></div>`;
+  }).join(''):'<div class="empty">No catalogue items for this supplier. Use "Add item not in list" on the right.</div>';
 }
-function rfAddCustom(){ const n=$("#rf-cust-name").value.trim(); if(!n)return; RF.custom.push({item:n,qty:+$("#rf-cust-qty").value||1}); $("#rf-cust-name").value=''; $("#rf-cust-qty").value=1; rfRenderCustom(); }
-function rfRenderCustom(){ const el=$("#rf-custom"); if(!el)return; el.innerHTML=RF.custom.map((c,i)=>`<div style="display:flex;align-items:center;gap:9px;padding:6px 0"><span style="flex:1">${c.item} <span class="muted" style="font-size:11px">· custom</span></span><span class="muted" style="font-size:12px">qty ${c.qty}</span><span class="cart-x" onclick="RF.custom.splice(${i},1);rfRenderCustom()">×</span></div>`).join(''); }
-function rfDatesFromBooking(){ const o=$("#rf-bk").selectedOptions[0]; if(!o||!o.dataset.s)return; $("#rf-start").value=o.dataset.s; $("#rf-end").value=o.dataset.e; }
-async function doNewRFQ(){
-  const supplierId=$("#rf-sup").value; if(!supplierId) return toast('Pick a supplier');
-  const items=[];
-  document.querySelectorAll('.rf-ck').forEach(ck=>{ if(ck.checked){ const qty=+ck.parentNode.querySelector('.rf-qty').value||1; items.push({item:ck.dataset.item,qty}); } });
-  RF.custom.forEach(c=>items.push({item:c.item,qty:c.qty}));
-  if(!items.length) return toast('Tick at least one item');
-  const bkCode=$("#rf-bk").value;
-  const start=$("#rf-start").value||null, end=$("#rf-end").value||null, pickup=$("#rf-pickup").value||null, ret=$("#rf-return").value||null, notes=$("#rf-notes").value.trim();
+function renderRfbSel(){
+  const el=$("#rfb-sel"); if(!el)return;
+  el.innerHTML=RFB.lines.length?RFB.lines.map((l,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><div class="grow" style="font-size:13.5px">${l.item}</div><span class="muted" style="font-size:12px">qty</span><input type="number" value="${l.qty}" min="1" onchange="RFB.lines[${i}].qty=+this.value||1" style="width:52px;padding:5px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--text);text-align:right"><span class="cart-x" onclick="rfbDel(${i})">×</span></div>`).join(''):'<div class="empty" style="padding:10px">Tap items on the left to add.</div>';
+}
+function rfbBooking(v){ RFB.bookingCode=v; const o=$("#rfb-bk").selectedOptions[0]; if(o&&o.dataset.s){ if(!RFB.pickup){RFB.pickup=o.dataset.s;$("#rfb-pickup").value=o.dataset.s;} if(!RFB.ret){RFB.ret=o.dataset.e;$("#rfb-ret").value=o.dataset.e;} } }
+function rfbAdd(item){ const idx=RFB.lines.findIndex(l=>qbNorm(l.item)===qbNorm(item)); if(idx>=0)RFB.lines.splice(idx,1); else RFB.lines.push({item,qty:1}); renderRfbCatalog(); renderRfbSel(); }
+function rfbDel(i){ RFB.lines.splice(i,1); renderRfbCatalog(); renderRfbSel(); }
+function rfbAddCustom(){ const n=$("#rfb-cust").value.trim(); if(!n)return; if(!RFB.lines.some(l=>qbNorm(l.item)===qbNorm(n)))RFB.lines.push({item:n,qty:1}); $("#rfb-cust").value=''; renderRfbCatalog(); renderRfbSel(); }
+async function doCreateRFB(){
+  if(!RFB.supplierId) return toast('Pick a supplier');
+  if(!RFB.lines.length) return toast('Add at least one item');
+  const items=RFB.lines.map(l=>({item:l.item,qty:l.qty||1}));
+  const pickup=RFB.pickup||null, ret=RFB.ret||null, notes=(RFB.notes||'').trim(), bkCode=RFB.bookingCode||'';
   const bookingId=bkCode?SDB.ids.bookingByCode[bkCode]:null;
-  const sup=(DATA.suppliers||[]).find(s=>s.id===supplierId)||{};
-  if(RF.editId){
-    const q=(DATA.rfqs||[]).find(x=>x.id===RF.editId);
+  const sup=(DATA.suppliers||[]).find(s=>s.id===RFB.supplierId)||{};
+  if(RFB.editId){
+    const q=(DATA.rfqs||[]).find(x=>x.id===RFB.editId);
     const prev={}; if(q) q.items.forEach(it=>prev[qbNorm(it.item)]=it.quotedRate);
     const litems=items.map((it,i)=>({id:(q&&q.items[i]&&q.items[i].id)||'li-e-'+i,item:it.item,qty:it.qty,requestedRate:null,quotedRate:(prev[qbNorm(it.item)]!=null?prev[qbNorm(it.item)]:null)}));
-    await SDB.updateRFQ(RF.editUuid,{supplier_id:supplierId,booking_id:bookingId,notes,start_at:start,end_at:end,pickup_at:pickup,return_at:ret},litems);
-    if(q) Object.assign(q,{supplierId,supplierName:sup.name||'—',supplierContact:sup.contact||'',bookingCode:bkCode||null,start,end,pickup,ret,notes,items:litems});
-    closeModal(); toast('RFQ updated'); openRFQ(RF.editId); return;
+    await SDB.updateRFQ(RFB.editUuid,{supplier_id:RFB.supplierId,booking_id:bookingId,notes,pickup_at:pickup,return_at:ret},litems);
+    if(q) Object.assign(q,{supplierId:RFB.supplierId,supplierName:sup.name||'—',supplierContact:sup.contact||'',bookingCode:bkCode||null,pickup,ret,notes,items:litems});
+    toast('RFQ updated'); openRFQ(RFB.editId); return;
   }
   const code='RFQ-'+Date.now().toString().slice(-6);
-  const uuid=await SDB.createRFQ({code,supplierId,bookingId,status:'draft',items,start,end,pickup,ret,notes});
+  const uuid=await SDB.createRFQ({code,supplierId:RFB.supplierId,bookingId,status:'draft',items,pickup,ret,notes});
   const localId=uuid||('local-'+code);
-  (DATA.rfqs=DATA.rfqs||[]).unshift({id:localId,_uuid:uuid,code,supplierId,supplierName:sup.name||'—',supplierContact:sup.contact||'',bookingCode:bkCode||null,status:'draft',start,end,pickup,ret,notes,items:items.map((it,i)=>({id:'li-'+code+'-'+i,item:it.item,qty:it.qty,requestedRate:null,quotedRate:null}))});
-  closeModal(); toast('RFQ '+code+' created'); openRFQ(localId);
+  (DATA.rfqs=DATA.rfqs||[]).unshift({id:localId,_uuid:uuid,code,supplierId:RFB.supplierId,supplierName:sup.name||'—',supplierContact:sup.contact||'',bookingCode:bkCode||null,status:'draft',pickup,ret,notes,start:null,end:null,items:items.map((it,i)=>({id:'li-'+code+'-'+i,item:it.item,qty:it.qty,requestedRate:null,quotedRate:null}))});
+  toast('RFQ '+code+' created'); openRFQ(localId);
 }
 function openRFQ(id){ CUR='hirein'; buildNav(); $("#pageTitle").textContent='RFQ letter'; $("#content").innerHTML=rfqLetter(id); window.scrollTo(0,0); }
 function rfqLetter(id){
@@ -1112,7 +1124,7 @@ function rfqLetter(id){
     </div>
     <div class="rc-parties">
       <div><label>To</label><div class="v"><b>${sup.name||q.supplierName}</b><br>${sup.contact||q.supplierContact||''}</div></div>
-      <div style="text-align:right"><label>Rental period</label><div class="v">${q.start?fmtDate(q.start)+' – '+fmtDate(q.end)+(days?' · '+days+' days':''):'—'}<br>${q.pickup?'Pickup: '+fmtDate(q.pickup):''}${q.ret?' · Return: '+fmtDate(q.ret):''}${q.bookingCode?'<br>Ref: '+q.bookingCode:''}</div></div>
+      <div style="text-align:right"><label>Rental period</label><div class="v">${(q.pickup||q.start)?'Pickup: '+fmtDate(q.pickup||q.start)+'<br>Return: '+fmtDate(q.ret||q.end)+(days?'<br>'+days+' days':''):'—'}${q.bookingCode?'<br>Ref: '+q.bookingCode:''}</div></div>
     </div>
     <p style="font-size:13.5px;color:#333;margin:6px 0 10px">Dear Sir/Madam, we wish to hire the following equipment for an upcoming production. Kindly confirm availability and your best rate per day.</p>
     <table class="rc-table"><thead><tr><th>#</th><th>Equipment</th><th class="r">Qty</th><th class="r">Your rate ₹/day</th></tr></thead><tbody>${rows}</tbody></table>
