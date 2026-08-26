@@ -237,21 +237,21 @@ function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");cl
 /* ---- WhatsApp (Phase 1: click-to-chat, staff taps send) ---- */
 const waEsc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'");
 function waSend(phone,msg){const d=(phone||"").replace(/[^0-9]/g,"");if(!d)return toast("No phone number on file");window.open(`https://wa.me/${d}?text=${encodeURIComponent(msg)}`,"_blank");}
-function sendQuoteWA(id){const r=DATA.requests.find(x=>x.id===id);
+async function sendQuoteWA(){
+  const u=await ensureRequest(); if(u===null)return;
   const items=QB.filter(l=>l.type==='item'&&l.include&&l.name);
   const bdOf=l=>isEquip(l.kind)?billedDays(l.days):l.days;
   const lines=items.map(l=>`• ${l.qty>1?l.qty+'× ':''}${l.name} — ₹${l.rate.toLocaleString("en-IN")}/day × ${bdOf(l)}d${l.qty>1?' × '+l.qty:''} = ₹${(l.rate*bdOf(l)*l.qty).toLocaleString("en-IN")}`);
   const subtotal=items.reduce((a,l)=>a+l.rate*bdOf(l)*l.qty,0);
-  const discount=qbDiscount(subtotal);
-  const total=Math.max(0,subtotal-discount);
-  let msg=`Hi ${r.name}, thanks for your enquiry with Sri Cine Hub.\n\nQuote for ${fmtDate(r.start)}–${fmtDate(r.end)}:\n${lines.join("\n")||"(add items first)"}\n`;
+  const discount=qbDiscount(subtotal); const total=Math.max(0,subtotal-discount);
+  let msg=`Hi ${QCTX.name}, thanks for your enquiry with Sri Cine Hub.\n\nQuote${QCTX.start&&QCTX.end?` for ${fmtDate(QCTX.start)}–${fmtDate(QCTX.end)}`:''}:\n${lines.join("\n")||"(add items first)"}\n`;
   if(discount>0) msg+=`\nSubtotal: ₹${subtotal.toLocaleString("en-IN")}\nDiscount: −₹${discount.toLocaleString("en-IN")}`;
   msg+=`\nTotal: ₹${total.toLocaleString("en-IN")}`;
   if(QB_OPTS.depositFlat>0) msg+=`\nRefundable deposit: ₹${QB_OPTS.depositFlat.toLocaleString("en-IN")}`;
   if(QB_OPTS.validDays) msg+=`\n(Valid ${QB_OPTS.validDays} days)`;
   msg+=`\n\nShall we confirm?`;
-  const code='QT-'+Date.now().toString().slice(-8);SDB.saveQuotation(r._uuid,code,QB,'sent',QB_SOURCE,qbOptsPayload());
-  r.status="quoted";SDB.setRequestStatus(r._uuid,"quoted");waSend(r.phone,msg);}
+  const code='QT-'+Date.now().toString().slice(-8); SDB.saveQuotation(u,code,QB,'sent',QB_SOURCE,qbOptsPayload());
+  const rr=(DATA.requests||[]).find(x=>x._uuid===u); if(rr)rr.status='quoted'; SDB.setRequestStatus(u,'quoted'); waSend(QCTX.phone,msg);}
 function sendReceiptWA(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const bal=Math.max(0,t.outstanding);
   const msg=`Hi ${b.contact}, here is your receipt RC-${b.code.slice(3)} from Sri Cine Hub for "${b.project}" (${fmtDate(b.start)}–${fmtDate(b.end)}).\n\nTotal: ${money(t.charges)}\nPaid: ${money(t.paid)}\n${bal>0?"Balance due: "+money(bal):"Status: PAID IN FULL ✅"}\n\nThank you for renting with us!`;
   waSend(b.phone,msg);}
@@ -338,7 +338,7 @@ VIEWS.dashboard=()=>{
   <div class="cols">
     <div class="card">
       <div class="card-h"><h3>Pending quote requests</h3><span class="lnk" onclick="go('requests')">View all →</span></div>
-      ${pending.length?pending.map(r=>`<div class="list-row" onclick="go('requests','${r.id}')">
+      ${pending.length?pending.map(r=>`<div class="list-row" onclick="openReq('${r.id}')">
         <div class="grow"><div class="t">${r.name} · ${r.company}</div><div class="sub">${fmtDate(r.start)}–${fmtDate(r.end)} · ${r.desc}</div></div>
         <span class="badge b-warn">new</span></div>`).join(""):`<div class="empty">No pending requests.</div>`}
     </div>
@@ -437,48 +437,99 @@ function checkoutQR(){
 
 /* ---- Requests ---- */
 VIEWS.requests=()=>{
-  return `<button class="btn btn-primary" style="margin-bottom:16px" onclick="newRequest()">＋ New request</button>
-  <div class="card">${DATA.requests.map(r=>`<div class="list-row" onclick="go('requests','${r.id}')">
-    <div class="grow"><div class="t">${r.name} · ${r.company}</div><div class="sub">${fmtDate(r.start)}–${fmtDate(r.end)} · ${r.desc}</div></div>
-    <span class="badge ${r.status==='new'?'b-warn':'b-info'}">${r.status}</span></div>`).join("")}</div>`;
+  const st=s=>({new:'b-warn',quoted:'b-info',converted:'b-ok',closed:'b-mut'})[s]||'b-mut';
+  return `<button class="btn btn-primary" style="margin-bottom:16px" onclick="openQuoteBuilder()">＋ New quote</button>
+  <div class="card">${(DATA.requests||[]).map(r=>`<div class="list-row" onclick="openReq('${r.id}')">
+    <div class="grow"><div class="t">${r.name}${r.company?' · '+r.company:''}</div><div class="sub">${r.start?fmtDate(r.start)+'–'+fmtDate(r.end)+' · ':''}${r.desc||''}</div></div>
+    <span class="badge ${st(r.status)}">${r.status}</span></div>`).join("")||`<div class="empty">No requests yet. Start one with ＋ New quote.</div>`}</div>`;
 };
-VIEWS.requests.detail=id=>{
-  const r=DATA.requests.find(x=>x.id===id);if(!r)return go("requests");
-  return r;
-};
-// request detail routed via param
-const _requests=VIEWS.requests;
-VIEWS.requests=param=>{
-  if(!param)return _requests();
-  const r=DATA.requests.find(x=>x.id===param);if(!r)return _requests();
-  return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('requests')">← All requests</div>
-  <div class="cols">
-    <div class="card"><div class="card-h"><h3>${r.name}</h3>${r.status==='new'?'<span class="badge b-warn">new</span>':'<span class="badge b-info">quoted</span>'}</div>
-      <div style="padding:16px">
-        <div class="field"><label>Company</label><div>${r.company}</div></div>
-        <div class="field"><label>Phone / WhatsApp</label><div>${r.phone}</div></div>
-        <div class="field"><label>Shoot dates</label><div>${fmtDate(r.start)} – ${fmtDate(r.end)} · ${daysBetween(r.start,r.end)} days</div></div>
-        <div class="field"><label>Requirement</label><div>${r.desc}</div></div>
-        ${r.notes?`<div class="field"><label>Notes</label><div class="muted">${r.notes}</div></div>`:''}
+function openReq(id){ const r=(DATA.requests||[]).find(x=>x.id===id); openQuoteBuilder(r); }
+/* ---- full-screen quote builder (own inventory ⇄ supplier hire-in) ---- */
+let QCTX={requestUuid:null,id:null,name:'',company:'',phone:'',start:'',end:''};
+let QSRC={mode:'own',supplierId:null,q:'',cat:'all'};
+function openQuoteBuilder(request){
+  QCTX = request ? {requestUuid:request._uuid||null,id:request.id,name:request.name||'',company:request.company||'',phone:request.phone||'',start:request.start||TODAY,end:request.end||''}
+                 : {requestUuid:null,id:null,name:'',company:'',phone:'',start:TODAY,end:''};
+  QSRC={mode:'own',supplierId:(DATA.suppliers[0]||{}).id||null,q:'',cat:'all'};
+  CUR='requests'; buildNav(); $("#pageTitle").textContent=request?'Quote':'New quote';
+  renderQuoteBuilder();
+  if(request) qbFromRequest(request); else { QB=[]; QB_SOURCE=''; QB_OPTS={discountVal:0,discountMode:'flat',depositFlat:0,validDays:7}; renderQB(); }
+  window.scrollTo(0,0);
+}
+function renderQuoteBuilder(){
+  const dinp='padding:9px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text)';
+  const cats=['all','Cameras','Lenses','Lights','Accessories','Grip','Transport','Genset'];
+  const supOpts=(DATA.suppliers||[]).map(s=>`<option value="${s.id}" ${s.id===QSRC.supplierId?'selected':''}>${s.name}</option>`).join('');
+  $("#content").innerHTML=`<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('requests')">← Requests</div>
+   <div class="qr">
+    <div class="card"><div class="card-h"><h3>Catalogue</h3></div>
+      <div style="padding:12px 16px">
+        <div class="tabs" style="margin-bottom:10px">
+          <div class="tab ${QSRC.mode==='own'?'active':''}" onclick="qcMode('own')">My inventory</div>
+          <div class="tab ${QSRC.mode==='sup'?'active':''}" onclick="qcMode('sup')">Supplier (hire-in)</div>
+          ${QSRC.mode==='sup'?`<select onchange="QSRC.supplierId=this.value;renderQcatalog()" style="margin-left:auto;${dinp}">${supOpts}</select>`:''}
+        </div>
+        ${QSRC.mode==='own'?`<div class="tabs" style="margin-bottom:10px">${cats.map(c=>`<div class="tab ${QSRC.cat===c?'active':''}" onclick="qcCat('${c}')">${c==='all'?'All':c}</div>`).join('')}</div>`:''}
+        <div class="tsearch" style="margin-bottom:10px"><span class="ic">🔍</span><input value="${QSRC.q}" placeholder="Search…" oninput="QSRC.q=this.value;renderQcatalog()" style="width:100%"></div>
+        <div id="qc-grid" style="max-height:60vh;overflow:auto"></div>
       </div></div>
-    <div class="card"><div class="card-h"><h3>Quote builder</h3></div>
+    <div class="card"><div class="card-h"><h3>${QCTX.requestUuid?'Quote':'New quote'}</h3></div>
       <div style="padding:16px">
-        <label class="muted" style="font-size:12px;display:block;margin-bottom:6px">Paste a WhatsApp / email list — we'll match it to your catalogue &amp; suggest hire-ins</label>
-        <textarea id="qb-paste" placeholder="e.g.&#10;2x Sony FX3&#10;SkyPanel S60&#10;Ultra Prime set&#10;Arri Alexa 65&#10;slider" style="width:100%;min-height:64px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-size:13px;font-family:inherit"></textarea>
-        <button class="btn btn-ghost btn-sm" style="margin:8px 0 14px" onclick="qbParse()">⇊ Parse &amp; match</button>
+        <div class="field"><label>Customer name *</label><input value="${(QCTX.name||'').replace(/"/g,'&quot;')}" oninput="QCTX.name=this.value" style="width:100%;${dinp}"></div>
+        <div class="r2"><div class="field"><label>Phone</label><input value="${QCTX.phone||''}" oninput="QCTX.phone=this.value" style="width:100%;${dinp}"></div><div class="field"><label>Company</label><input value="${(QCTX.company||'').replace(/"/g,'&quot;')}" oninput="QCTX.company=this.value" style="width:100%;${dinp}"></div></div>
+        <div class="r2"><div class="field"><label>Shoot start</label><input type="date" value="${QCTX.start||''}" onchange="qctxDate('start',this.value)"></div><div class="field"><label>Shoot end</label><input type="date" value="${QCTX.end||''}" onchange="qctxDate('end',this.value)"></div></div>
+        <label class="muted" style="font-size:11px;letter-spacing:.06em;text-transform:uppercase">Or paste a WhatsApp list</label>
+        <textarea id="qb-paste" placeholder="2x Sony FX3&#10;SkyPanel S60&#10;Arri Alexa 65" style="width:100%;min-height:50px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px;color:var(--text);font-size:13px;font-family:inherit;margin-top:4px"></textarea>
+        <button class="btn btn-ghost btn-sm" style="margin:8px 0 12px" onclick="qbParse()">⇊ Parse &amp; match</button>
         <div id="qb-original"></div>
         <div id="qb-lines"></div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="qbAdd()">＋ Add line</button>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="qbAdd()">＋ Add blank line</button>
         <div id="qb-summary"></div>
         <div style="display:flex;gap:8px;margin-top:14px">
-          <button class="btn btn-ghost" style="flex:1" onclick="qbSave('${r.id}')">Save draft</button>
-          <button class="btn btn-ghost" style="flex:1" onclick="sendQuoteWA('${r.id}')">💬 Send</button>
-          <button class="btn btn-primary" style="flex:1" onclick="convertReq('${r.id}')">Convert →</button>
+          <button class="btn btn-ghost" style="flex:1" onclick="qbSave()">Save draft</button>
+          <button class="btn btn-ghost" style="flex:1" onclick="sendQuoteWA()">💬 Send</button>
+          <button class="btn btn-primary" style="flex:1" onclick="convertReq()">Convert →</button>
         </div>
       </div></div>
-  </div>`;
-};
-VIEWS.requests.after=param=>{ if(!param) return; qbFromRequest(DATA.requests.find(x=>x.id===param)); };
+   </div>`;
+  renderQcatalog(); renderQB();
+}
+function qcMode(m){ QSRC.mode=m; if(m==='sup'&&!QSRC.supplierId)QSRC.supplierId=(DATA.suppliers[0]||{}).id||null; renderQuoteBuilder(); }
+function qcCat(c){ QSRC.cat=c; renderQuoteBuilder(); }
+function qctxDate(f,v){ QCTX[f]=v; const d=(QCTX.start&&QCTX.end)?daysBetween(QCTX.start,QCTX.end):1; QB.forEach(l=>{ if(l.type==='item')l.days=d; }); renderQB(); }
+function renderQcatalog(){
+  const el=$("#qc-grid"); if(!el)return; const q=(QSRC.q||'').toLowerCase(); let items;
+  if(QSRC.mode==='own'){
+    items=Object.keys(DATA.optionRates||{}).map(n=>({name:n,rate:(DATA.optionRates||{})[n],cat:(DATA.optionCats||{})[n]||'—',src:'own'}));
+    if(QSRC.cat!=='all') items=items.filter(i=>i.cat===QSRC.cat);
+    items=items.filter(i=>!q||i.name.toLowerCase().includes(q));
+  } else {
+    const sup=(DATA.suppliers||[]).find(s=>s.id===QSRC.supplierId)||{catalog:[]};
+    items=(sup.catalog||[]).filter(c=>!q||c.item.toLowerCase().includes(q)).map(c=>({name:c.item,rate:c.rate,src:'sup',supplierId:sup.id}));
+  }
+  el.innerHTML=items.length?items.map(i=>{ const added=QB.some(l=>l.type==='item'&&qbNorm(l.name)===qbNorm(i.name));
+    return `<div class="qr-item ${added?'added':''}" onclick="qbPick('${i.src}','${i.name.replace(/'/g,"\\'")}',${i.rate||0},'${i.supplierId||''}')"><div class="grow"><div class="t">${i.name}</div><div class="sub">${i.src==='sup'?'hire-in · ':''}₹${(i.rate||0).toLocaleString('en-IN')}/day</div></div><div>${added?'<span class="badge b-ok">✓</span>':'<button class="btn btn-ghost btn-sm">＋ Add</button>'}</div></div>`;
+  }).join(''):'<div class="empty">No items.</div>';
+}
+function qbPick(src,name,rate,supplierId){
+  const idx=QB.findIndex(l=>l.type==='item'&&qbNorm(l.name)===qbNorm(name));
+  if(idx>=0){ QB.splice(idx,1); }
+  else{ const days=(QCTX.start&&QCTX.end)?daysBetween(QCTX.start,QCTX.end):1;
+    if(src==='sup'){ const l=qbLine(name,Math.round(rate*(1+QB_MARKUP/100)),days,'hirein'); l.cost=rate; l.supplierId=supplierId||null; l.offers=matchSuppliers(name); QB.push(l); }
+    else QB.push(qbLine(name,rate,days,'own'));
+  }
+  renderQB(); renderQcatalog();
+}
+async function ensureRequest(){
+  if(QCTX.requestUuid) return QCTX.requestUuid;
+  if(!QCTX.name){ toast('Enter a customer name'); return null; }
+  const code='REQ-'+Date.now().toString().slice(-8);
+  const desc=QB.filter(l=>l.type==='item'&&l.name).map(l=>l.name).join(', ');
+  const uuid=await SDB.createRequest(code,{name:QCTX.name,company:QCTX.company,phone:QCTX.phone,start:QCTX.start,end:QCTX.end,desc});
+  QCTX.requestUuid=uuid; QCTX.id=code;
+  (DATA.requests=DATA.requests||[]).unshift({id:code,_uuid:uuid,name:QCTX.name,company:QCTX.company,phone:QCTX.phone,start:QCTX.start,end:QCTX.end,desc,status:'new',notes:'',kit:[]});
+  return uuid;
+}
 
 /* ---- quote builder engine: match to catalogue + own / hire-in lines ---- */
 let QB=[]; const QB_MARKUP=25;
@@ -662,39 +713,23 @@ function renderQB(){
   </div>`;
   const orig=$("#qb-original"); if(orig) orig.innerHTML = QB_SOURCE? `<details style="margin:4px 0 12px"><summary style="cursor:pointer;color:var(--mut);font-size:12px">📄 Original request (as received — nothing dropped)</summary><pre style="white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;color:var(--text);margin-top:6px;font-family:inherit">${(QB_SOURCE||'').replace(/</g,'&lt;')}</pre></details>` : '';
 }
-function newRequest(){
-  openModal(`<h3>New quote request</h3><p class="mut">Walk-in or phone enquiry. Paste their WhatsApp list into Requirement if you have it.</p>
-    <div class="field"><label>Customer name *</label><input id="nr-name"></div>
-    <div class="r2"><div class="field"><label>Phone</label><input id="nr-phone" placeholder="+91"></div><div class="field"><label>Company</label><input id="nr-co"></div></div>
-    <div class="r2"><div class="field"><label>Shoot start</label><input id="nr-start" type="date" value="${TODAY}" onchange="this.blur()"></div><div class="field"><label>Shoot end</label><input id="nr-end" type="date" onchange="this.blur()"></div></div>
-    <div class="field"><label>Requirement (paste WhatsApp list)</label><textarea id="nr-desc" style="width:100%;min-height:80px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-family:inherit"></textarea></div>
-    <button class="btn btn-primary" style="width:100%" onclick="doNewRequest()">Create request</button>`);
-}
-async function doNewRequest(){
-  const name=$("#nr-name").value.trim(); if(!name) return toast('Enter a customer name');
-  const code='REQ-'+Date.now().toString().slice(-8);
-  const req={ id:code,_uuid:null,name,company:$("#nr-co").value.trim(),phone:$("#nr-phone").value.trim(),
-    start:$("#nr-start").value||TODAY,end:$("#nr-end").value||$("#nr-start").value||TODAY,
-    desc:$("#nr-desc").value.trim(),status:'new',notes:'',kit:[] };
-  req._uuid=await SDB.createRequest(code,req);
-  DATA.requests.unshift(req); closeModal(); toast('Request '+code+' created'); go('requests',code);
-}
 function addDays(d,n){ const x=parseD(d); x.setDate(x.getDate()+(+n||0)); return x.toISOString().slice(0,10); }
 function qbOptsPayload(){ let equip=0,svc=0; QB.forEach(l=>{ if(l.type!=='item'||!l.include||!l.name)return; const qty=l.qty||1; if(isEquip(l.kind))equip+=l.rate*billedDays(l.days)*qty; else svc+=l.rate*l.days*qty; });
   const subtotal=equip+svc; const discount=qbDiscount(subtotal);
   return { discount_inr:discount, deposit_inr:QB_OPTS.depositFlat||0, other_charges_inr:svc, valid_until:(QB_OPTS.validDays?addDays(TODAY,QB_OPTS.validDays):null) }; }
-function qbSave(id){const r=DATA.requests.find(x=>x.id===id);const code='QT-'+Date.now().toString().slice(-8);SDB.saveQuotation(r._uuid,code,QB,'draft',QB_SOURCE,qbOptsPayload());toast('Quote saved · '+code);}
-async function convertReq(id){
-  const r=DATA.requests.find(x=>x.id===id); const qcode='QT-'+Date.now().toString().slice(-8); const opts=qbOptsPayload();
-  const res=await SDB.convertQuote(r._uuid,{name:r.name,company:r.company,phone:r.phone,start:r.start,end:r.end},qcode,QB,QB_SOURCE,opts);
-  const eq=QB.filter(l=>l.type==='item'&&l.include&&l.name&&isEquip(l.kind)); const cd=daysBetween(r.start,r.end);
-  const toLine=l=>{ const effRate=l.rate;
-    return {code:l.kind==='hirein'?'(hire-in)':'(assign at checkout)',name:l.name,rate:effRate,qty:l.qty||1,lineKind:l.kind,supplierId:l.supplierId,cost:l.cost}; };
-  const b={code:res.code,customer:res.customer_id||'',production:r.company||r.name,project:'Booking — '+r.name,contact:r.name,phone:r.phone,status:'confirmed',start:r.start,end:r.end,pickup:'Studio floor',operator:'',
+async function qbSave(){ const u=await ensureRequest(); if(u===null)return; const code='QT-'+Date.now().toString().slice(-8); SDB.saveQuotation(u,code,QB,'draft',QB_SOURCE,qbOptsPayload()); toast('Quote saved · '+code); }
+async function convertReq(){
+  if(!QCTX.name) return toast('Enter a customer name');
+  if(!QCTX.start||!QCTX.end) return toast('Set shoot start & end dates');
+  const u=await ensureRequest(); const qcode='QT-'+Date.now().toString().slice(-8); const opts=qbOptsPayload();
+  const res=await SDB.convertQuote(u,{name:QCTX.name,company:QCTX.company,phone:QCTX.phone,start:QCTX.start,end:QCTX.end},qcode,QB,QB_SOURCE,opts);
+  const eq=QB.filter(l=>l.type==='item'&&l.include&&l.name&&isEquip(l.kind));
+  const toLine=l=>({code:l.kind==='hirein'?'(hire-in)':'(assign at checkout)',name:l.name,rate:l.rate,qty:l.qty||1,lineKind:l.kind,supplierId:l.supplierId,cost:l.cost});
+  const b={code:res.code,customer:res.customer_id||'',production:QCTX.company||QCTX.name,project:'Booking — '+QCTX.name,contact:QCTX.name,phone:QCTX.phone,status:'confirmed',start:QCTX.start,end:QCTX.end,pickup:'Studio floor',operator:'',
     otherCharges:opts.other_charges_inr||0,discount:opts.discount_inr||0,deposit:opts.deposit_inr||0,
     cameras:eq.filter(l=>(DATA.optionCats||{})[l.name]==='Cameras').map(toLine),
     accessories:eq.filter(l=>(DATA.optionCats||{})[l.name]!=='Cameras').map(toLine),payments:[]};
-  DATA.bookings.unshift(b); r.status='converted';
+  DATA.bookings.unshift(b); const rr=(DATA.requests||[]).find(x=>x._uuid===u); if(rr)rr.status='converted';
   toast('Booking '+res.code+' created'); openBooking(res.code);
 }
 
