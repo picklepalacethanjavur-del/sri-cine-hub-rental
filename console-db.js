@@ -30,8 +30,8 @@ window.SDB = (function () {
           sb.from("customers").select("*"),
           sb.from("suppliers").select("*"),
           sb.from("supplier_catalog").select("*"),
-          sb.from("quote_requests").select("*"),
-          sb.from("bookings").select("*"),
+          sb.from("quote_requests").select("*").is("deleted_at", null),
+          sb.from("bookings").select("*").is("deleted_at", null),
           sb.from("booking_lines").select("*"),
           sb.from("payments").select("*"),
           sb.from("settlements").select("*"),
@@ -208,6 +208,12 @@ window.SDB = (function () {
   const editSupplierRate = guard(async (catId, item, rate) => {
     const { error } = await sb.from("supplier_catalog").update({ item, daily_rate_inr: rate }).eq("id", catId); if (error) throw error;
   });
+  const softDeleteBooking = guard(async (code) => {
+    const { error } = await sb.rpc("soft_delete_booking", { p_code: code }); if (error) throw error;
+  });
+  const softDeleteRequest = guard(async (reqUuid) => {
+    const { error } = await sb.rpc("soft_delete_request", { p_id: reqUuid }); if (error) throw error;
+  });
   const addSupplier = guard(async (s) => {
     const { data, error } = await sb.from("suppliers").insert({
       name: s.name, contact: s.contact || null, specialisation: s.specialisation || null, notes: s.notes || null
@@ -327,5 +333,5 @@ window.SDB = (function () {
     return { error:null };
   }
 
-  return { on: ON, bootstrap, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
+  return { on: ON, bootstrap, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
 })();

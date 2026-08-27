@@ -61,6 +61,7 @@
   .btn{padding:10px 16px;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:inherit}
   .btn-primary{background:var(--gold);color:#000}.btn-primary:hover{filter:brightness(1.08)}
   .btn-ghost{background:transparent;border-color:var(--line);color:var(--text)}.btn-ghost:hover{border-color:var(--gold)}
+  .btn-danger{color:var(--bad)}.btn-danger:hover{border-color:var(--bad);background:var(--bad-bg)}
   .btn-sm{padding:6px 11px;font-size:12.5px;border-radius:7px}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
   .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
@@ -476,9 +477,26 @@ VIEWS.requests=()=>{
   return `<button class="btn btn-primary" style="margin-bottom:16px" onclick="openQuoteBuilder()">＋ New quote</button>
   <div class="card">${(DATA.requests||[]).map(r=>`<div class="list-row" onclick="openReq('${r.id}')">
     <div class="grow"><div class="t">${r.name}${r.company?' · '+r.company:''}</div><div class="sub">${r.start?fmtDate(r.start)+'–'+fmtDate(r.end)+' · ':''}${r.desc||''}</div></div>
-    <span class="badge ${st(r.status)}">${r.status}</span></div>`).join("")||`<div class="empty">No requests yet. Start one with ＋ New quote.</div>`}</div>`;
+    <span class="badge ${st(r.status)}">${r.status}</span>
+    ${ROLE==='admin'?`<button class="btn btn-ghost btn-sm btn-danger" style="margin-left:12px" title="Delete quote" onclick="event.stopPropagation();deleteRequest('${r.id}')">🗑</button>`:''}</div>`).join("")||`<div class="empty">No requests yet. Start one with ＋ New quote.</div>`}</div>`;
 };
 function openReq(id){ const r=(DATA.requests||[]).find(x=>x.id===id); openQuoteBuilder(r); }
+function deleteRequest(id){
+  if(ROLE!=='admin')return toast("Only admins can delete");
+  const r=(DATA.requests||[]).find(x=>x.id===id);if(!r)return;
+  if(!confirm(`Delete quote for "${r.name}"?\nIt will be hidden from the list (soft delete — recoverable in the database).`))return;
+  SDB.softDeleteRequest(r._uuid);
+  DATA.requests=(DATA.requests||[]).filter(x=>x.id!==id);
+  go('requests');toast("Quote deleted");
+}
+function deleteBooking(code){
+  if(ROLE!=='admin')return toast("Only admins can delete");
+  const b=DATA.bookings.find(x=>x.code===code);if(!b)return;
+  if(!confirm(`Delete booking ${code} (${b.project})?\nIt will be hidden from all lists (soft delete — recoverable in the database).`))return;
+  SDB.softDeleteBooking(code);
+  DATA.bookings=DATA.bookings.filter(x=>x.code!==code);
+  go('bookings');toast("Booking deleted");
+}
 /* ---- full-screen quote builder (own inventory ⇄ supplier hire-in) ---- */
 let QCTX={requestUuid:null,id:null,name:'',company:'',phone:'',start:'',end:''};
 let QSRC={mode:'own',supplierId:null,q:'',cat:'all'};
@@ -811,7 +829,8 @@ function bookingDetail(code){
     ${!ret&&isOut&&l.code&&l.code.indexOf('(')<0?`<button class="btn btn-ghost btn-sm" onclick="returnEarly('${code}','${type}','${l.code}')">Return early</button>`:''}</div>`;};
   return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('bookings')">← All bookings</div>
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><h1 class="disp" style="font-size:26px">${b.project}</h1>${badge(b.status)}
-    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openReceipt('${code}')">🧾 Receipt</button></div>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openReceipt('${code}')">🧾 Receipt</button>
+    ${ROLE==='admin'?`<button class="btn btn-ghost btn-sm btn-danger" onclick="deleteBooking('${code}')">🗑 Delete</button>`:''}</div>
   <div class="muted" style="margin-bottom:20px">${b.code} · ${b.production} · ${b.contact} · ${b.phone} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div>
   <div class="metrics" style="grid-template-columns:repeat(3,1fr)">
     <div class="metric"><div class="l">Total charges</div><div class="v">${money(t.charges)}</div></div>
