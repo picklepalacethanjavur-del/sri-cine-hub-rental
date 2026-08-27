@@ -812,9 +812,12 @@ VIEWS.bookings=()=>{
   const groups={Active:[],Out:[],Completed:[]};
   DATA.bookings.forEach(b=>groups[(STATUS[b.status]||{g:'Active'}).g].push(b));
   const sec=(name,arr)=>`<div class="sec-title">${name} <span class="pill">${arr.length}</span></div>
-    <div class="card">${arr.length?arr.map(b=>{const t=bookingTotals(b);return `<div class="list-row" onclick="openBooking('${b.code}')">
-      <div class="grow"><div class="t">${b.project} <span class="muted" style="font-weight:400">· ${b.code}</span></div>
-        <div class="sub">${b.production} · ${fmtDate(b.start)}–${fmtDate(b.end)} · ${b.cameras.length+b.accessories.length} items · ${money(t.charges)} · ${t.outstanding>0?`<span class="gold">${money(t.outstanding)} due</span>`:'paid up'}</div></div>
+    <div class="card">${arr.length?arr.map(b=>{const t=bookingTotals(b);
+      const who=b.contact||b.project||'Booking';
+      const sub=[b.production&&b.production!==who?b.production:'',b.project&&b.project!==who&&b.project!=='Walk-in booking'?b.project:''].filter(Boolean).join(' · ');
+      return `<div class="list-row" onclick="openBooking('${b.code}')">
+      <div class="grow"><div class="t">${who} <span class="muted" style="font-weight:400">· ${b.code}</span></div>
+        <div class="sub">${sub?sub+' · ':''}${fmtDate(b.start)}–${fmtDate(b.end)} · ${b.cameras.length+b.accessories.length} items · ${money(t.charges)} · ${t.outstanding>0?`<span class="gold">${money(t.outstanding)} due</span>`:'paid up'}</div></div>
       ${badge(b.status)}</div>`;}).join(""):`<div class="empty">None.</div>`}</div>`;
   return sec("Active",groups.Active)+sec("Out",groups.Out)+sec("Completed",groups.Completed);
 };
@@ -836,10 +839,10 @@ function bookingDetail(code){
       <div class="sub">${fmtDate(l.start||b.start)}–${fmtDate(l.returnedAt||l.end||b.end)} · ${money(l.rate)}/day × ${days}${qty>1?' × '+qty:''} = <span class="amt">${money(l.rate*days*qty)}</span></div>${meter}</div>
     ${!ret&&isOut&&l.code&&l.code.indexOf('(')<0?`<button class="btn btn-ghost btn-sm" onclick="returnEarly('${code}','${type}','${l.code}')">Return early</button>`:''}</div>`;};
   return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('bookings')">← All bookings</div>
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><h1 class="disp" style="font-size:26px">${b.project}</h1>${badge(b.status)}
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><h1 class="disp" style="font-size:26px">${b.contact||b.project}</h1>${badge(b.status)}
     <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openReceipt('${code}')">🧾 Receipt</button>
     ${ROLE==='admin'?`<button class="btn btn-ghost btn-sm btn-danger" onclick="deleteBooking('${code}')">🗑 Delete</button>`:''}</div>
-  <div class="muted" style="margin-bottom:20px">${b.code} · ${b.production} · ${b.contact} · ${b.phone} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div>
+  <div class="muted" style="margin-bottom:20px">${b.code}${b.production&&b.production!==b.contact?' · '+b.production:''}${b.project&&b.project!==b.contact&&b.project!=='Walk-in booking'?' · '+b.project:''}${b.phone?' · '+b.phone:''} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div>
   <div class="metrics" style="grid-template-columns:repeat(3,1fr)">
     <div class="metric"><div class="l">Total charges</div><div class="v">${money(t.charges)}</div></div>
     <div class="metric"><div class="l">Paid</div><div class="v">${money(t.paid)}</div></div>
