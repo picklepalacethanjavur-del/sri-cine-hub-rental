@@ -166,8 +166,13 @@
   .rc-table{width:100%;border-collapse:collapse;margin:8px 0 4px}
   .rc-table th{background:#f4efe2;color:#7a5f1a;font-size:11px;letter-spacing:.04em;text-transform:uppercase;padding:10px 12px;text-align:left}
   .rc-table th.r,.rc-table td.r{text-align:right}
-  .rc-table td{padding:11px 12px;border-bottom:1px solid #eee;font-size:13px;color:#222}
+  .rc-table td{padding:11px 12px;border-bottom:1px solid #eee;font-size:13px;color:#222;vertical-align:top;word-break:break-word}
+  .rc-table tbody tr:nth-child(even){background:#faf8f2}
   .rc-table td .c{color:#999;font-size:11px}
+  .rc-sign{display:flex;justify-content:space-between;align-items:flex-end;margin-top:40px;gap:30px}
+  .rc-sign .box{min-width:210px;text-align:center}
+  .rc-sign .line{border-top:1.5px solid #1a1a1a;padding-top:6px;font-size:12px;color:#555}
+  .rc-sign .name{font-size:13px;color:#1a1a1a;font-weight:600;margin-bottom:2px}
   .rc-totals{width:300px;margin-left:auto;margin-top:14px}
   .rc-totals .row{display:flex;justify-content:space-between;padding:7px 0;font-size:14px;color:#333}
   .rc-totals .row.grand{border-top:2px solid #1a1a1a;margin-top:6px;padding-top:12px;font-weight:700;font-size:17px;color:#1a1a1a}
@@ -178,12 +183,19 @@
   .rc-foot{margin-top:30px;padding-top:18px;border-top:1px solid #eee;color:#888;font-size:12px;text-align:center;line-height:1.6}
   .rc-stamp{display:inline-block;border:2px solid #1f8a5b;color:#1f8a5b;font-weight:800;letter-spacing:.1em;padding:6px 16px;border-radius:8px;transform:rotate(-6deg);font-size:15px}
   @media print{
-    .sidebar,.topbar,.rc-actions,.toast,.kitbar,.ov{display:none!important}
-    .app,.main,.content{display:block!important;margin:0!important;padding:0!important;max-width:none!important}
-    body{background:#fff!important}
-    .receipt{box-shadow:none;border-radius:0;margin:0;max-width:none;padding:0}
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+    html,body{height:auto!important;overflow:visible!important;background:#fff!important;margin:0!important}
+    .sidebar,.topbar,.rc-actions,.toast,.kitbar,.ov,.no-print,#loginOverlay{display:none!important}
+    .app,.main,.content{display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:0!important;max-width:none!important;width:auto!important;flex:none!important}
+    .card{overflow:visible!important}
+    .receipt{box-shadow:none!important;border-radius:0;margin:0;max-width:none;padding:0;color:#1a1a1a!important}
+    /* keep rows whole and repeat the header on every printed page */
+    .rc-table{page-break-inside:auto}
+    .rc-table thead{display:table-header-group}
+    .rc-table tr{page-break-inside:avoid}
+    .rc-head,.rc-parties,.rc-totals,.rc-pay,.rc-foot,.rc-sign,.rc-stamp{page-break-inside:avoid}
   }
-  @page{margin:16mm}
+  @page{margin:14mm}
   @media(max-width:760px){.sidebar{display:none}}
   /* investor portal */
   .eyebrow-inv{color:var(--gold);letter-spacing:.2em;font-size:12px;text-transform:uppercase;font-weight:700;margin-bottom:8px}
@@ -252,6 +264,50 @@ async function sendQuoteWA(){
   msg+=`\n\nShall we confirm?`;
   const code='QT-'+Date.now().toString().slice(-8); SDB.saveQuotation(u,code,QB,'sent',QB_SOURCE,qbOptsPayload());
   const rr=(DATA.requests||[]).find(x=>x._uuid===u); if(rr)rr.status='quoted'; SDB.setRequestStatus(u,'quoted'); waSend(QCTX.phone,msg);}
+/* Printable customer quotation — same letterhead as the invoice/RFQ. */
+function printQuote(){
+  if(!QCTX.name) return toast("Enter a customer name first");
+  if(!QB.some(l=>l.type==='item'&&l.include&&l.name)) return toast("Add at least one item to quote");
+  CUR='requests'; buildNav(); $("#pageTitle").textContent='Quotation';
+  $("#content").innerHTML=quoteLetter(); window.scrollTo(0,0);
+}
+function quoteLetter(){
+  const esc=s=>String(s==null?'':s).replace(/</g,'&lt;');
+  const items=QB.filter(l=>l.type==='item'&&l.include&&l.name);
+  const bdOf=l=>isEquip(l.kind)?billedDays(l.days):l.days;
+  const rows=items.map((l,i)=>{const qty=l.qty||1,d=bdOf(l),amt=l.rate*d*qty;
+    return `<tr><td class="c">${i+1}</td><td><b>${esc(l.name)}</b>${l.spec?`<div class="c">${esc(l.spec)}</div>`:''}</td><td class="r">${money(l.rate)}</td><td class="r">${d}</td><td class="r">${qty}</td><td class="r">${money(amt)}</td></tr>`;}).join('');
+  const subtotal=items.reduce((a,l)=>a+l.rate*bdOf(l)*(l.qty||1),0);
+  const discount=qbDiscount(subtotal); const total=Math.max(0,subtotal-discount);
+  const days=(QCTX.start&&QCTX.end)?daysBetween(QCTX.start,QCTX.end):0;
+  const period=(QCTX.start&&QCTX.end)?`${fmtDate(QCTX.start)} – ${fmtDate(QCTX.end)}${days?'<br>'+days+' days':''}`:'To be confirmed';
+  return `<div class="rc-actions no-print">
+    <button class="btn btn-ghost" onclick="renderQuoteBuilder()">← Back to quote</button>
+    <button class="btn btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button>
+  </div>
+  <div class="receipt" id="receipt">
+    <div class="rc-head">
+      <div class="rc-brand"><img src="logo.png" alt="SRC"><div><b>${STUDIO.name}</b><span>${STUDIO.tagline}<br>${STUDIO.addr}<br>${STUDIO.phone} · ${STUDIO.web}</span></div></div>
+      <div class="rc-meta"><h2>QUOTATION</h2><div>Date: ${fmtDate(TODAY)}</div>${QCTX.id?`<div>Ref: ${esc(QCTX.id)}</div>`:''}</div>
+    </div>
+    <div class="rc-parties">
+      <div><label>Prepared for</label><div class="v"><b>${esc(QCTX.name)}</b>${QCTX.company?'<br>'+esc(QCTX.company):''}${QCTX.phone?'<br>'+esc(QCTX.phone):''}</div></div>
+      <div style="text-align:right"><label>Rental period</label><div class="v">${period}</div></div>
+    </div>
+    <p style="font-size:13.5px;color:#333;margin:6px 0 10px">Thank you for your enquiry. We're pleased to quote the following for your production:</p>
+    <table class="rc-table"><thead><tr><th>#</th><th>Equipment</th><th class="r">Rate/day</th><th class="r">Days</th><th class="r">Qty</th><th class="r">Amount</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="rc-totals">
+      ${discount>0?`<div class="row"><span>Subtotal</span><span>${money(subtotal)}</span></div><div class="row due"><span>Discount</span><span>− ${money(discount)}</span></div>`:''}
+      <div class="row grand"><span>Estimated total</span><span>${money(total)}</span></div>
+    </div>
+    <div style="clear:both"></div>
+    <div class="rc-foot" style="text-align:left;margin-top:22px">Valid for 7 days from the date of issue · Availability is subject to confirmation at the time of booking · Rates are exclusive of applicable taxes.</div>
+    <div class="rc-sign">
+      <div class="box"><div class="line">Customer acceptance</div></div>
+      <div class="box"><div class="name">For ${STUDIO.name}</div><div class="line">${STUDIO.sign}</div></div>
+    </div>
+  </div>`;
+}
 function sendReceiptWA(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const bal=Math.max(0,t.outstanding);
   const msg=`Hi ${b.contact}, here is your invoice INV-${b.code.slice(3)} from Sri Cine Hub for "${b.project}" (${fmtDate(b.start)}–${fmtDate(b.end)}).\n\nTotal: ${money(t.charges)}\nPaid: ${money(t.paid)}\n${bal>0?"Balance due: "+money(bal):"Status: PAID IN FULL ✅"}\n\nThank you for renting with us!`;
   waSend(b.phone,msg);}
@@ -548,10 +604,12 @@ function renderQuoteBuilder(){
         <div id="qb-summary"></div>
         <div style="display:flex;gap:8px;margin-top:14px">
           ${QCTX.requestUuid ? `
+            <button class="btn btn-ghost" style="flex:1" onclick="printQuote()">🖨 Print</button>
             <button class="btn btn-ghost" style="flex:1" onclick="sendQuoteWA()">💬 Send</button>
             <button class="btn btn-ghost" style="flex:1" onclick="qbSave()">Save changes</button>
             <button class="btn btn-primary" style="flex:1.4" onclick="convertReq()">Create booking →</button>
           ` : `
+            <button class="btn btn-ghost" style="flex:1" onclick="printQuote()">🖨 Print</button>
             <button class="btn btn-ghost" style="flex:1" onclick="sendQuoteWA()">💬 Send</button>
             <button class="btn btn-primary" style="flex:2" onclick="qbSave()">Create quote</button>
           `}
@@ -1398,7 +1456,11 @@ function receiptView(code){
     <div style="clear:both"></div>
     <div class="rc-pay"><h4>Payments received</h4>${pays}</div>
     ${t.outstanding<=0?'<div style="text-align:center;margin-top:24px"><span class="rc-stamp">PAID IN FULL</span></div>':''}
-    <div class="rc-foot">Invoice generated live from current booking data · Thank you for renting with Sri Cine Hub.<br>Equipment remains the property of Sri Cine Hub. Damage or loss chargeable as per rental terms.</div>
+    <div class="rc-sign">
+      <div class="box"><div class="line">Customer signature</div></div>
+      <div class="box"><div class="name">For ${STUDIO.name}</div><div class="line">Authorised signatory · ${STUDIO.sign}</div></div>
+    </div>
+    <div class="rc-foot">Thank you for renting with Sri Cine Hub.<br>Equipment remains the property of Sri Cine Hub. Damage or loss is chargeable as per rental terms.</div>
   </div>`;
 }
 
