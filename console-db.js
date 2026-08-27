@@ -355,5 +355,17 @@ window.SDB = (function () {
     return { error:null };
   }
 
-  return { on: ON, bootstrap, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
+  // Diagnostic: run `await SDB.debug()` in the browser console to see exactly what this session sees.
+  async function debug(){
+    const out = { on: ON, schema: cfg.schema, url: cfg.url };
+    try { const u = await currentUser(); out.signedInAs = u ? u.email : null; } catch(e){ out.userErr = String(e); }
+    out.inMemory = { cameras: (window.DATA&&window.DATA.cameras||[]).length, accessories: (window.DATA&&window.DATA.accessories||[]).length };
+    if (ON) {
+      const q = await sb.from("equipment_units").select("code");
+      out.liveEquipmentQuery = { rows: q.data ? q.data.length : 0, error: q.error ? (q.error.message + " [" + (q.error.code||"") + "]") : null };
+      try { const st = await sb.rpc("is_staff"); out.is_staff = st.error ? ("ERR " + st.error.message) : st.data; } catch(e){ out.is_staff = "THREW " + String(e); }
+    }
+    console.log("SDB.debug →", out); return out;
+  }
+  return { on: ON, bootstrap, debug, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
 })();
