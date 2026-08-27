@@ -253,7 +253,7 @@ async function sendQuoteWA(){
   const code='QT-'+Date.now().toString().slice(-8); SDB.saveQuotation(u,code,QB,'sent',QB_SOURCE,qbOptsPayload());
   const rr=(DATA.requests||[]).find(x=>x._uuid===u); if(rr)rr.status='quoted'; SDB.setRequestStatus(u,'quoted'); waSend(QCTX.phone,msg);}
 function sendReceiptWA(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const bal=Math.max(0,t.outstanding);
-  const msg=`Hi ${b.contact}, here is your receipt RC-${b.code.slice(3)} from Sri Cine Hub for "${b.project}" (${fmtDate(b.start)}–${fmtDate(b.end)}).\n\nTotal: ${money(t.charges)}\nPaid: ${money(t.paid)}\n${bal>0?"Balance due: "+money(bal):"Status: PAID IN FULL ✅"}\n\nThank you for renting with us!`;
+  const msg=`Hi ${b.contact}, here is your invoice INV-${b.code.slice(3)} from Sri Cine Hub for "${b.project}" (${fmtDate(b.start)}–${fmtDate(b.end)}).\n\nTotal: ${money(t.charges)}\nPaid: ${money(t.paid)}\n${bal>0?"Balance due: "+money(bal):"Status: PAID IN FULL ✅"}\n\nThank you for renting with us!`;
   waSend(b.phone,msg);}
 function sendReminderWA(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const bal=Math.max(0,t.outstanding);
   const msg=`Hi ${b.contact}, a gentle reminder from Sri Cine Hub regarding "${b.project}".\n\nOutstanding balance: ${money(bal)} (of ${money(t.charges)} total).\nKindly clear it at your convenience. Thank you!`;
@@ -292,7 +292,7 @@ const NAV=[
   {v:"suppliers",i:"🏢",t:"Suppliers"},
   {v:"customers",i:"👤",t:"Customers"},
   {grp:"Finance"},
-  {v:"receipts",i:"🧾",t:"Receipts"},
+  {v:"receipts",i:"🧾",t:"Invoices"},
   {v:"investor",i:"📈",t:"Investor Portal"},
   {grp:"Admin"},
   {v:"users",i:"👥",t:"Users"}
@@ -461,8 +461,8 @@ async function checkoutQR(){
   const prod=$("#qr-prod").value, phone=$("#qr-phone").value;
   const b={code,customer:"CUS-new",production:prod||name,project:prod||"Walk-in booking",
     contact:name,phone,status:"confirmed",start:QR.start,end:QR.end,pickup:"Studio floor",operator:"",
-    cameras:QR.cart.filter(c=>c.type==="camera").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1})),
-    accessories:QR.cart.filter(c=>c.type==="accessory").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1})),
+    cameras:QR.cart.filter(c=>c.type==="camera").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1,lineKind:'own'})),
+    accessories:QR.cart.filter(c=>c.type==="accessory").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1,lineKind:'own'})),
     payments:[]};
   // Persist FIRST when online — only claim success if it actually saved.
   if(SDB.on){
@@ -826,6 +826,7 @@ function bookingDetail(code){
   const b=DATA.bookings.find(x=>x.code===code);if(!b)return VIEWS.bookings();
   const t=bookingTotals(b);
   const isOut=["checked_out","overdue"].includes(b.status);
+  const isReady=["reserved","confirmed","preparing"].includes(b.status);
   const line=(l,type)=>{const days=lineDays(b,l);const ret=!!l.returnedAt;
     let meter="";
     if(type==="cameras"&&(l.checkoutHours!=null||l.returnHours!=null)){
@@ -840,7 +841,8 @@ function bookingDetail(code){
     ${!ret&&isOut&&l.code&&l.code.indexOf('(')<0?`<button class="btn btn-ghost btn-sm" onclick="returnEarly('${code}','${type}','${l.code}')">Return early</button>`:''}</div>`;};
   return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('bookings')">← All bookings</div>
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><h1 class="disp" style="font-size:26px">${b.contact||b.project}</h1>${badge(b.status)}
-    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openReceipt('${code}')">🧾 Receipt</button>
+    ${isReady?`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go('checkout','${code}')">Check out →</button>`:isOut?`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go('checkout','${code}')">Return →</button>`:''}
+    <button class="btn btn-ghost btn-sm" ${isReady||isOut?'':'style="margin-left:auto"'} onclick="openReceipt('${code}')">🧾 Invoice</button>
     ${ROLE==='admin'?`<button class="btn btn-ghost btn-sm btn-danger" onclick="deleteBooking('${code}')">🗑 Delete</button>`:''}</div>
   <div class="muted" style="margin-bottom:20px">${b.code}${b.production&&b.production!==b.contact?' · '+b.production:''}${b.project&&b.project!==b.contact&&b.project!=='Walk-in booking'?' · '+b.project:''}${b.phone?' · '+b.phone:''} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div>
   <div class="metrics" style="grid-template-columns:repeat(3,1fr)">
@@ -905,9 +907,9 @@ VIEWS.checkout=param=>{
   if(param){const b=DATA.bookings.find(x=>x.code===param);if(b)return checkoutPanel(b);}
   return `<div class="cols">
     <div class="card"><div class="card-h"><h3>Ready to check out</h3></div>
-      ${readies.length?readies.map(b=>`<div class="list-row" onclick="go('checkout','${b.code}')"><div class="grow"><div class="t">${b.project}</div><div class="sub">${b.production} · ${fmtDate(b.start)}</div></div>${badge(b.status)}</div>`).join(""):`<div class="empty">Nothing waiting.</div>`}</div>
+      ${readies.length?readies.map(b=>`<div class="list-row" onclick="go('checkout','${b.code}')"><div class="grow"><div class="t">${b.contact||b.project}</div><div class="sub">${b.production&&b.production!==b.contact?b.production+' · ':''}out ${fmtDate(b.start)} · ${b.cameras.length+b.accessories.length} items</div></div>${badge(b.status)}</div>`).join(""):`<div class="empty">Nothing waiting.</div>`}</div>
     <div class="card"><div class="card-h"><h3>Out — awaiting return</h3></div>
-      ${outs.map(b=>`<div class="list-row" onclick="go('checkout','${b.code}')"><div class="grow"><div class="t">${b.project}</div><div class="sub">${b.production} · due ${fmtDate(b.end)}</div></div>${badge(b.status)}</div>`).join("")}</div>
+      ${outs.length?outs.map(b=>`<div class="list-row" onclick="go('checkout','${b.code}')"><div class="grow"><div class="t">${b.contact||b.project}</div><div class="sub">${b.production&&b.production!==b.contact?b.production+' · ':''}due ${fmtDate(b.end)}</div></div>${badge(b.status)}</div>`).join(""):`<div class="empty">Nothing out right now.</div>`}</div>
   </div>`;
 };
 function candidateUnits(line,cam){
@@ -931,9 +933,9 @@ function checkoutPanel(b){
         ? `<td><select id="asn-${type}-${idx}" style="${inpS};max-width:190px"><option value="">— pick unit —</option>${cands.map(u=>`<option value="${u.code}">${u.code} · ${u.name}${cam?' ('+u.meterHours+'h)':''}</option>`).join('')}</select></td>`
         : `<td class="muted" style="color:var(--bad)">none available →<br><span style="font-size:11px">hire-in?</span></td>`;
     } else { unitCell=`<td><b>${l.code}</b></td>`; }
-    // Meter cell (cameras only)
+    // Meter cell (cameras only — any owned camera, incl. Quick Rent lines with no explicit kind)
     let hoursCell='<td class="muted">—</td>';
-    if(cam && l.lineKind==='own'){
+    if(cam && l.lineKind!=='hirein' && l.lineKind!=='custom'){
       if(isOut){ const outH=(l.checkoutHours!=null)?l.checkoutHours:(unit?unit.meterHours:0);
         hoursCell=`<td><span class="muted" style="font-size:11px">out at ${outH}h</span><br><input id="mh-${type}-${idx}" type="number" placeholder="return reading" value="${(l.returnHours!=null)?l.returnHours:outH}" style="width:120px;margin-top:4px;${inpS}"></td>`;
       } else { const outH=unit?unit.meterHours:'';
@@ -944,28 +946,65 @@ function checkoutPanel(b){
     return `<tr><td><b>${l.name}</b>${l.qty>1?` <span class="muted">×${l.qty}</span>`:''}</td>${unitCell}${hoursCell}${cond}</tr>`;
   };
   const rows=b.cameras.map((l,i)=>rowFor(l,'cam',i,true)).join("")+b.accessories.map((l,i)=>rowFor(l,'acc',i,false)).join("");
+  const t=bookingTotals(b);
+  const who=b.contact||b.project;
+  const meta=[b.code,b.production&&b.production!==who?b.production:'',b.phone].filter(Boolean).join(' · ');
+  const nextStatus=isOut?'returned':'checked_out';
+  const money0=v=>money(v||0);
   return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('checkout')">← All ops</div>
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px"><h1 class="disp" style="font-size:24px">${mode} · ${b.project}</h1>${badge(b.status)}</div>
+  <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:6px">
+    <div><h1 class="disp" style="font-size:24px">${mode} · ${who}</h1>
+      <div class="muted" style="font-size:13px;margin-top:2px">${meta} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div></div>
+    ${badge(b.status)}
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openReceipt('${b.code}')">🧾 Invoice</button>
+  </div>
+  <div class="sec-title" style="margin-top:18px">1 · ${isOut?'Check the gear back in':'Hand over the gear'}</div>
   <div class="card"><table><thead><tr><th>Item</th><th>Unit</th><th>Meter hours ${isOut?'(in)':'(out)'}</th><th>Condition ${isOut?'in':'out'}</th></tr></thead><tbody>${rows}</tbody></table></div>
-  <p class="muted" style="font-size:12.5px;margin-top:10px">${isOut?"Return reading updates each camera's lifetime meter hours.":"Assign the actual serial unit for each line, then log the checkout meter reading."}</p>
-  <div style="display:flex;gap:10px;margin-top:14px">
+  <p class="muted" style="font-size:12.5px;margin-top:8px">${isOut?"Return reading updates each camera's lifetime meter hours.":"Assign the actual serial unit for each line, then log the checkout meter reading."}</p>
+
+  <div class="sec-title" style="margin-top:22px">2 · Money</div>
+  <div class="cols">
+    <div class="card"><div class="card-h"><h3>Charges</h3></div>
+      <div style="padding:14px 16px">
+        <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">Rental total</span><span class="amt">${money0(t.charges)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">Already paid</span><span class="amt">${money0(t.paid)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid var(--line);margin-top:6px;font-weight:600"><span>Balance ${isOut?'due':'so far'}</span><span class="${t.outstanding>0?'gold':''}">${money0(t.outstanding)}</span></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Collect payment <span class="muted" style="font-weight:400;font-size:12px">· optional</span></h3></div>
+      <div style="padding:14px 16px">
+        <div class="r2"><div class="field"><label>Amount ₹</label><input type="number" id="co-amt" placeholder="0"></div>
+          <div class="field"><label>Method</label><select id="co-method"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Cheque</option></select></div></div>
+        <div class="field"><label>Reference / UTR</label><input id="co-ref" placeholder="optional"></div>
+        <div class="muted" style="font-size:11.5px">Leave amount blank to skip — it's recorded when you confirm ${mode.toLowerCase()}.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
     <button class="btn btn-ghost" onclick="openBooking('${b.code}')">Open booking detail</button>
-    <button class="btn btn-primary" onclick="confirmOps('${b.code}','${isOut?'returned':'checked_out'}')">Confirm ${mode.toLowerCase()} →</button>
+    <button class="btn btn-ghost" onclick="confirmOps('${b.code}','${nextStatus}',false)">Confirm ${mode.toLowerCase()}</button>
+    <button class="btn btn-primary" onclick="confirmOps('${b.code}','${nextStatus}',true)">Confirm ${mode.toLowerCase()} &amp; print invoice →</button>
   </div>`;
 }
-function confirmOps(code,newStatus){
+function confirmOps(code,newStatus,print){
   const b=DATA.bookings.find(x=>x.code===code);
   const handle=(list,type,cam)=>list.forEach((l,idx)=>{
-    if(l.lineKind==='own' && (l.unassigned||(l.code&&l.code.indexOf('(')===0))){
+    if(l.lineKind!=='hirein'&&l.lineKind!=='custom' && (l.unassigned||(l.code&&l.code.indexOf('(')===0))){
       const sel=$("#asn-"+type+"-"+idx);
       if(sel&&sel.value){ const uc=sel.value; l.code=uc; l.unassigned=false; const unit=(cam?DATA.cameras:DATA.accessories).find(u=>u.code===uc); if(unit)unit.status='booked'; SDB.assignUnit(l._lineId,uc); }
     }
     const mh=$("#mh-"+type+"-"+idx), cond=$("#cond-"+type+"-"+idx);
-    if(cam&&mh){ const v=+mh.value||0; if(newStatus==="checked_out")l.checkoutHours=v; else {l.returnHours=v; const unit=DATA.cameras.find(u=>u.code===l.code); if(unit)unit.meterHours=v;} }
+    if(cam&&mh&&mh.value!==""){ const v=+mh.value||0; if(newStatus==="checked_out")l.checkoutHours=v; else {l.returnHours=v; const unit=DATA.cameras.find(u=>u.code===l.code); if(unit)unit.meterHours=v;} }
     if(cond){ if(newStatus==="checked_out")l.conditionOut=cond.value; else l.conditionIn=cond.value; }
   });
   handle(b.cameras,'cam',true); handle(b.accessories,'acc',false);
-  b.status=newStatus;SDB.confirmOps(b,newStatus);toast("Marked "+newStatus.replace("_"," "));go(newStatus==="returned"?"receipts":"checkout");
+  // Optional payment captured on the ops screen.
+  const amtEl=$("#co-amt"); const amt=amtEl?+(amtEl.value||0):0;
+  if(amt>0){ const pay={amount:amt,type:newStatus==="returned"?'final':'advance',method:($("#co-method")||{}).value||'Cash',date:TODAY,ref:($("#co-ref")||{}).value||''}; b.payments.push(pay); SDB.addPayment(code,pay); }
+  b.status=newStatus;SDB.confirmOps(b,newStatus);
+  toast((amt>0?money(amt)+" recorded · ":"")+"Marked "+newStatus.replace("_"," "));
+  if(print) openReceipt(code); else go(newStatus==="returned"?"receipts":"checkout");
 }
 
 /* ---- Calendar — booking timeline (Gantt) ---- */
@@ -1323,28 +1362,28 @@ function rfqLetter(id){
 }
 VIEWS.receipts=()=>{
   const done=DATA.bookings.filter(b=>["returned","checked_out","overdue"].includes(b.status));
-  return `<p class="muted" style="margin-bottom:14px">Receipts for every booking that has gone out. Open one to print or save it as a PDF. Balance carries over until fully paid.</p>
-  <div class="card"><div class="card-h"><h3>Receipts</h3></div>
-  ${done.map(b=>{const t=bookingTotals(b);return `<div class="list-row" onclick="openReceipt('${b.code}')">
-    <div class="grow"><div class="t">RC-${b.code.slice(3)} · ${b.project}</div><div class="sub">${b.production} · ${money(t.charges)} charged · ${money(t.paid)} paid</div></div>
-    <span class="badge ${t.outstanding<=0?'b-ok':'b-warn'}">${t.outstanding<=0?'settled':money(t.outstanding)+' due'}</span></div>`;}).join("")||`<div class="empty">Receipts appear here once bookings go out.</div>`}</div>`;
+  return `<p class="muted" style="margin-bottom:14px">Invoices for every booking that has gone out. Open one to print or save it as a PDF. Balance carries over until fully paid.</p>
+  <div class="card"><div class="card-h"><h3>Invoices</h3></div>
+  ${done.map(b=>{const t=bookingTotals(b);const who=b.contact||b.project;return `<div class="list-row" onclick="openReceipt('${b.code}')">
+    <div class="grow"><div class="t">${who} <span class="muted" style="font-weight:400">· INV-${b.code.slice(3)}</span></div><div class="sub">${b.production&&b.production!==who?b.production+' · ':''}${money(t.charges)} charged · ${money(t.paid)} paid</div></div>
+    <span class="badge ${t.outstanding<=0?'b-ok':'b-warn'}">${t.outstanding<=0?'settled':money(t.outstanding)+' due'}</span></div>`;}).join("")||`<div class="empty">Invoices appear here once bookings go out.</div>`}</div>`;
 };
-function openReceipt(code){CUR="receipts";buildNav();$("#pageTitle").textContent="Receipt";$("#content").innerHTML=receiptView(code);window.scrollTo(0,0);}
+function openReceipt(code){CUR="receipts";buildNav();$("#pageTitle").textContent="Invoice";$("#content").innerHTML=receiptView(code);window.scrollTo(0,0);}
 function receiptView(code){
   const b=DATA.bookings.find(x=>x.code===code);if(!b)return VIEWS.receipts();
-  const t=bookingTotals(b);const rc="RC-"+b.code.slice(3);
+  const t=bookingTotals(b);const rc="INV-"+b.code.slice(3);
   const items=[...b.cameras,...b.accessories].map(l=>{const days=lineDays(b,l);const s=l.start||b.start,e=l.returnedAt||l.end||b.end;
     const qty=l.qty||1;return `<tr><td><b>${l.name}</b></td><td class="c">${l.code}</td><td>${fmtDate(s)}–${fmtDate(e)}</td><td class="r">${money(l.rate)}</td><td class="r">${days}</td><td class="r">${qty}</td><td class="r">${money(l.rate*days*qty)}</td></tr>`;}).join("");
   const pays=b.payments.length?b.payments.map(p=>`<div class="p"><span>${fmtDate(p.date)} · ${p.type} · ${p.method}${p.ref?' · '+p.ref:''}</span><span>${money(p.amount)}</span></div>`).join(""):'<div class="p"><span>No payments recorded yet</span><span>₹0</span></div>';
   return `<div class="rc-actions no-print">
-    <button class="btn btn-ghost" onclick="go('receipts')">← Receipts</button>
+    <button class="btn btn-ghost" onclick="go('receipts')">← Invoices</button>
     <button class="btn btn-ghost" onclick="sendReceiptWA('${code}')">💬 Send on WhatsApp</button>
     <button class="btn btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button>
   </div>
   <div class="receipt" id="receipt">
     <div class="rc-head">
       <div class="rc-brand"><img src="logo.png" alt="SRC"><div><b>${STUDIO.name}</b><span>${STUDIO.tagline}<br>${STUDIO.addr}<br>${STUDIO.phone} · ${STUDIO.web}</span></div></div>
-      <div class="rc-meta"><h2>RECEIPT</h2><div>${rc}</div><div>Issued: ${fmtDate(TODAY)}</div><div>Booking: ${b.code}</div></div>
+      <div class="rc-meta"><h2>INVOICE</h2><div>${rc}</div><div>Issued: ${fmtDate(TODAY)}</div><div>Booking: ${b.code}</div></div>
     </div>
     <div class="rc-parties">
       <div><label>Billed to</label><div class="v"><b>${b.contact}</b><br>${b.production}<br>${b.phone}</div></div>
