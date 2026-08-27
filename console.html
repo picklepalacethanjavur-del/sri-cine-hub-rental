@@ -235,9 +235,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260827d"></script>
-<script src="console-data.js?v=20260827d"></script>
-<script src="console-db.js?v=20260827d"></script>
+<script src="supabase-config.js?v=20260827e"></script>
+<script src="console-data.js?v=20260827e"></script>
+<script src="console-db.js?v=20260827e"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -1138,10 +1138,10 @@ function renderInvTable(){
   const el=$("#invtable");if(!el)return;const q=INV.q.toLowerCase();
   if(INV.tab==="cameras"){
     let rows=DATA.cameras.filter(c=>(INV.status==="all"||c.status===INV.status)&&(!q||((c.name||'')+(c.code||'')+(c.serial||'')+(c.manufacturer||'')).toLowerCase().includes(q)));
-    el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Serial</th><th>Meter</th><th>Location</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
+    el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Serial</th><th>Meter</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
     ${rows.map(c=>`<tr><td>${c.code}${c.investors?' <span class="badge b-mut">investor</span>':''}</td><td><b>${c.name}</b>${c.manufacturer?`<div class="muted" style="font-size:11px">${c.manufacturer}</div>`:''}</td>
-      <td class="muted">${dash(c.serial)}</td><td>${c.meterHours||0}h</td><td>${dash(c.location)}</td><td class="amt">${money(c.dailyRate)}</td><td>${statusBadge(c.status)}</td>
-      <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${c.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="8" class="empty">No matches.</td></tr>`}</tbody></table>`;
+      <td class="muted">${dash(c.serial)}</td><td>${c.meterHours||0}h</td><td class="amt">${money(c.dailyRate)}</td><td>${statusBadge(c.status)}</td>
+      <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${c.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No matches.</td></tr>`}</tbody></table>`;
   }else{
     let rows=DATA.accessories.filter(a=>(INV.status==="all"||a.status===INV.status)&&(!q||((a.name||'')+(a.code||'')+(a.category||'')).toLowerCase().includes(q)));
     el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
@@ -1165,8 +1165,7 @@ function addUnitForm(){
     ${cam?`<div class="r2"><div class="field"><label>Manufacturer</label><input id="u-manu" placeholder="ARRI"></div><div class="field"><label>Model</label><input id="u-model" placeholder="Alexa Mini LF"></div></div>
       <div class="r2"><div class="field"><label>Serial no.</label><input id="u-serial"></div><div class="field"><label>Meter hours</label><input id="u-meter" type="number" value="0"></div></div>`
     :`<div class="field"><label>Category</label><select id="u-cat" onchange="document.getElementById('u-code').value=nextForCat(this.value)">${ACC_CATS.map(c=>`<option value="${c}">${c}</option>`).join("")}</select></div>`}
-    <div class="r2"><div class="field"><label>Location</label><input id="u-loc" placeholder="Rack / shelf"></div>
-      <div class="field"><label>Status</label><select id="u-status">${statusOpts("available")}</select></div></div>
+    <div class="field"><label>Status</label><select id="u-status">${statusOpts("available")}</select></div>
     <button class="btn btn-primary" style="width:100%" onclick="saveUnit()">Add to inventory</button>`);
 }
 async function saveUnit(){
@@ -1175,13 +1174,13 @@ async function saveUnit(){
   if(!code)return toast("Enter a code");
   if(!name)return toast("Enter a name");
   if([...DATA.cameras,...DATA.accessories].some(u=>u.code===code))return toast("Code "+code+" already exists");
-  const rate=+($("#u-rate").value||0), status=$("#u-status").value, loc=($("#u-loc").value||"").trim();
+  const rate=+($("#u-rate").value||0), status=$("#u-status").value;
   const u=cam
-    ?{kind:"camera",code,name,manufacturer:($("#u-manu").value||"").trim(),model:($("#u-model").value||"").trim(),serial:($("#u-serial").value||"").trim(),meterHours:+($("#u-meter").value||0),location:loc,status,dailyRate:rate}
-    :{kind:"accessory",code,name,category:$("#u-cat").value,location:loc,status,dailyRate:rate};
+    ?{kind:"camera",code,name,manufacturer:($("#u-manu").value||"").trim(),model:($("#u-model").value||"").trim(),serial:($("#u-serial").value||"").trim(),meterHours:+($("#u-meter").value||0),status,dailyRate:rate}
+    :{kind:"accessory",code,name,category:$("#u-cat").value,status,dailyRate:rate};
   const local=cam
-    ?{code,name,manufacturer:u.manufacturer,model:u.model,serial:u.serial,meterHours:u.meterHours,location:loc,status,dailyRate:rate}
-    :{code,name,category:u.category,location:loc,status,dailyRate:rate};
+    ?{code,name,manufacturer:u.manufacturer,model:u.model,serial:u.serial,meterHours:u.meterHours,status,dailyRate:rate}
+    :{code,name,category:u.category,status,dailyRate:rate};
   (cam?DATA.cameras:DATA.accessories).push(local);
   await SDB.addUnit(u);
   closeModal();go("inventory");toast(name+" added");
@@ -1194,15 +1193,14 @@ function editUnitForm(code){
     ${cam?`<div class="r2"><div class="field"><label>Manufacturer</label><input id="u-manu" value="${escAttr(u.manufacturer||"")}"></div><div class="field"><label>Model</label><input id="u-model" value="${escAttr(u.model||"")}"></div></div>
       <div class="r2"><div class="field"><label>Serial no.</label><input id="u-serial" value="${escAttr(u.serial||"")}"></div><div class="field"><label>Meter hours</label><input id="u-meter" type="number" value="${u.meterHours||0}"></div></div>`
     :`<div class="field"><label>Category</label><select id="u-cat">${ACC_CATS.map(c=>`<option value="${c}" ${u.category===c?"selected":""}>${c}</option>`).join("")}</select></div>`}
-    <div class="r2"><div class="field"><label>Location</label><input id="u-loc" value="${escAttr(u.location||"")}"></div>
-      <div class="field"><label>Rate per day (₹)</label><input id="u-rate" type="number" value="${u.dailyRate||0}"></div></div>
-    <div class="field"><label>Status</label><select id="u-status">${["available","booked","maintenance","retired"].map(s=>`<option value="${s}" ${u.status===s?"selected":""}>${s}</option>`).join("")}</select></div>
+    <div class="r2"><div class="field"><label>Rate per day (₹)</label><input id="u-rate" type="number" value="${u.dailyRate||0}"></div>
+      <div class="field"><label>Status</label><select id="u-status">${["available","booked","maintenance","retired"].map(s=>`<option value="${s}" ${u.status===s?"selected":""}>${s}</option>`).join("")}</select></div></div>
     <button class="btn btn-primary" style="width:100%" onclick="saveUnitEdit('${code}')">Save changes</button>`);
 }
 function saveUnitEdit(code){
   const cam=INV.tab==="cameras";
   const u=(cam?DATA.cameras:DATA.accessories).find(x=>x.code===code);if(!u)return;
-  const patch={name:($("#u-name").value||"").trim()||u.name,location:($("#u-loc").value||"").trim(),status:$("#u-status").value,dailyRate:+($("#u-rate").value||0)};
+  const patch={name:($("#u-name").value||"").trim()||u.name,status:$("#u-status").value,dailyRate:+($("#u-rate").value||0)};
   if(cam){patch.manufacturer=($("#u-manu").value||"").trim();patch.model=($("#u-model").value||"").trim();patch.serial=($("#u-serial").value||"").trim();patch.meterHours=+($("#u-meter").value||0);}
   else{patch.category=$("#u-cat").value;}
   Object.assign(u,patch);
