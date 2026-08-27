@@ -1,6 +1,7 @@
 // Seed data for the Sri Cine Hub internal console mockup.
 // Serialized units (internal truth) — distinct from the public "option cards".
-window.TODAY = "2026-08-25";
+// Real current date (local), so the console never freezes on a hard-coded day.
+window.TODAY = (function(){ const d=new Date(); const p=n=>String(n).padStart(2,"0"); return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate()); })();
 
 window.DATA = {
   cameras: [

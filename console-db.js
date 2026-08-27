@@ -157,7 +157,7 @@ window.SDB = (function () {
     if (be) throw be;
     ids.bookingByCode[b.code] = bk.id;
     const rows = [...b.cameras.map(c => ({ ...c, kind: "camera" })), ...b.accessories.map(a => ({ ...a, kind: "accessory" }))]
-      .map(l => ({ booking_id: bk.id, unit_id: ids.unitByCode[l.code], kind: l.kind, daily_rate_inr: l.rate }));
+      .map(l => ({ booking_id: bk.id, unit_id: ids.unitByCode[l.code], kind: l.kind, daily_rate_inr: l.rate, quantity: l.qty || 1 }));
     if (rows.length) { const { error } = await sb.from("booking_lines").insert(rows); if (error) throw error; }
   });
 
@@ -203,7 +203,7 @@ window.SDB = (function () {
   });
 
   const addSupplierItem = guard(async (sid, item, rate) => {
-    const { error } = await sb.from("supplier_catalog").insert({ supplier_id: sid, item, daily_rate_inr: rate }); if (error) throw error;
+    const { data, error } = await sb.from("supplier_catalog").insert({ supplier_id: sid, item, daily_rate_inr: rate }).select("id").single(); if (error) throw error; return data.id;
   });
   const editSupplierRate = guard(async (catId, item, rate) => {
     const { error } = await sb.from("supplier_catalog").update({ item, daily_rate_inr: rate }).eq("id", catId); if (error) throw error;

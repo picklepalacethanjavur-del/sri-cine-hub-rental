@@ -210,7 +210,7 @@
     <div class="topbar">
       <div><h1 id="pageTitle">Dashboard</h1></div>
       <div class="spacer"></div>
-      <div class="tsearch"><span class="ic">🔍</span><input placeholder="Search bookings, gear…"></div>
+      <div class="tsearch"><span class="ic">🔍</span><input id="globalSearch" placeholder="Search bookings, gear, people…" onkeydown="if(event.key==='Enter')gsearch(this.value)"></div>
       <button class="toggle" onclick="toggleTheme()"><span id="themeIcon">☀</span><span id="themeLabel">Light</span></button>
       <div class="who"><div class="avatar" id="avatar">M</div></div>
     </div>
@@ -310,7 +310,23 @@ function buildNav(){
   [...el.children].forEach((c,i)=>{if(c.className==="grp"){const nx=el.children[i+1];if(!nx||nx.className==="grp")c.style.display="none";}});
 }
 function setRole(r){ROLE=r;$("#avatar").textContent=r[0].toUpperCase();if(!canSee(CUR))CUR=(ALLOWED[r]==="*"?"dashboard":ALLOWED[r][0]);buildNav();go(CUR);}
-function go(v,param){CUR=v;buildNav();const V=VIEWS[v];$("#pageTitle").textContent=(NAV.find(n=>n.v===v)||{}).t||"";$("#content").innerHTML=V?V(param):"<div class='empty'>Coming soon.</div>";if(V&&V.after)V.after(param);window.scrollTo(0,0);}
+function go(v,param){if(ROLE&&!canSee(v)){v=(ALLOWED[ROLE]==="*"?"dashboard":(ALLOWED[ROLE][0]||"dashboard"));param=undefined;}CUR=v;buildNav();const V=VIEWS[v];$("#pageTitle").textContent=(NAV.find(n=>n.v===v)||{}).t||"";$("#content").innerHTML=V?V(param):"<div class='empty'>Coming soon.</div>";if(V&&V.after)V.after(param);window.scrollTo(0,0);}
+/* Global search across bookings, gear, customers, suppliers. */
+function gsearch(raw){const q=(raw||"").trim();if(!q){toast("Type something to search");return;}if(ROLE&&!canSee("dashboard")){toast("Search isn't available for this role");return;}CUR="";buildNav();$("#pageTitle").textContent='Search: "'+q+'"';$("#content").innerHTML=searchView(q);window.scrollTo(0,0);}
+function searchView(q){
+  const s=q.toLowerCase(),hit=t=>String(t||"").toLowerCase().includes(s);
+  const bk=(DATA.bookings||[]).filter(b=>hit(b.code)||hit(b.project)||hit(b.production)||hit(b.contact)||hit(b.phone));
+  const gear=[...(DATA.cameras||[]).map(c=>({...c,_t:"camera"})),...(DATA.accessories||[]).map(a=>({...a,_t:"accessory"}))].filter(g=>hit(g.name)||hit(g.code)||hit(g.manufacturer)||hit(g.category));
+  const cus=(DATA.customers||[]).filter(c=>hit(c.name)||hit(c.company)||hit(c.phone));
+  const sup=(DATA.suppliers||[]).filter(x=>hit(x.name)||hit(x.contact)||hit(x.phone));
+  const sec=(title,rows)=>rows.length?`<div class="sec-title">${title} <span class="pill">${rows.length}</span></div><div class="card">${rows.join("")}</div>`:"";
+  const bkRows=bk.map(b=>`<div class="list-row" onclick="openBooking('${b.code}')"><div class="grow"><div class="t">${b.project} <span class="muted" style="font-weight:400">· ${b.code}</span></div><div class="sub">${b.production} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div></div><span class="badge b-ok">Open →</span></div>`);
+  const gearRows=gear.map(g=>`<div class="list-row" onclick="go('inventory')"><div class="grow"><div class="t">${g.name} <span class="muted" style="font-weight:400">· ${g.code}</span></div><div class="sub">${g.manufacturer||g.category||g._t} · ${g.status||''}</div></div><span class="badge b-ok">Inventory →</span></div>`);
+  const cusRows=cus.map(c=>`<div class="list-row" onclick="go('customers')"><div class="grow"><div class="t">${c.name}</div><div class="sub">${c.company||''}${c.phone?' · '+c.phone:''}</div></div><span class="badge b-ok">Customers →</span></div>`);
+  const supRows=sup.map(x=>`<div class="list-row" onclick="go('suppliers')"><div class="grow"><div class="t">${x.name}</div><div class="sub">${x.contact||''}${x.phone?' · '+x.phone:''}</div></div><span class="badge b-ok">Suppliers →</span></div>`);
+  const out=sec("Bookings",bkRows)+sec("Gear",gearRows)+sec("Customers",cusRows)+sec("Suppliers",supRows);
+  return `<button class="btn btn-ghost" style="margin-bottom:14px" onclick="go('dashboard')">← Dashboard</button>`+(out||`<div class="empty" style="padding:40px">No matches for "${q}".</div>`);
+}
 
 /* ============ VIEWS ============ */
 const VIEWS={};
@@ -320,7 +336,7 @@ VIEWS.dashboard=()=>{
   const outUnits=new Set();
   DATA.bookings.filter(b=>["checked_out","overdue"].includes(b.status)).forEach(b=>b.cameras.forEach(c=>outUnits.add(c.code)));
   const overdue=DATA.bookings.filter(b=>b.status==="overdue");
-  const pending=DATA.requests.filter(r=>r.status==="new");
+  const pending=(DATA.requests||[]).filter(r=>r.status==="new");
   const coDue=DATA.bookings.filter(b=>b.start===TODAY&&["reserved","confirmed","preparing"].includes(b.status));
   const rtDue=DATA.bookings.filter(b=>b.end===TODAY&&["checked_out","overdue"].includes(b.status));
   const active=DATA.bookings.filter(b=>b.status!=="returned");
@@ -344,7 +360,7 @@ VIEWS.dashboard=()=>{
       <div class="card-h"><h3>Active bookings</h3><span class="lnk" onclick="go('bookings')">View all →</span></div>
       ${active.map(b=>{const t=bookingTotals(b);return `<div class="list-row" onclick="openBooking('${b.code}')">
         <div class="grow"><div class="t">${b.project}</div><div class="sub">${b.production} · ${fmtDate(b.start)}–${fmtDate(b.end)} · ${money(t.outstanding)} due</div></div>
-        ${badge(b.status)}</div>`;}).join("")}
+        ${badge(b.status)}</div>`;}).join("")||`<div class="empty" style="padding:24px">No active bookings. Start one from <span class="lnk" onclick="go('quickrent')">Quick Rent</span>.</div>`}
     </div>
   </div>`;
 };
@@ -398,7 +414,7 @@ function toggleQR(code,type){
   const src=type==="camera"?DATA.cameras:DATA.accessories;
   const it=src.find(x=>x.code===code);
   const i=QR.cart.findIndex(c=>c.code===code);
-  if(i>=0)QR.cart.splice(i,1);else QR.cart.push({code,name:it.name,rate:it.dailyRate,type});
+  if(i>=0)QR.cart.splice(i,1);else QR.cart.push({code,name:it.name,rate:it.dailyRate,type,qty:1});
   renderQRcatalog();renderCart();
 }
 function renderCart(){
@@ -408,26 +424,46 @@ function renderCart(){
   if(dur)dur.textContent=QR.end?`Duration: ${days} day${days>1?'s':''}`:"Set a return date to price the booking.";
   if(!QR.cart.length){el.innerHTML=`<div class="empty" style="padding:18px">Tap gear to build the kit.</div>`;return;}
   let total=0;
-  el.innerHTML=QR.cart.map((c,idx)=>{const line=c.rate*(days||1);if(QR.end)total+=line;return `<div class="cart-line">
-    <div class="grow"><div class="t" style="font-size:13.5px">${c.name}</div><div class="sub">${money(c.rate)}/day × ${days||'?'}</div></div>
-    <input type="number" value="${c.rate}" onchange="QR.cart[${idx}].rate=+this.value;renderCart()">
+  el.innerHTML=QR.cart.map((c,idx)=>{const qty=c.qty||1;const line=c.rate*(days||1)*qty;if(QR.end)total+=line;return `<div class="cart-line">
+    <div class="grow"><div class="t" style="font-size:13.5px">${c.name}</div><div class="sub">${money(c.rate)}/day × ${days||'?'} day${days>1?'s':''}${qty>1?' × '+qty+' units':''}</div></div>
+    <input type="number" title="Qty" min="1" value="${qty}" onchange="QR.cart[${idx}].qty=Math.max(1,Math.floor(+this.value)||1);renderCart()" style="width:52px">
+    <input type="number" title="Rate/day" value="${c.rate}" onchange="QR.cart[${idx}].rate=+this.value;renderCart()">
     <div class="amt" style="width:78px;text-align:right">${QR.end?money(line):'—'}</div>
     <span class="cart-x" onclick="QR.cart.splice(${idx},1);renderQRcatalog();renderCart()">×</span></div>`;}).join("")
     +`<div class="total-row"><span>Total</span><span class="gold">${QR.end?money(total):'—'}</span></div>`;
+}
+/* Return human-readable clash notes for any of `codes` already committed over [start,end]. */
+function unitClashes(codes,start,end){
+  const s=parseD(start),e=parseD(end),held=["confirmed","checked_out","overdue"];
+  const set=new Set(codes),out=[];
+  (DATA.bookings||[]).forEach(b=>{
+    if(!held.includes(b.status))return;
+    const bs=parseD(b.start),be=parseD(b.end);
+    if(!(bs<=e&&s<=be))return; // no date overlap
+    [...(b.cameras||[]),...(b.accessories||[])].forEach(l=>{
+      if(set.has(l.code))out.push(`• ${l.name} (${l.code}) — on ${b.code} ${fmtDate(b.start)}–${fmtDate(b.end)}`);
+    });
+  });
+  return out;
 }
 function checkoutQR(){
   const name=$("#qr-name").value.trim();
   if(!name)return toast("Enter a customer name");
   if(!QR.cart.length)return toast("Add at least one item");
   if(!QR.end)return toast("Set a return date");
-  const n=101+DATA.bookings.length;
-  const code="BK-2026-"+String(200+n).padStart(6,"0");
+  if(daysBetween(QR.start,QR.end)<1)return toast("Return date must be after checkout");
+  // Warn (don't hard-block) if any unit is already out for overlapping dates.
+  const clash=unitClashes(QR.cart.map(c=>c.code),QR.start,QR.end);
+  if(clash.length&&!confirm(clash.join("\n")+"\n\nThese are already booked for overlapping dates. Create this booking anyway?"))return;
+  const code="BK-2026-"+String(Date.now()).slice(-6);
   const b={code,customer:"CUS-new",production:$("#qr-prod").value||name,project:$("#qr-prod").value||"Walk-in booking",
     contact:name,phone:$("#qr-phone").value,status:"confirmed",start:QR.start,end:QR.end,pickup:"Studio floor",operator:"",
-    cameras:QR.cart.filter(c=>c.type==="camera").map(c=>({code:c.code,name:c.name,rate:c.rate})),
-    accessories:QR.cart.filter(c=>c.type==="accessory").map(c=>({code:c.code,name:c.name,rate:c.rate})),
+    cameras:QR.cart.filter(c=>c.type==="camera").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1})),
+    accessories:QR.cart.filter(c=>c.type==="accessory").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1})),
     payments:[]};
   DATA.customers.push({id:"CUS-new",name,company:$("#qr-prod").value||"",phone:$("#qr-phone").value});
+  // Reflect that these units are now committed so the catalogue flags them.
+  QR.cart.forEach(c=>{const src=c.type==="camera"?DATA.cameras:DATA.accessories;const u=src.find(x=>x.code===c.code);if(u&&u.status==="available")u.status="booked";});
   DATA.bookings.unshift(b);SDB.createBooking(b,{name:b.contact,company:b.production,phone:b.phone});
   QR={cart:[],start:TODAY,end:"",tab:"all",q:""};
   toast("Booking "+code+" created");openBooking(code);
@@ -747,7 +783,7 @@ async function convertReq(){
 /* ---- Bookings ---- */
 VIEWS.bookings=()=>{
   const groups={Active:[],Out:[],Completed:[]};
-  DATA.bookings.forEach(b=>groups[STATUS[b.status].g].push(b));
+  DATA.bookings.forEach(b=>groups[(STATUS[b.status]||{g:'Active'}).g].push(b));
   const sec=(name,arr)=>`<div class="sec-title">${name} <span class="pill">${arr.length}</span></div>
     <div class="card">${arr.length?arr.map(b=>{const t=bookingTotals(b);return `<div class="list-row" onclick="openBooking('${b.code}')">
       <div class="grow"><div class="t">${b.project} <span class="muted" style="font-weight:400">· ${b.code}</span></div>
@@ -903,8 +939,8 @@ function confirmOps(code,newStatus){
 
 /* ---- Calendar — booking timeline (Gantt) ---- */
 VIEWS.calendar=()=>{
-  const START="2026-08-16", DAYS=28, CELL=40, LABEL=190;
-  const start=parseD(START);
+  const DAYS=28, CELL=40, LABEL=190;
+  const start=parseD(TODAY); start.setDate(start.getDate()-5); // window opens 5 days before today, always current
   const dayList=[...Array(DAYS)].map((_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i);return d;});
   const offset=ds=>Math.round((parseD(ds)-start)/86400000);
   const todayOff=offset(TODAY);
@@ -993,10 +1029,11 @@ function addSupplierItem(sid){
     <div class="field"><label>Rate per day (₹)</label><input id="si-rate" type="number" placeholder="e.g. 12000"></div>
     <button class="btn btn-primary" style="width:100%" onclick="saveSupplierItem('${sid}')">Add to catalogue</button>`);
 }
-function saveSupplierItem(sid){
+async function saveSupplierItem(sid){
   const item=$("#si-item").value.trim(), rate=+($("#si-rate").value||0);
   if(!item)return toast("Enter an equipment name");
-  DATA.suppliers.find(x=>x.id===sid).catalog.push({item,rate});SDB.addSupplierItem(sid,item,rate);
+  const obj={item,rate};DATA.suppliers.find(x=>x.id===sid).catalog.push(obj);
+  const id=await SDB.addSupplierItem(sid,item,rate);if(id)obj._id=id;
   closeModal();go("suppliers");toast("Added "+item);
 }
 function editSupplierRate(sid,i){
@@ -1191,7 +1228,7 @@ function receiptView(code){
   const b=DATA.bookings.find(x=>x.code===code);if(!b)return VIEWS.receipts();
   const t=bookingTotals(b);const rc="RC-"+b.code.slice(3);
   const items=[...b.cameras,...b.accessories].map(l=>{const days=lineDays(b,l);const s=l.start||b.start,e=l.returnedAt||l.end||b.end;
-    return `<tr><td><b>${l.name}</b></td><td class="c">${l.code}</td><td>${fmtDate(s)}–${fmtDate(e)}</td><td class="r">${money(l.rate)}</td><td class="r">${days}</td><td class="r">${money(l.rate*days)}</td></tr>`;}).join("");
+    const qty=l.qty||1;return `<tr><td><b>${l.name}</b></td><td class="c">${l.code}</td><td>${fmtDate(s)}–${fmtDate(e)}</td><td class="r">${money(l.rate)}</td><td class="r">${days}</td><td class="r">${qty}</td><td class="r">${money(l.rate*days*qty)}</td></tr>`;}).join("");
   const pays=b.payments.length?b.payments.map(p=>`<div class="p"><span>${fmtDate(p.date)} · ${p.type} · ${p.method}${p.ref?' · '+p.ref:''}</span><span>${money(p.amount)}</span></div>`).join(""):'<div class="p"><span>No payments recorded yet</span><span>₹0</span></div>';
   return `<div class="rc-actions no-print">
     <button class="btn btn-ghost" onclick="go('receipts')">← Receipts</button>
@@ -1207,7 +1244,7 @@ function receiptView(code){
       <div><label>Billed to</label><div class="v"><b>${b.contact}</b><br>${b.production}<br>${b.phone}</div></div>
       <div style="text-align:right"><label>Rental period</label><div class="v">${fmtDate(b.start)} – ${fmtDate(b.end)}<br>${daysBetween(b.start,b.end)} days<br>${b.project}</div></div>
     </div>
-    <table class="rc-table"><thead><tr><th>Equipment</th><th>Code</th><th>Dates</th><th class="r">Rate/day</th><th class="r">Days</th><th class="r">Amount</th></tr></thead><tbody>${items}</tbody></table>
+    <table class="rc-table"><thead><tr><th>Equipment</th><th>Code</th><th>Dates</th><th class="r">Rate/day</th><th class="r">Days</th><th class="r">Qty</th><th class="r">Amount</th></tr></thead><tbody>${items}</tbody></table>
     <div class="rc-totals">
       <div class="row"><span>Total charges</span><span>${money(t.charges)}</span></div>
       <div class="row paid"><span>Paid</span><span>${money(t.paid)}</span></div>
@@ -1225,6 +1262,10 @@ const round1=n=>Math.round(n*10)/10;
 let INVEST={cam:null,period:"2026"};
 VIEWS.investor=()=>{
   const invCams=DATA.cameras.filter(c=>c.investors&&c.investors.length);
+  if(!invCams.length)return `<div class="empty" style="padding:48px;text-align:center">
+    <div style="font-size:34px">📈</div>
+    <h3 style="margin:10px 0 4px">No investor-owned cameras yet</h3>
+    <div class="muted">When a camera is co-owned by investors, its monthly earnings and profit-share settlements will show up here.</div></div>`;
   if(!INVEST.cam||!invCams.some(c=>c.code===INVEST.cam))INVEST.cam=invCams[0].code;
   const cam=invCams.find(c=>c.code===INVEST.cam);
   const cfg=DATA.config, poolPct=1-cfg.maintenancePct-cfg.managerPct, dedPct=cfg.maintenancePct+cfg.managerPct;
@@ -1237,7 +1278,7 @@ VIEWS.investor=()=>{
   let totalBilled=0,totalReceived=0;const rows=[];
   shipped.forEach(b=>{const bt=bookingTotals(b);
     b.cameras.filter(c=>c.code===cam.code).forEach(c=>{
-      const billed=c.rate*lineDays(b,c);
+      const billed=c.rate*lineDays(b,c)*(c.qty||1);
       const recv=bt.charges>0?Math.round(bt.paid*billed/bt.charges):0;
       totalBilled+=billed;totalReceived+=recv;rows.push({b,billed,recv});});});
   const gross=totalReceived;
@@ -1322,7 +1363,7 @@ function settleMonth(camCode,mk){
   const poolPct=1-DATA.config.maintenancePct-DATA.config.managerPct;
   let recv=0;
   DATA.bookings.filter(b=>["checked_out","overdue","returned"].includes(b.status)&&b.start.slice(0,7)===mk&&b.cameras.some(c=>c.code===camCode))
-    .forEach(b=>{const bt=bookingTotals(b);b.cameras.filter(c=>c.code===camCode).forEach(c=>{const billed=c.rate*lineDays(b,c);recv+=bt.charges>0?Math.round(bt.paid*billed/bt.charges):0;});});
+    .forEach(b=>{const bt=bookingTotals(b);b.cameras.filter(c=>c.code===camCode).forEach(c=>{const billed=c.rate*lineDays(b,c)*(c.qty||1);recv+=bt.charges>0?Math.round(bt.paid*billed/bt.charges):0;});});
   const mpool=Math.round(recv*poolPct);
   DATA.settlements.push({cam:camCode,month:mk,date:mk+"-28",pool:mpool});
   cam.investors.forEach(iv=>DATA.payouts.push({cam:camCode,investor:iv.name,amount:round1(mpool*iv.invested/totalInvested),date:mk+"-28",mode:"Monthly settlement",month:mk,notes:mk}));
@@ -1349,13 +1390,15 @@ function addUserForm(){
   openModal(`<h3>Add staff user</h3><p class="mut">They can sign in immediately with this email + password.</p>
     <div class="field"><label>Full name</label><input id="nu-name"></div>
     <div class="field"><label>Email</label><input id="nu-email" type="email"></div>
-    <div class="field"><label>Temporary password</label><input id="nu-pw" value="cinehub123"></div>
+    <div class="field"><label>Temporary password</label><input id="nu-pw" type="text" placeholder="Set a strong one-time password" autocomplete="off"><div class="muted" style="font-size:11.5px;margin-top:4px">Min 8 characters. Ask the user to change it after first sign-in.</div></div>
     <div class="field"><label>Role</label><select id="nu-role"><option value="manager">Manager — operations</option><option value="admin">Admin — full access</option><option value="investor">Investor — read-only</option></select></div>
     <button class="btn btn-primary" style="width:100%" onclick="doAddUser()">Create user</button>`);
 }
 async function doAddUser(){
   const name=$("#nu-name").value.trim(), email=$("#nu-email").value.trim(), pw=$("#nu-pw").value, role=$("#nu-role").value;
+  if(!name) return toast('Enter the user\'s name');
   if(!email||!pw) return toast('Email + password required');
+  if(pw.length<8) return toast('Password must be at least 8 characters');
   toast('Creating…');
   const { error }=await SDB.addUser(email,pw,name,role);
   if(error){ toast('Error: '+error); return; }
@@ -1369,6 +1412,8 @@ function openModal(html){$("#modal").innerHTML=html+'<div style="text-align:righ
 function closeModal(){$("#ov").classList.remove("show");}
 $("#ov").addEventListener("click",e=>{if(e.target.id==="ov")closeModal();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+/* Dismiss the native date-picker as soon as a date is chosen — applies to every calendar in the app. */
+document.addEventListener("change",e=>{if(e.target&&e.target.matches&&e.target.matches('input[type=date]'))e.target.blur();});
 function applyTheme(t){document.body.dataset.theme=t;$("#themeIcon").textContent=t==="dark"?"☀":"☾";$("#themeLabel").textContent=t==="dark"?"Light":"Dark";try{localStorage.setItem("src-theme",t);}catch(e){}}
 function toggleTheme(){applyTheme(document.body.dataset.theme==="dark"?"light":"dark");}
 (function(){let t="dark";try{t=localStorage.getItem("src-theme")||"dark";}catch(e){}applyTheme(t);})();
