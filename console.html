@@ -236,6 +236,7 @@ const cust=id=>DATA.customers.find(c=>c.id===id)||{name:"—"};
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),2200);}
 /* ---- WhatsApp (Phase 1: click-to-chat, staff taps send) ---- */
 const waEsc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+const escAttr=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
 function waSend(phone,msg){const d=(phone||"").replace(/[^0-9]/g,"");if(!d)return toast("No phone number on file");window.open(`https://wa.me/${d}?text=${encodeURIComponent(msg)}`,"_blank");}
 async function sendQuoteWA(){
   const u=await ensureRequest(); if(u===null)return;
@@ -974,7 +975,7 @@ VIEWS.inventory=()=>{
     <div class="tab ${INV.tab==='cameras'?'active':''}" onclick="INV.tab='cameras';go('inventory')">Cameras <span class="pill">${DATA.cameras.length}</span></div>
     <div class="tab ${INV.tab==='accessories'?'active':''}" onclick="INV.tab='accessories';go('inventory')">Accessories <span class="pill">${DATA.accessories.length}</span></div>
     <div class="tsearch" style="margin-left:auto"><input placeholder="Search…" value="${INV.q}" oninput="INV.q=this.value;renderInvTable()" style="padding-left:14px"></div>
-    <button class="btn btn-primary btn-sm" onclick="toast('Demo: add item form')">＋ Add</button>
+    <button class="btn btn-primary btn-sm" onclick="addUnitForm()">＋ Add</button>
   </div>
   <div class="tabs">${["all","available","booked","maintenance"].map(s=>`<div class="tab ${INV.status===s?'active':''}" onclick="INV.status='${s}';renderInvTable()">${s[0].toUpperCase()+s.slice(1)}</div>`).join("")}</div>
   <div class="card" id="invtable"></div>`;
@@ -988,13 +989,73 @@ function renderInvTable(){
     el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Serial</th><th>Meter</th><th>Location</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
     ${rows.map(c=>`<tr><td>${c.code}${c.investors?' <span class="badge b-mut">investor</span>':''}</td><td><b>${c.name}</b><div class="muted" style="font-size:11px">${c.manufacturer}</div></td>
       <td class="muted">${c.serial}</td><td>${c.meterHours}h</td><td>${c.location}</td><td class="amt">${money(c.dailyRate)}</td><td>${statusBadge(c.status)}</td>
-      <td><span class="lnk gold" style="cursor:pointer" onclick="toast('Demo: edit ${c.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="8" class="empty">No matches.</td></tr>`}</tbody></table>`;
+      <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${c.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="8" class="empty">No matches.</td></tr>`}</tbody></table>`;
   }else{
     let rows=DATA.accessories.filter(a=>(INV.status==="all"||a.status===INV.status)&&(!q||(a.name+a.code+a.category).toLowerCase().includes(q)));
     el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
     ${rows.map(a=>`<tr><td>${a.code}</td><td><b>${a.name}</b></td><td class="muted">${a.category}</td><td class="amt">${money(a.dailyRate)}</td><td>${statusBadge(a.status)}</td>
-      <td><span class="lnk gold" style="cursor:pointer" onclick="toast('Demo: edit ${a.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="6" class="empty">No matches.</td></tr>`}</tbody></table>`;
+      <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${a.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="6" class="empty">No matches.</td></tr>`}</tbody></table>`;
   }
+}
+
+/* Inventory add/edit */
+const ACC_CATS=["Lenses","Lights","Accessories","Transport","Genset","Grip"];
+const ACC_PREFIX={Lenses:"LEN",Lights:"LIT",Accessories:"ACC",Transport:"TRN",Genset:"GEN",Grip:"GRP"};
+function nextUnitCode(prefix){let max=0;[...DATA.cameras,...DATA.accessories].forEach(u=>{const m=(u.code||"").match(new RegExp("^"+prefix+"-(\\d+)$"));if(m)max=Math.max(max,+m[1]);});return prefix+"-"+String(max+1).padStart(3,"0");}
+function nextForCat(cat){return nextUnitCode(ACC_PREFIX[cat]||"ACC");}
+function addUnitForm(){
+  const cam=INV.tab==="cameras";
+  const statusOpts=s=>["available","maintenance","retired"].map(x=>`<option value="${x}" ${s===x?"selected":""}>${x}</option>`).join("");
+  openModal(`<h3>Add ${cam?"camera":"accessory"}</h3><p class="mut">Registers a new serialized unit in your inventory.</p>
+    <div class="r2"><div class="field"><label>Code *</label><input id="u-code" value="${cam?nextUnitCode("CAM"):nextForCat(ACC_CATS[0])}"></div>
+      <div class="field"><label>Rate per day (₹)</label><input id="u-rate" type="number" placeholder="0"></div></div>
+    <div class="field"><label>Name *</label><input id="u-name" placeholder="${cam?"e.g. ARRI Alexa Mini LF":"e.g. SkyPanel S60"}"></div>
+    ${cam?`<div class="r2"><div class="field"><label>Manufacturer</label><input id="u-manu" placeholder="ARRI"></div><div class="field"><label>Model</label><input id="u-model" placeholder="Alexa Mini LF"></div></div>
+      <div class="r2"><div class="field"><label>Serial no.</label><input id="u-serial"></div><div class="field"><label>Meter hours</label><input id="u-meter" type="number" value="0"></div></div>`
+    :`<div class="field"><label>Category</label><select id="u-cat" onchange="document.getElementById('u-code').value=nextForCat(this.value)">${ACC_CATS.map(c=>`<option value="${c}">${c}</option>`).join("")}</select></div>`}
+    <div class="r2"><div class="field"><label>Location</label><input id="u-loc" placeholder="Rack / shelf"></div>
+      <div class="field"><label>Status</label><select id="u-status">${statusOpts("available")}</select></div></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveUnit()">Add to inventory</button>`);
+}
+async function saveUnit(){
+  const cam=INV.tab==="cameras";
+  const code=($("#u-code").value||"").trim().toUpperCase(), name=($("#u-name").value||"").trim();
+  if(!code)return toast("Enter a code");
+  if(!name)return toast("Enter a name");
+  if([...DATA.cameras,...DATA.accessories].some(u=>u.code===code))return toast("Code "+code+" already exists");
+  const rate=+($("#u-rate").value||0), status=$("#u-status").value, loc=($("#u-loc").value||"").trim();
+  const u=cam
+    ?{kind:"camera",code,name,manufacturer:($("#u-manu").value||"").trim(),model:($("#u-model").value||"").trim(),serial:($("#u-serial").value||"").trim(),meterHours:+($("#u-meter").value||0),location:loc,status,dailyRate:rate}
+    :{kind:"accessory",code,name,category:$("#u-cat").value,location:loc,status,dailyRate:rate};
+  const local=cam
+    ?{code,name,manufacturer:u.manufacturer,model:u.model,serial:u.serial,meterHours:u.meterHours,location:loc,status,dailyRate:rate}
+    :{code,name,category:u.category,location:loc,status,dailyRate:rate};
+  (cam?DATA.cameras:DATA.accessories).push(local);
+  await SDB.addUnit(u);
+  closeModal();go("inventory");toast(name+" added");
+}
+function editUnitForm(code){
+  const cam=INV.tab==="cameras";
+  const u=(cam?DATA.cameras:DATA.accessories).find(x=>x.code===code);if(!u)return;
+  openModal(`<h3>Edit · ${u.code}</h3>
+    <div class="field"><label>Name</label><input id="u-name" value="${escAttr(u.name)}"></div>
+    ${cam?`<div class="r2"><div class="field"><label>Manufacturer</label><input id="u-manu" value="${escAttr(u.manufacturer||"")}"></div><div class="field"><label>Model</label><input id="u-model" value="${escAttr(u.model||"")}"></div></div>
+      <div class="r2"><div class="field"><label>Serial no.</label><input id="u-serial" value="${escAttr(u.serial||"")}"></div><div class="field"><label>Meter hours</label><input id="u-meter" type="number" value="${u.meterHours||0}"></div></div>`
+    :`<div class="field"><label>Category</label><select id="u-cat">${ACC_CATS.map(c=>`<option value="${c}" ${u.category===c?"selected":""}>${c}</option>`).join("")}</select></div>`}
+    <div class="r2"><div class="field"><label>Location</label><input id="u-loc" value="${escAttr(u.location||"")}"></div>
+      <div class="field"><label>Rate per day (₹)</label><input id="u-rate" type="number" value="${u.dailyRate||0}"></div></div>
+    <div class="field"><label>Status</label><select id="u-status">${["available","booked","maintenance","retired"].map(s=>`<option value="${s}" ${u.status===s?"selected":""}>${s}</option>`).join("")}</select></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveUnitEdit('${code}')">Save changes</button>`);
+}
+function saveUnitEdit(code){
+  const cam=INV.tab==="cameras";
+  const u=(cam?DATA.cameras:DATA.accessories).find(x=>x.code===code);if(!u)return;
+  const patch={name:($("#u-name").value||"").trim()||u.name,location:($("#u-loc").value||"").trim(),status:$("#u-status").value,dailyRate:+($("#u-rate").value||0)};
+  if(cam){patch.manufacturer=($("#u-manu").value||"").trim();patch.model=($("#u-model").value||"").trim();patch.serial=($("#u-serial").value||"").trim();patch.meterHours=+($("#u-meter").value||0);}
+  else{patch.category=$("#u-cat").value;}
+  Object.assign(u,patch);
+  SDB.updateUnit(code,patch);
+  closeModal();go("inventory");toast(code+" updated");
 }
 
 /* ---- Suppliers / Customers / Hire-In / Receipts ---- */
@@ -1008,7 +1069,7 @@ VIEWS.suppliers=()=>{
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
     <div class="sec-title" style="margin:0">Suppliers <span class="pill">${DATA.suppliers.length}</span></div>
-    <button class="btn btn-primary btn-sm" onclick="toast('Demo: add supplier')">＋ Add supplier</button>
+    <button class="btn btn-primary btn-sm" onclick="addSupplierForm()">＋ Add supplier</button>
   </div>
   <div class="cols">${DATA.suppliers.map(s=>`<div class="card">
     <div class="card-h"><h3>${s.name}</h3><button class="btn btn-ghost btn-sm" onclick="addSupplierItem('${s.id}')">＋ Add item</button></div>
@@ -1022,6 +1083,21 @@ VIEWS.suppliers=()=>{
       <span class="lnk gold" style="cursor:pointer;font-size:12.5px" onclick="editSupplierRate('${s.id}',${i})">Edit</span></div>`).join("")}</div>
   </div>`).join("")}</div>`;
 };
+function addSupplierForm(){
+  openModal(`<h3>Add supplier</h3><p class="mut">A rental house or peer you hire gear from — track what they carry and their rates.</p>
+    <div class="field"><label>Name *</label><input id="sp-name" placeholder="e.g. Chennai Cine Rentals"></div>
+    <div class="r2"><div class="field"><label>Contact</label><input id="sp-contact" placeholder="Name / phone"></div>
+      <div class="field"><label>Specialisation</label><input id="sp-spec" placeholder="e.g. Lighting & grip"></div></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveSupplier()">Add supplier</button>`);
+}
+async function saveSupplier(){
+  const name=($("#sp-name").value||"").trim();
+  if(!name)return toast("Enter a supplier name");
+  const s={name,contact:($("#sp-contact").value||"").trim(),specialisation:($("#sp-spec").value||"").trim(),catalog:[]};
+  const id=await SDB.addSupplier(s);s.id=id||("SUP-"+Date.now());
+  DATA.suppliers.push(s);
+  closeModal();go("suppliers");toast(name+" added");
+}
 function addSupplierItem(sid){
   const s=DATA.suppliers.find(x=>x.id===sid);
   openModal(`<h3>Add equipment · ${s.name}</h3><p class="mut">Log what they carry and their daily hire rate — so you can compare on price later.</p>

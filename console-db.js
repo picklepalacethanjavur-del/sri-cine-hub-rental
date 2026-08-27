@@ -208,6 +208,26 @@ window.SDB = (function () {
   const editSupplierRate = guard(async (catId, item, rate) => {
     const { error } = await sb.from("supplier_catalog").update({ item, daily_rate_inr: rate }).eq("id", catId); if (error) throw error;
   });
+  const addSupplier = guard(async (s) => {
+    const { data, error } = await sb.from("suppliers").insert({
+      name: s.name, contact: s.contact || null, specialisation: s.specialisation || null, notes: s.notes || null
+    }).select("id").single(); if (error) throw error; return data.id;
+  });
+  const addUnit = guard(async (u) => {
+    const { data, error } = await sb.from("equipment_units").insert({
+      kind: u.kind, code: u.code, name: u.name, category: u.category || null,
+      manufacturer: u.manufacturer || null, model: u.model || null, serial_number: u.serial || null,
+      meter_hours: u.meterHours || 0, location: u.location || null, status: u.status || "available",
+      default_daily_rate: u.dailyRate || 0, option_id: (u.optionName && ids.optionByName[u.optionName]) || null
+    }).select("id").single(); if (error) throw error; return data.id;
+  });
+  const updateUnit = guard(async (code, patch) => {
+    const MAP = { name: "name", category: "category", manufacturer: "manufacturer", model: "model",
+      serial: "serial_number", meterHours: "meter_hours", location: "location", status: "status", dailyRate: "default_daily_rate" };
+    const row = {}; Object.keys(patch).forEach(k => { if (MAP[k]) row[MAP[k]] = patch[k]; });
+    if (!Object.keys(row).length) return;
+    const { error } = await sb.from("equipment_units").update(row).eq("code", code); if (error) throw error;
+  });
   const setRequestStatus = guard(async (reqUuid, status) => {
     const { error } = await sb.from("quote_requests").update({ status }).eq("id", reqUuid); if (error) throw error;
   });
@@ -307,5 +327,5 @@ window.SDB = (function () {
     return { error:null };
   }
 
-  return { on: ON, bootstrap, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
+  return { on: ON, bootstrap, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
 })();
