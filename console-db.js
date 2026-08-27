@@ -19,6 +19,7 @@ window.SDB = (function () {
 
   function fail(e, what) {
     console.error("SDB " + what, e);
+    if (authErr(e) && window.onSessionExpired) { window.onSessionExpired(); return; }
     const code = (e && e.code) ? e.code : "";
     const raw = (e && (e.message || e.error_description || e.hint || e.msg)) || String(e || "unknown error");
     let friendly = raw;
@@ -28,6 +29,9 @@ window.SDB = (function () {
       friendly = "your session expired — please sign in again.";
     if (window.toast) toast((/load/i.test(what) ? "Couldn't load — " : "Couldn't save — ") + friendly);
   }
+  // True when an error means the session is expired/invalid (vs. a real empty result or other failure).
+  const authErr = e => !!e && (e.code === "PGRST301" || String(e.status) === "401" ||
+    /\bjwt\b|token|not authenticated|auth session|session (has )?(expired|missing)|invalid (claim|signature)|401/i.test(e.message || ""));
 
   async function bootstrap() {
     if (!ON) { console.info("SDB offline — using seed data (console-data.js)."); return false; }
@@ -56,8 +60,9 @@ window.SDB = (function () {
       const _all = [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows];
       const _errs = _all.filter(r => r && r.error);
       if (_errs.length) console.warn("SDB: some tables failed to load —", _errs.map(r => r.error.message).join(" | "));
-      // Core inventory failing almost always means an auth/session problem — tell the user, don't silently blank it.
-      if (units.error) fail(units.error, "load inventory — sign out and back in if it stays empty");
+      // Expired / invalid session → tell boot() to show the login page, NOT a scary all-zero console.
+      if (authErr(units.error) || _errs.some(r => authErr(r.error))) return "auth";
+      if (units.error) fail(units.error, "load inventory");
       _all.forEach(r => { if (r && r.data == null) r.data = []; });
 
       const U = units.data, INV = invs.data, AINV = ainv.data;
@@ -154,7 +159,7 @@ window.SDB = (function () {
       window.DATA = { cameras, accessories, customers, bookings, requests, suppliers, payouts, settlements, config, optionRates, optionCats, rfqs };
       console.info("SDB live — loaded from Supabase.");
       return true;
-    } catch (e) { fail(e, "load"); return false; }
+    } catch (e) { if (authErr(e)) return "auth"; fail(e, "load"); return false; }
   }
 
   // ---- writes (fire-and-forget; safe no-op offline) ----

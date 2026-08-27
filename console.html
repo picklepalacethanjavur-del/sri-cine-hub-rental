@@ -1654,6 +1654,9 @@ async function doLogin(){
   location.reload();
 }
 async function signOutNow(){ await SDB.signOut(); location.reload(); }
+/* Called by the data layer when any request fails with an expired/invalid session — go to the login page, never a scary all-zero console. */
+let SESSION_ENDED=false;
+window.onSessionExpired=async function(){ if(SESSION_ENDED)return; SESSION_ENDED=true; try{await SDB.signOut();}catch(e){} const app=document.querySelector('.app'); if(app)app.style.display='none'; showLogin('Your session expired — please sign in again.'); };
 async function boot(){
   const app=document.querySelector('.app');
   if(!SDB.on){ ROLE='admin'; MYNAME='Demo'; await SDB.bootstrap(); app.style.display=''; buildNav(); renderUserChip(); go('dashboard'); return; }
@@ -1663,7 +1666,9 @@ async function boot(){
   if(!prof || !prof.is_active){ await SDB.signOut(); app.style.display='none'; showLogin('No active staff profile for this account. Ask an admin.'); return; }
   ROLE=prof.role; MYNAME=prof.full_name||user.email;
   const ov=document.getElementById('loginOverlay'); if(ov) ov.remove();
-  await SDB.bootstrap(); app.style.display=''; buildNav(); renderUserChip(); go('dashboard');
+  const status=await SDB.bootstrap();
+  if(status==='auth'){ await SDB.signOut(); app.style.display='none'; showLogin('Your session expired — please sign in again.'); return; }
+  app.style.display=''; buildNav(); renderUserChip(); go('dashboard');
 }
 document.querySelector('.app').style.display='none';
 boot();
