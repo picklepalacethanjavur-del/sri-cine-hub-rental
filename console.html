@@ -484,9 +484,8 @@ function renderQuoteBuilder(){
         <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="qbAdd()">＋ Add blank line</button>
         <div id="qb-summary"></div>
         <div style="display:flex;gap:8px;margin-top:14px">
-          <button class="btn btn-ghost" style="flex:1" onclick="qbSave()">Save draft</button>
           <button class="btn btn-ghost" style="flex:1" onclick="sendQuoteWA()">💬 Send</button>
-          <button class="btn btn-primary" style="flex:1" onclick="convertReq()">Convert →</button>
+          <button class="btn btn-primary" style="flex:2" onclick="qbSave()">Create quote</button>
         </div>
       </div></div>
    </div>`;
@@ -723,7 +722,7 @@ function addDays(d,n){ const x=parseD(d); x.setDate(x.getDate()+(+n||0)); return
 function qbOptsPayload(){ let equip=0,svc=0; QB.forEach(l=>{ if(l.type!=='item'||!l.include||!l.name)return; const qty=l.qty||1; if(isEquip(l.kind))equip+=l.rate*billedDays(l.days)*qty; else svc+=l.rate*l.days*qty; });
   const subtotal=equip+svc; const discount=qbDiscount(subtotal);
   return { discount_inr:discount, deposit_inr:0, other_charges_inr:svc, valid_until:null }; }
-async function qbSave(){ const u=await ensureRequest(); if(u===null)return; const code='QT-'+Date.now().toString().slice(-8); SDB.saveQuotation(u,code,QB,'draft',QB_SOURCE,qbOptsPayload()); toast('Quote saved · '+code); }
+async function qbSave(){ const u=await ensureRequest(); if(u===null)return; const code='QT-'+Date.now().toString().slice(-8); SDB.saveQuotation(u,code,QB,'draft',QB_SOURCE,qbOptsPayload()); toast('Quote created · '+code); go('requests'); }
 async function convertReq(){
   if(!QCTX.name) return toast('Enter a customer name');
   if(!QCTX.start||!QCTX.end) return toast('Set shoot start & end dates');
