@@ -235,9 +235,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260827b"></script>
-<script src="console-data.js?v=20260827b"></script>
-<script src="console-db.js?v=20260827b"></script>
+<script src="supabase-config.js?v=20260827c"></script>
+<script src="console-data.js?v=20260827c"></script>
+<script src="console-db.js?v=20260827c"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -1105,9 +1105,33 @@ VIEWS.inventory=()=>{
     <button class="btn btn-primary btn-sm" onclick="addUnitForm()">＋ Add</button>
   </div>
   <div class="tabs">${["all","available","booked","maintenance"].map(s=>`<div class="tab ${INV.status===s?'active':''}" onclick="INV.status='${s}';renderInvTable()">${s[0].toUpperCase()+s.slice(1)}</div>`).join("")}</div>
+  <div id="inv-diag"></div>
   <div class="card" id="invtable"></div>`;
 };
-VIEWS.inventory.after=()=>renderInvTable();
+VIEWS.inventory.after=()=>{ renderInvTable(); renderInvDiag(); };
+async function renderInvDiag(){
+  const el=$("#inv-diag"); if(!el) return;
+  const empty=((DATA.cameras||[]).length+(DATA.accessories||[]).length)===0;
+  if(!empty || !SDB.on){ el.innerHTML=""; return; }
+  el.innerHTML=`<div class="card" style="border-color:var(--gold-dim);padding:16px;margin-bottom:14px"><div class="muted">Checking why the list is empty…</div></div>`;
+  let d={}; try{ d=SDB.debug?await SDB.debug():{note:"Please hard-refresh (⌥⌘E then ⌘R) to load the latest build."}; }catch(e){ d={error:String(e)}; }
+  const row=(k,v)=>`<div style="display:flex;justify-content:space-between;gap:14px;padding:4px 0;border-bottom:1px solid var(--line)"><span class="muted">${k}</span><span style="font-family:monospace;text-align:right">${v}</span></div>`;
+  const lq=d.liveEquipmentQuery||{};
+  const staffBad=d.is_staff===false;
+  el.innerHTML=`<div class="card" style="border-color:${staffBad||lq.error?'var(--bad)':'var(--gold-dim)'};padding:18px;margin-bottom:14px">
+    <div style="font-family:var(--font-display);font-size:16px;margin-bottom:8px">🩺 Why is the inventory empty?</div>
+    ${row("Signed in as", d.signedInAs||'— (not signed in)')}
+    ${row("Recognised as staff", d.is_staff===undefined?'?':(d.is_staff===true?'✅ yes':'❌ no'))}
+    ${row("Units the server returned", lq.rows!=null?lq.rows:'?')}
+    ${row("Server error", lq.error?('<span style="color:var(--bad)">'+lq.error+'</span>'):'none')}
+    ${d.note?row("Note",d.note):''}
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="SDB.bootstrap().then(()=>go('inventory'))">↻ Re-sync</button>
+      <button class="btn btn-primary btn-sm" onclick="signOutNow()">Sign out & sign in again</button>
+    </div>
+    <div class="muted" style="font-size:11.5px;margin-top:10px">${staffBad?"This account isn't being recognised as staff — sign out and sign back in with your studio login.":lq.error?"The server rejected the request — sign out and back in to refresh your session.":"If units returned above is 0 with no error, your session needs a refresh."}</div>
+  </div>`;
+}
 function statusBadge(s){const m={available:"b-ok",booked:"b-info",maintenance:"b-warn",retired:"b-mut"};return `<span class="badge ${m[s]||'b-mut'}">${s}</span>`;}
 function renderInvTable(){
   const el=$("#invtable");if(!el)return;const q=INV.q.toLowerCase();
