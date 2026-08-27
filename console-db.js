@@ -26,7 +26,7 @@ window.SDB = (function () {
       friendly = "not signed in as staff (or your session expired). Sign out and sign back in, then retry.";
     else if (/JWT|401|not authenticated|Auth session missing|invalid token/i.test(raw))
       friendly = "your session expired — please sign in again.";
-    if (window.toast) toast("Couldn't save — " + friendly);
+    if (window.toast) toast((/load/i.test(what) ? "Couldn't load — " : "Couldn't save — ") + friendly);
   }
 
   async function bootstrap() {
@@ -51,8 +51,14 @@ window.SDB = (function () {
           sb.from("supplier_rfqs").select("*"),
           sb.from("supplier_rfq_items").select("*")
         ]);
-      for (const r of [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows])
-        if (r.error) throw r.error;
+      // Resilient load: one failed table must not wipe the whole console.
+      // Log any errors, but let the tables that DID load populate normally.
+      const _all = [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows];
+      const _errs = _all.filter(r => r && r.error);
+      if (_errs.length) console.warn("SDB: some tables failed to load —", _errs.map(r => r.error.message).join(" | "));
+      // Core inventory failing almost always means an auth/session problem — tell the user, don't silently blank it.
+      if (units.error) fail(units.error, "load inventory — sign out and back in if it stays empty");
+      _all.forEach(r => { if (r && r.data == null) r.data = []; });
 
       const U = units.data, INV = invs.data, AINV = ainv.data;
       const unitById = {}; U.forEach(u => { unitById[u.id] = u; ids.unitByCode[u.code] = u.id; });
