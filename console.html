@@ -235,9 +235,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260827c"></script>
-<script src="console-data.js?v=20260827c"></script>
-<script src="console-db.js?v=20260827c"></script>
+<script src="supabase-config.js?v=20260827d"></script>
+<script src="console-data.js?v=20260827d"></script>
+<script src="console-db.js?v=20260827d"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -1133,18 +1133,19 @@ async function renderInvDiag(){
   </div>`;
 }
 function statusBadge(s){const m={available:"b-ok",booked:"b-info",maintenance:"b-warn",retired:"b-mut"};return `<span class="badge ${m[s]||'b-mut'}">${s}</span>`;}
+const dash=v=>(v==null||v==="")?'<span class="muted">—</span>':v;
 function renderInvTable(){
   const el=$("#invtable");if(!el)return;const q=INV.q.toLowerCase();
   if(INV.tab==="cameras"){
-    let rows=DATA.cameras.filter(c=>(INV.status==="all"||c.status===INV.status)&&(!q||(c.name+c.code+c.serial+c.manufacturer).toLowerCase().includes(q)));
+    let rows=DATA.cameras.filter(c=>(INV.status==="all"||c.status===INV.status)&&(!q||((c.name||'')+(c.code||'')+(c.serial||'')+(c.manufacturer||'')).toLowerCase().includes(q)));
     el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Serial</th><th>Meter</th><th>Location</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
-    ${rows.map(c=>`<tr><td>${c.code}${c.investors?' <span class="badge b-mut">investor</span>':''}</td><td><b>${c.name}</b><div class="muted" style="font-size:11px">${c.manufacturer}</div></td>
-      <td class="muted">${c.serial}</td><td>${c.meterHours}h</td><td>${c.location}</td><td class="amt">${money(c.dailyRate)}</td><td>${statusBadge(c.status)}</td>
+    ${rows.map(c=>`<tr><td>${c.code}${c.investors?' <span class="badge b-mut">investor</span>':''}</td><td><b>${c.name}</b>${c.manufacturer?`<div class="muted" style="font-size:11px">${c.manufacturer}</div>`:''}</td>
+      <td class="muted">${dash(c.serial)}</td><td>${c.meterHours||0}h</td><td>${dash(c.location)}</td><td class="amt">${money(c.dailyRate)}</td><td>${statusBadge(c.status)}</td>
       <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${c.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="8" class="empty">No matches.</td></tr>`}</tbody></table>`;
   }else{
-    let rows=DATA.accessories.filter(a=>(INV.status==="all"||a.status===INV.status)&&(!q||(a.name+a.code+a.category).toLowerCase().includes(q)));
+    let rows=DATA.accessories.filter(a=>(INV.status==="all"||a.status===INV.status)&&(!q||((a.name||'')+(a.code||'')+(a.category||'')).toLowerCase().includes(q)));
     el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
-    ${rows.map(a=>`<tr><td>${a.code}</td><td><b>${a.name}</b></td><td class="muted">${a.category}</td><td class="amt">${money(a.dailyRate)}</td><td>${statusBadge(a.status)}</td>
+    ${rows.map(a=>`<tr><td>${a.code}</td><td><b>${a.name}</b></td><td class="muted">${dash(a.category)}</td><td class="amt">${money(a.dailyRate)}</td><td>${statusBadge(a.status)}</td>
       <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${a.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="6" class="empty">No matches.</td></tr>`}</tbody></table>`;
   }
 }
