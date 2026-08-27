@@ -448,7 +448,7 @@ function unitClashes(codes,start,end){
   });
   return out;
 }
-function checkoutQR(){
+async function checkoutQR(){
   const name=$("#qr-name").value.trim();
   if(!name)return toast("Enter a customer name");
   if(!QR.cart.length)return toast("Add at least one item");
@@ -458,15 +458,23 @@ function checkoutQR(){
   const clash=unitClashes(QR.cart.map(c=>c.code),QR.start,QR.end);
   if(clash.length&&!confirm(clash.join("\n")+"\n\nThese are already booked for overlapping dates. Create this booking anyway?"))return;
   const code="BK-2026-"+String(Date.now()).slice(-6);
-  const b={code,customer:"CUS-new",production:$("#qr-prod").value||name,project:$("#qr-prod").value||"Walk-in booking",
-    contact:name,phone:$("#qr-phone").value,status:"confirmed",start:QR.start,end:QR.end,pickup:"Studio floor",operator:"",
+  const prod=$("#qr-prod").value, phone=$("#qr-phone").value;
+  const b={code,customer:"CUS-new",production:prod||name,project:prod||"Walk-in booking",
+    contact:name,phone,status:"confirmed",start:QR.start,end:QR.end,pickup:"Studio floor",operator:"",
     cameras:QR.cart.filter(c=>c.type==="camera").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1})),
     accessories:QR.cart.filter(c=>c.type==="accessory").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1})),
     payments:[]};
-  DATA.customers.push({id:"CUS-new",name,company:$("#qr-prod").value||"",phone:$("#qr-phone").value});
-  // Reflect that these units are now committed so the catalogue flags them.
+  // Persist FIRST when online — only claim success if it actually saved.
+  if(SDB.on){
+    const btn=event&&event.target;if(btn){btn.disabled=true;btn.textContent="Saving…";}
+    const ok=await SDB.createBooking(b,{name:b.contact,company:b.production,phone:b.phone});
+    if(btn){btn.disabled=false;btn.textContent="Check Out →";}
+    if(!ok)return; // fail() already showed the real reason; keep the cart intact so nothing is lost
+  }
+  // Saved (or offline) — reflect locally.
+  DATA.customers.push({id:"CUS-new",name,company:prod||"",phone});
   QR.cart.forEach(c=>{const src=c.type==="camera"?DATA.cameras:DATA.accessories;const u=src.find(x=>x.code===c.code);if(u&&u.status==="available")u.status="booked";});
-  DATA.bookings.unshift(b);SDB.createBooking(b,{name:b.contact,company:b.production,phone:b.phone});
+  DATA.bookings.unshift(b);
   QR={cart:[],start:TODAY,end:"",tab:"all",q:""};
   toast("Booking "+code+" created");openBooking(code);
 }

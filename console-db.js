@@ -17,7 +17,17 @@ window.SDB = (function () {
   // id caches (code/name -> uuid) built during bootstrap
   const ids = { unitByCode: {}, bookingByCode: {}, supplierById: {}, investorByName: {}, optionByName: {}, lineKey: {} };
 
-  function fail(e, what) { console.error(what, e); if (window.toast) toast("Sync error: " + what); }
+  function fail(e, what) {
+    console.error("SDB " + what, e);
+    const code = (e && e.code) ? e.code : "";
+    const raw = (e && (e.message || e.error_description || e.hint || e.msg)) || String(e || "unknown error");
+    let friendly = raw;
+    if (/row-level security|permission denied|42501/i.test(raw + " " + code))
+      friendly = "not signed in as staff (or your session expired). Sign out and sign back in, then retry.";
+    else if (/JWT|401|not authenticated|Auth session missing|invalid token/i.test(raw))
+      friendly = "your session expired — please sign in again.";
+    if (window.toast) toast("Couldn't save — " + friendly);
+  }
 
   async function bootstrap() {
     if (!ON) { console.info("SDB offline — using seed data (console-data.js)."); return false; }
@@ -159,6 +169,7 @@ window.SDB = (function () {
     const rows = [...b.cameras.map(c => ({ ...c, kind: "camera" })), ...b.accessories.map(a => ({ ...a, kind: "accessory" }))]
       .map(l => ({ booking_id: bk.id, unit_id: ids.unitByCode[l.code], kind: l.kind, daily_rate_inr: l.rate, quantity: l.qty || 1 }));
     if (rows.length) { const { error } = await sb.from("booking_lines").insert(rows); if (error) throw error; }
+    return b.code;
   });
 
   const addPayment = guard(async (code, p) => {
