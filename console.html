@@ -247,8 +247,6 @@ async function sendQuoteWA(){
   let msg=`Hi ${QCTX.name}, thanks for your enquiry with Sri Cine Hub.\n\nQuote${QCTX.start&&QCTX.end?` for ${fmtDate(QCTX.start)}–${fmtDate(QCTX.end)}`:''}:\n${lines.join("\n")||"(add items first)"}\n`;
   if(discount>0) msg+=`\nSubtotal: ₹${subtotal.toLocaleString("en-IN")}\nDiscount: −₹${discount.toLocaleString("en-IN")}`;
   msg+=`\nTotal: ₹${total.toLocaleString("en-IN")}`;
-  if(QB_OPTS.depositFlat>0) msg+=`\nRefundable deposit: ₹${QB_OPTS.depositFlat.toLocaleString("en-IN")}`;
-  if(QB_OPTS.validDays) msg+=`\n(Valid ${QB_OPTS.validDays} days)`;
   msg+=`\n\nShall we confirm?`;
   const code='QT-'+Date.now().toString().slice(-8); SDB.saveQuotation(u,code,QB,'sent',QB_SOURCE,qbOptsPayload());
   const rr=(DATA.requests||[]).find(x=>x._uuid===u); if(rr)rr.status='quoted'; SDB.setRequestStatus(u,'quoted'); waSend(QCTX.phone,msg);}
@@ -713,13 +711,10 @@ function renderQB(){
   const sum=$("#qb-summary"); if(sum) sum.innerHTML=`<div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px">
     <div style="display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;font-size:12px;color:var(--mut);margin-bottom:10px">
       <span>Discount <input type="number" placeholder="0" value="${QB_OPTS.discountVal||''}" onchange="qbSetOpt('discountVal',this.value)" style="${inp(70)}"> <select onchange="QB_OPTS.discountMode=this.value;renderQB()" style="background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px;color:var(--text)"><option value="flat" ${QB_OPTS.discountMode==='flat'?'selected':''}>₹ off</option><option value="pct" ${QB_OPTS.discountMode==='pct'?'selected':''}>% off</option></select></span>
-      <span>deposit ₹<input type="number" value="${QB_OPTS.depositFlat||''}" onchange="qbSetOpt('depositFlat',this.value)" style="${inp(66)}"></span>
-      <span>valid <input type="number" value="${QB_OPTS.validDays}" onchange="qbSetOpt('validDays',this.value)" style="${inp(34)}">d</span>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0"><span class="muted">Subtotal</span><span>${money(subtotal)}</span></div>
     ${discount>0?`<div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0"><span class="muted">Discount</span><span style="color:var(--bad)">− ${money(discount)}</span></div>`:''}
     <div style="display:flex;justify-content:space-between;font-family:var(--font-display);font-size:19px;padding:6px 0;border-top:1px solid var(--line);margin-top:4px"><span>Total payable</span><span class="gold">${money(total)}</span></div>
-    ${QB_OPTS.depositFlat>0?`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0;color:var(--mut)"><span>+ Refundable deposit</span><span>${money(QB_OPTS.depositFlat)}</span></div>`:''}
     ${margin>0?`<div class="muted" style="font-size:12px;text-align:right;margin-top:2px">incl. <span class="gold">${money(margin)}</span> hire-in margin</div>`:''}
   </div>`;
   const orig=$("#qb-original"); if(orig) orig.innerHTML = QB_SOURCE? `<details style="margin:4px 0 12px"><summary style="cursor:pointer;color:var(--mut);font-size:12px">📄 Original request (as received — nothing dropped)</summary><pre style="white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;color:var(--text);margin-top:6px;font-family:inherit">${(QB_SOURCE||'').replace(/</g,'&lt;')}</pre></details>` : '';
@@ -727,7 +722,7 @@ function renderQB(){
 function addDays(d,n){ const x=parseD(d); x.setDate(x.getDate()+(+n||0)); return x.toISOString().slice(0,10); }
 function qbOptsPayload(){ let equip=0,svc=0; QB.forEach(l=>{ if(l.type!=='item'||!l.include||!l.name)return; const qty=l.qty||1; if(isEquip(l.kind))equip+=l.rate*billedDays(l.days)*qty; else svc+=l.rate*l.days*qty; });
   const subtotal=equip+svc; const discount=qbDiscount(subtotal);
-  return { discount_inr:discount, deposit_inr:QB_OPTS.depositFlat||0, other_charges_inr:svc, valid_until:(QB_OPTS.validDays?addDays(TODAY,QB_OPTS.validDays):null) }; }
+  return { discount_inr:discount, deposit_inr:0, other_charges_inr:svc, valid_until:null }; }
 async function qbSave(){ const u=await ensureRequest(); if(u===null)return; const code='QT-'+Date.now().toString().slice(-8); SDB.saveQuotation(u,code,QB,'draft',QB_SOURCE,qbOptsPayload()); toast('Quote saved · '+code); }
 async function convertReq(){
   if(!QCTX.name) return toast('Enter a customer name');
