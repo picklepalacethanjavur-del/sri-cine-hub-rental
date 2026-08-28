@@ -126,7 +126,7 @@ window.SDB = (function () {
 
       const customers = custs.data.map(c => ({ id: c.id, name: c.name, company: c.company_name || "", phone: c.phone || "" }));
       const requests = reqs.data.map(r => ({
-        id: r.request_code, _uuid: r.id, name: r.name, company: r.company || "", phone: r.phone,
+        id: r.request_code, _uuid: r.id, name: r.name, company: r.company || "", phone: r.phone, project: r.project || "",
         start: r.start_at, end: r.end_at, desc: r.description, status: r.status, notes: r.notes || "",
         kit: Array.isArray(r.kit) ? r.kit : []
       }));
@@ -300,7 +300,7 @@ window.SDB = (function () {
   });
   const createRequest = async (code, r) => {
     if (!ON) return null;
-    try { const { data, error } = await sb.from("quote_requests").insert({ request_code: code, name: r.name, phone: r.phone || null, company: r.company || null, start_at: r.start || null, end_at: r.end || null, description: r.desc || null, source: "walk_in" }).select("id").single(); if (error) throw error; return data.id; }
+    try { const { data, error } = await sb.from("quote_requests").insert({ request_code: code, name: r.name, phone: r.phone || null, company: r.company || null, project: r.project || null, start_at: r.start || null, end_at: r.end || null, description: r.desc || null, source: "walk_in" }).select("id").single(); if (error) throw error; return data.id; }
     catch (e) { fail(e, "create request"); return null; }
   };
   // convert a quote to a real booking (option-level lines; unit assigned at checkout)
@@ -316,7 +316,7 @@ window.SDB = (function () {
       if (ce) throw ce;
       const { data: b, error: be } = await sb.from("bookings").insert({
         code, customer_id: c.id, status: "confirmed", production_name: req.company || req.name,
-        project_name: "Booking — " + req.name, contact_name: req.name, contact_phone: req.phone,
+        project_name: req.project || ("Booking — " + req.name), contact_name: req.name, contact_phone: req.phone,
         start_at: req.start, end_at: req.end, pickup_location: "Studio floor",
         other_charges_inr: opts.other_charges_inr || 0, discount_inr: opts.discount_inr || 0, deposit_inr: opts.deposit_inr || 0
       }).select("id").single();

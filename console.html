@@ -235,9 +235,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828f"></script>
-<script src="console-data.js?v=20260828f"></script>
-<script src="console-db.js?v=20260828f"></script>
+<script src="supabase-config.js?v=20260828g"></script>
+<script src="console-data.js?v=20260828g"></script>
+<script src="console-db.js?v=20260828g"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -292,7 +292,7 @@ function quoteLetter(){
     </div>
     <div class="rc-parties">
       <div><label>Prepared for</label><div class="v"><b>${esc(QCTX.name)}</b>${QCTX.company?'<br>'+esc(QCTX.company):''}${QCTX.phone?'<br>'+esc(QCTX.phone):''}</div></div>
-      <div style="text-align:right"><label>Rental period</label><div class="v">${period}</div></div>
+      <div style="text-align:right"><label>${QCTX.project?'Project · Rental period':'Rental period'}</label><div class="v">${QCTX.project?'<b>'+esc(QCTX.project)+'</b><br>':''}${period}</div></div>
     </div>
     <p style="font-size:13.5px;color:#333;margin:6px 0 10px">Thank you for your enquiry. We're pleased to quote the following for your production:</p>
     <table class="rc-table"><thead><tr><th>#</th><th>Equipment</th><th class="r">Rate/day</th><th class="r">Days</th><th class="r">Qty</th><th class="r">Amount</th></tr></thead><tbody>${rows}</tbody></table>
@@ -424,7 +424,7 @@ VIEWS.dashboard=()=>{
 };
 
 /* ---- Quick Rent ---- */
-let QR={cart:[],start:TODAY,end:"",tab:"all",q:"",name:"",phone:"",prod:""};
+let QR={cart:[],start:TODAY,end:"",tab:"all",q:"",name:"",phone:"",prod:"",project:""};
 VIEWS.quickrent=()=>{
   return `<div class="qr">
     <div>
@@ -438,8 +438,9 @@ VIEWS.quickrent=()=>{
       <div class="card-h"><h3>New booking</h3><span class="pill">under 60 sec</span></div>
       <div style="padding:16px">
         <div class="field"><label>Customer name *</label><input id="qr-name" placeholder="Walk-in / caller name" value="${escAttr(QR.name||'')}" oninput="QR.name=this.value"></div>
+        <div class="field"><label>Project / shoot name</label><input id="qr-project" placeholder="e.g. Vikram – Ad film" value="${escAttr(QR.project||'')}" oninput="QR.project=this.value"></div>
         <div class="r2"><div class="field"><label>Phone</label><input id="qr-phone" placeholder="+91" value="${escAttr(QR.phone||'')}" oninput="QR.phone=this.value"></div>
-        <div class="field"><label>Production</label><input id="qr-prod" placeholder="Company" value="${escAttr(QR.prod||'')}" oninput="QR.prod=this.value"></div></div>
+        <div class="field"><label>Production house</label><input id="qr-prod" placeholder="Company" value="${escAttr(QR.prod||'')}" oninput="QR.prod=this.value"></div></div>
         <div class="r2"><div class="field"><label>Checkout</label><input type="date" id="qr-start" value="${QR.start}" onchange="QR.start=this.value;renderCart()"></div>
         <div class="field"><label>Return</label><input type="date" id="qr-end" value="${QR.end}" onchange="QR.end=this.value;renderCart()"></div></div>
         <div id="qr-dur" class="muted" style="font-size:12.5px;margin:-4px 0 12px"></div>
@@ -515,8 +516,8 @@ async function checkoutQR(){
   const clash=unitClashes(QR.cart.map(c=>c.code),QR.start,QR.end);
   if(clash.length&&!confirm(clash.join("\n")+"\n\nThese are already booked for overlapping dates. Create this booking anyway?"))return;
   const code="BK-2026-"+String(Date.now()).slice(-6);
-  const prod=(QR.prod||"").trim(), phone=(QR.phone||"").trim();
-  const b={code,customer:"CUS-new",production:prod||name,project:prod||"Walk-in booking",
+  const prod=(QR.prod||"").trim(), phone=(QR.phone||"").trim(), proj=(QR.project||"").trim();
+  const b={code,customer:"CUS-new",production:prod||name,project:proj||"Walk-in booking",
     contact:name,phone,status:"confirmed",start:QR.start,end:QR.end,pickup:"Studio floor",operator:"",
     cameras:QR.cart.filter(c=>c.type==="camera").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1,lineKind:'own'})),
     accessories:QR.cart.filter(c=>c.type==="accessory").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1,lineKind:'own'})),
@@ -532,7 +533,7 @@ async function checkoutQR(){
   DATA.customers.push({id:"CUS-new",name,company:prod||"",phone});
   QR.cart.forEach(c=>{const src=c.type==="camera"?DATA.cameras:DATA.accessories;const u=src.find(x=>x.code===c.code);if(u&&u.status==="available")u.status="booked";});
   DATA.bookings.unshift(b);
-  QR={cart:[],start:TODAY,end:"",tab:"all",q:"",name:"",phone:"",prod:""};
+  QR={cart:[],start:TODAY,end:"",tab:"all",q:"",name:"",phone:"",prod:"",project:""};
   toast("Booking "+code+" created");openBooking(code);
 }
 
@@ -541,7 +542,7 @@ VIEWS.requests=()=>{
   const st=s=>({new:'b-warn',quoted:'b-info',converted:'b-ok',closed:'b-mut'})[s]||'b-mut';
   return `<button class="btn btn-primary" style="margin-bottom:16px" onclick="openQuoteBuilder()">＋ New quote</button>
   <div class="card">${(DATA.requests||[]).map(r=>`<div class="list-row" onclick="openReq('${r.id}')">
-    <div class="grow"><div class="t">${r.name}${r.company?' · '+r.company:''}</div><div class="sub">${r.start?fmtDate(r.start)+'–'+fmtDate(r.end)+' · ':''}${r.desc||''}</div></div>
+    <div class="grow"><div class="t">${r.name}${r.project?' <span class="muted" style="font-weight:400">· '+r.project+'</span>':''}</div><div class="sub">${r.company?r.company+' · ':''}${r.start?fmtDate(r.start)+'–'+fmtDate(r.end)+' · ':''}${r.desc||''}</div></div>
     <span class="badge ${st(r.status)}">${r.status}</span>
     ${ROLE==='admin'?`<button class="btn btn-ghost btn-sm btn-danger" style="margin-left:12px" title="Delete quote" onclick="event.stopPropagation();deleteRequest('${r.id}')">🗑</button>`:''}</div>`).join("")||`<div class="empty">No requests yet. Start one with ＋ New quote.</div>`}</div>`;
 };
@@ -563,11 +564,11 @@ function deleteBooking(code){
   go('bookings');toast("Booking deleted");
 }
 /* ---- full-screen quote builder (own inventory ⇄ supplier hire-in) ---- */
-let QCTX={requestUuid:null,id:null,name:'',company:'',phone:'',start:'',end:''};
+let QCTX={requestUuid:null,id:null,name:'',company:'',phone:'',project:'',start:'',end:''};
 let QSRC={mode:'own',supplierId:null,q:'',cat:'all'};
 function openQuoteBuilder(request){
-  QCTX = request ? {requestUuid:request._uuid||null,id:request.id,name:request.name||'',company:request.company||'',phone:request.phone||'',start:request.start||TODAY,end:request.end||''}
-                 : {requestUuid:null,id:null,name:'',company:'',phone:'',start:TODAY,end:''};
+  QCTX = request ? {requestUuid:request._uuid||null,id:request.id,name:request.name||'',company:request.company||'',phone:request.phone||'',project:request.project||'',start:request.start||TODAY,end:request.end||''}
+                 : {requestUuid:null,id:null,name:'',company:'',phone:'',project:'',start:TODAY,end:''};
   QSRC={mode:'own',supplierId:(DATA.suppliers[0]||{}).id||null,q:'',cat:'all'};
   CUR='requests'; buildNav(); $("#pageTitle").textContent=request?'Quote':'New quote';
   renderQuoteBuilder();
@@ -593,8 +594,8 @@ function renderQuoteBuilder(){
       </div></div>
     <div class="card"><div class="card-h"><h3>${QCTX.requestUuid?'Quote':'New quote'}</h3></div>
       <div style="padding:20px 22px">
-        <div class="field"><label>Customer name *</label><input value="${(QCTX.name||'').replace(/"/g,'&quot;')}" oninput="QCTX.name=this.value" style="width:100%;${dinp}"></div>
-        <div class="r2"><div class="field"><label>Phone</label><input value="${QCTX.phone||''}" oninput="QCTX.phone=this.value" style="width:100%;${dinp}"></div><div class="field"><label>Company</label><input value="${(QCTX.company||'').replace(/"/g,'&quot;')}" oninput="QCTX.company=this.value" style="width:100%;${dinp}"></div></div>
+        <div class="r2"><div class="field"><label>Customer name *</label><input value="${(QCTX.name||'').replace(/"/g,'&quot;')}" oninput="QCTX.name=this.value" style="width:100%;${dinp}"></div><div class="field"><label>Project / shoot name</label><input value="${(QCTX.project||'').replace(/"/g,'&quot;')}" oninput="QCTX.project=this.value" placeholder="e.g. Vikram – Ad film" style="width:100%;${dinp}"></div></div>
+        <div class="r2"><div class="field"><label>Phone</label><input value="${QCTX.phone||''}" oninput="QCTX.phone=this.value" style="width:100%;${dinp}"></div><div class="field"><label>Production house</label><input value="${(QCTX.company||'').replace(/"/g,'&quot;')}" oninput="QCTX.company=this.value" style="width:100%;${dinp}"></div></div>
         <div class="r2"><div class="field"><label>Shoot start</label><input type="date" value="${QCTX.start||''}" onchange="qctxDate('start',this.value)"></div><div class="field"><label>Shoot end</label><input type="date" value="${QCTX.end||''}" onchange="qctxDate('end',this.value)"></div></div>
         <label class="muted" style="font-size:11px;letter-spacing:.06em;text-transform:uppercase">Or paste a WhatsApp list</label>
         <textarea id="qb-paste" placeholder="Paste the customer's list, one item per line, e.g.&#10;2x Sony FX3&#10;SkyPanel S60&#10;Ultra Prime set&#10;Tripod + head" style="width:100%;min-height:130px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:11px;color:var(--text);font-size:14px;line-height:1.5;font-family:inherit;margin-top:4px;resize:vertical"></textarea>
@@ -650,9 +651,9 @@ async function ensureRequest(){
   if(!QCTX.name){ toast('Enter a customer name'); return null; }
   const code='REQ-'+Date.now().toString().slice(-8);
   const desc=QB.filter(l=>l.type==='item'&&l.name).map(l=>l.name).join(', ');
-  const uuid=await SDB.createRequest(code,{name:QCTX.name,company:QCTX.company,phone:QCTX.phone,start:QCTX.start,end:QCTX.end,desc});
+  const uuid=await SDB.createRequest(code,{name:QCTX.name,company:QCTX.company,phone:QCTX.phone,project:QCTX.project,start:QCTX.start,end:QCTX.end,desc});
   QCTX.requestUuid=uuid; QCTX.id=code;
-  (DATA.requests=DATA.requests||[]).unshift({id:code,_uuid:uuid,name:QCTX.name,company:QCTX.company,phone:QCTX.phone,start:QCTX.start,end:QCTX.end,desc,status:'new',notes:'',kit:[]});
+  (DATA.requests=DATA.requests||[]).unshift({id:code,_uuid:uuid,name:QCTX.name,company:QCTX.company,phone:QCTX.phone,project:QCTX.project,start:QCTX.start,end:QCTX.end,desc,status:'new',notes:'',kit:[]});
   return uuid;
 }
 
@@ -856,10 +857,10 @@ async function convertReq(){
   if(!QCTX.name) return toast('Enter a customer name');
   if(!QCTX.start||!QCTX.end) return toast('Set shoot start & end dates');
   const u=await ensureRequest(); const qcode='QT-'+Date.now().toString().slice(-8); const opts=qbOptsPayload();
-  const res=await SDB.convertQuote(u,{name:QCTX.name,company:QCTX.company,phone:QCTX.phone,start:QCTX.start,end:QCTX.end},qcode,QB,QB_SOURCE,opts);
+  const res=await SDB.convertQuote(u,{name:QCTX.name,company:QCTX.company,phone:QCTX.phone,project:QCTX.project,start:QCTX.start,end:QCTX.end},qcode,QB,QB_SOURCE,opts);
   const eq=QB.filter(l=>l.type==='item'&&l.include&&l.name&&isEquip(l.kind));
   const toLine=l=>({code:l.kind==='hirein'?'(hire-in)':'(assign at checkout)',name:l.name,rate:l.rate,qty:l.qty||1,lineKind:l.kind,supplierId:l.supplierId,cost:l.cost});
-  const b={code:res.code,customer:res.customer_id||'',production:QCTX.company||QCTX.name,project:'Booking — '+QCTX.name,contact:QCTX.name,phone:QCTX.phone,status:'confirmed',start:QCTX.start,end:QCTX.end,pickup:'Studio floor',operator:'',
+  const b={code:res.code,customer:res.customer_id||'',production:QCTX.company||QCTX.name,project:QCTX.project||('Booking — '+QCTX.name),contact:QCTX.name,phone:QCTX.phone,status:'confirmed',start:QCTX.start,end:QCTX.end,pickup:'Studio floor',operator:'',
     otherCharges:opts.other_charges_inr||0,discount:opts.discount_inr||0,deposit:opts.deposit_inr||0,
     cameras:eq.filter(l=>(DATA.optionCats||{})[l.name]==='Cameras').map(toLine),
     accessories:eq.filter(l=>(DATA.optionCats||{})[l.name]!=='Cameras').map(toLine),payments:[]};
