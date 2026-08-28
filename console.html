@@ -237,15 +237,16 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828o"></script>
-<script src="console-data.js?v=20260828o"></script>
-<script src="console-db.js?v=20260828o"></script>
+<script src="supabase-config.js?v=20260828p"></script>
+<script src="console-data.js?v=20260828p"></script>
+<script src="console-db.js?v=20260828p"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n||0).toLocaleString("en-IN");
 const parseD=s=>new Date(s+"T00:00:00");
-const daysBetween=(s,e)=>Math.max(1,Math.ceil((parseD(e)-parseD(s))/86400000));
+/* Inclusive rental days: a shoot from the 20th to the 22nd = 3 days (both dates billed). */
+const daysBetween=(s,e)=>Math.max(1,Math.round((parseD(e)-parseD(s))/86400000)+1);
 const fmtDate=s=>parseD(s).toLocaleDateString("en-IN",{day:"numeric",month:"short"});
 const cust=id=>DATA.customers.find(c=>c.id===id)||{name:"—"};
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),2200);}
@@ -458,7 +459,10 @@ VIEWS.quickrent=()=>{
         <div class="field"><label>Return</label><input type="date" id="qr-end" value="${QR.end}" onchange="QR.end=this.value;renderCart()"></div></div>
         <div id="qr-dur" class="muted" style="font-size:12.5px;margin:-4px 0 12px"></div>
         <div id="qr-cart"></div>
-        <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="checkoutQR()">Check Out →</button>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn btn-ghost" onclick="clearQR()">Clear</button>
+          <button class="btn btn-primary" style="flex:1" onclick="checkoutQR()">Check Out →</button>
+        </div>
       </div>
     </div>
   </div>`;
@@ -519,12 +523,13 @@ function unitClashes(codes,start,end){
   });
   return out;
 }
+function clearQR(){ if(!QR.cart.length&&!QR.name&&!QR.phone&&!QR.prod&&!QR.project){toast("Nothing to clear");return;} if(confirm("Clear this booking form?")){ QR={cart:[],start:TODAY,end:"",tab:"all",q:"",name:"",phone:"",prod:"",project:""}; go("quickrent"); } }
 async function checkoutQR(){
   const name=(QR.name||"").trim();
   if(!name)return toast("Enter a customer name");
   if(!QR.cart.length)return toast("Add at least one item");
   if(!QR.end)return toast("Set a return date");
-  if(daysBetween(QR.start,QR.end)<1)return toast("Return date must be after checkout");
+  if(parseD(QR.end)<parseD(QR.start))return toast("Return date can't be before checkout");
   // Warn (don't hard-block) if any unit is already out for overlapping dates.
   const clash=unitClashes(QR.cart.map(c=>c.code),QR.start,QR.end);
   if(clash.length&&!confirm(clash.join("\n")+"\n\nThese are already booked for overlapping dates. Create this booking anyway?"))return;
@@ -617,13 +622,15 @@ function renderQuoteBuilder(){
         <div id="qb-lines"></div>
         <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="qbAdd()">＋ Add blank line</button>
         <div id="qb-summary"></div>
-        <div style="display:flex;gap:8px;margin-top:14px">
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
           ${QCTX.requestUuid ? `
+            <button class="btn btn-ghost" onclick="cancelQuote()">Cancel</button>
             <button class="btn btn-ghost" style="flex:1" onclick="printQuote()">🖨 Print</button>
             <button class="btn btn-ghost" style="flex:1" onclick="sendQuoteWA()">💬 Send</button>
             <button class="btn btn-ghost" style="flex:1" onclick="qbSave()">Save changes</button>
             <button class="btn btn-primary" style="flex:1.4" onclick="convertReq()">Create booking →</button>
           ` : `
+            <button class="btn btn-ghost" onclick="cancelQuote()">Cancel</button>
             <button class="btn btn-ghost" style="flex:1" onclick="printQuote()">🖨 Print</button>
             <button class="btn btn-ghost" style="flex:1" onclick="sendQuoteWA()">💬 Send</button>
             <button class="btn btn-primary" style="flex:2" onclick="qbSave()">Create quote</button>
@@ -636,6 +643,7 @@ function renderQuoteBuilder(){
 function qcMode(m){ QSRC.mode=m; if(m==='sup'&&!QSRC.supplierId)QSRC.supplierId=(DATA.suppliers[0]||{}).id||null; renderQuoteBuilder(); }
 function qcCat(c){ QSRC.cat=c; renderQuoteBuilder(); }
 function qctxDate(f,v){ QCTX[f]=v; const d=(QCTX.start&&QCTX.end)?daysBetween(QCTX.start,QCTX.end):1; QB.forEach(l=>{ if(l.type==='item')l.days=d; }); renderQB(); }
+function cancelQuote(){ if(confirm('Discard this quote and go back? Any unsaved changes will be lost.')) go('requests'); }
 function renderQcatalog(){
   const el=$("#qc-grid"); if(!el)return; const q=(QSRC.q||'').toLowerCase(); let items;
   if(QSRC.mode==='own'){
@@ -1394,7 +1402,10 @@ function renderRFB(){
         <div id="rfb-sel" style="margin:6px 0 10px"></div>
         <div style="display:flex;gap:8px;margin-bottom:12px"><input id="rfb-cust" placeholder="Add item not in list…" style="flex:1;${dinp}" onkeydown="if(event.key==='Enter')rfbAddCustom()"><button class="btn btn-ghost btn-sm" onclick="rfbAddCustom()">＋</button></div>
         <div class="field"><label>Notes</label><textarea id="rfb-notes" onchange="RFB.notes=this.value" style="width:100%;min-height:56px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);font-family:inherit" placeholder="PL mount, with batteries + charger">${RFB.notes||''}</textarea></div>
-        <button class="btn btn-primary" style="width:100%" onclick="doCreateRFB()">${RFB.editId?'Save changes':'Create RFQ →'}</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="if(confirm('Discard this RFQ and go back?'))go('hirein')">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" onclick="doCreateRFB()">${RFB.editId?'Save changes':'Create RFQ →'}</button>
+        </div>
       </div></div>
    </div>`;
   renderRfbCatalog(); renderRfbSel();
