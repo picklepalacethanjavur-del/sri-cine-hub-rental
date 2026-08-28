@@ -235,9 +235,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828d"></script>
-<script src="console-data.js?v=20260828d"></script>
-<script src="console-db.js?v=20260828d"></script>
+<script src="supabase-config.js?v=20260828e"></script>
+<script src="console-data.js?v=20260828e"></script>
+<script src="console-db.js?v=20260828e"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -456,6 +456,7 @@ function renderQRcatalog(){
   if(QR.tab!=="accessories")items=items.concat(DATA.cameras.map(c=>({...c,type:"camera",ic:"🎥"})));
   if(QR.tab!=="cameras")items=items.concat(DATA.accessories.map(a=>({...a,type:"accessory",ic:"🎚️"})));
   items=items.filter(i=>!q||(i.name+i.code+(i.manufacturer||"")+(i.category||"")).toLowerCase().includes(q));
+  items.sort((a,b)=>((b.dailyRate||0)-(a.dailyRate||0))||(a.name||"").localeCompare(b.name||"")); // priciest first, then A–Z
   $("#qrcatalog").innerHTML=items.map(i=>{
     const added=QR.cart.some(c=>c.code===i.code);
     const avail=i.status==="available"||i.status==="booked"; // booked shown but flagged
