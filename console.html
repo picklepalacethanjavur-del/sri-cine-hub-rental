@@ -117,6 +117,8 @@
   /* quick rent */
   .qr{display:grid;grid-template-columns:1.1fr 1fr;gap:22px;align-items:start}
   @media(max-width:980px){.qr{grid-template-columns:1fr}}
+  .inv-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+  @media(max-width:1080px){.inv-grid{grid-template-columns:1fr}}
   .qr-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;cursor:pointer;background:var(--panel)}
   .qr-item:hover{border-color:var(--gold)}
   .qr-item.added{border-color:var(--gold);background:var(--gold-soft)}
@@ -235,9 +237,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828k"></script>
-<script src="console-data.js?v=20260828k"></script>
-<script src="console-db.js?v=20260828k"></script>
+<script src="supabase-config.js?v=20260828l"></script>
+<script src="console-data.js?v=20260828l"></script>
+<script src="console-db.js?v=20260828l"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -1512,7 +1514,40 @@ function receiptView(code){
 /* ---- Investor Portal — per-camera investment portfolio ---- */
 const round1=n=>Math.round(n*10)/10;
 let INVEST={cam:null,period:"2026"};
-VIEWS.investor=()=>{
+/* Static ARRI S35 expense sheet (INR @ ₹96/USD) — reference panel in the portal. */
+const ARRI_S35_COSTS=[
+  {n:"Camera + accessories, full setup (3 cards)", usd:60000, inr:5760000},
+  {n:"Inspection", usd:390, inr:37440},
+  {n:"Monitor + battery charger", usd:1800, inr:172800},
+  {n:"Batteries — B-mount (2) + ground (2), chargers", inr:170000},
+  {n:"Transport & research", usd:1000, inr:96000},
+  {n:"Video transmitter (c-Motion)", inr:275000},
+  {n:"Tripod (O'Connor)", inr:450000},
+  {n:"Wireless follow focus", inr:225000},
+  {n:"Other accessories, allen key, cables, magic arm", inr:100000},
+  {n:"Mattebox & filter", inr:300000},
+  {n:"Shoulder pad, handle & small hood", inr:120000},
+  {n:"Shogun & director monitor", inr:350000},
+  {n:"Shipping Charges & Travel Insurance", usd:1000, inr:96000},
+  {n:"Port of Authority / Duty Paid", inr:20000}
+];
+function arriCostPanel(){
+  const fmt=n=>'₹'+Number(n).toLocaleString('en-IN');
+  const total=ARRI_S35_COSTS.reduce((a,x)=>a+x.inr,0);
+  const rows=ARRI_S35_COSTS.map((x,i)=>`<tr style="border-bottom:1px solid var(--line)">
+    <td style="color:var(--mut);padding:8px 6px 8px 0;vertical-align:top;font-size:12px">${i+1}</td>
+    <td style="padding:8px 8px;vertical-align:top;font-size:13px;line-height:1.35">${x.n}</td>
+    <td style="text-align:right;white-space:nowrap;padding:8px 0;vertical-align:top;font-size:13px">${x.usd?`<div class="muted" style="font-size:11px">$${x.usd.toLocaleString('en-US')}</div>`:''}${fmt(x.inr)}</td></tr>`).join('');
+  return `<div class="card" style="position:sticky;top:80px">
+    <div class="card-h"><h3>ARRI S35 — expenses</h3><span class="pill">@ ₹96/$</span></div>
+    <div style="padding:10px 16px 16px">
+      <table style="width:100%;border-collapse:collapse"><tbody>${rows}</tbody></table>
+      <div style="display:flex;justify-content:space-between;font-family:var(--font-display);font-size:18px;margin-top:12px;border-top:2px solid var(--line);padding-top:10px"><span>Total cost</span><span class="gold">${fmt(total)}</span></div>
+    </div>
+  </div>`;
+}
+VIEWS.investor=()=>`<div class="inv-grid"><div style="min-width:0">${investorBody()}</div>${arriCostPanel()}</div>`;
+function investorBody(){
   const invCams=DATA.cameras.filter(c=>c.investors&&c.investors.length);
   if(!invCams.length)return `<div class="empty" style="padding:48px;text-align:center">
     <div style="font-size:34px">📈</div>
