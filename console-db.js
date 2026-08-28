@@ -36,7 +36,7 @@ window.SDB = (function () {
   async function bootstrap() {
     if (!ON) { console.info("SDB offline — using seed data (console-data.js)."); return false; }
     try {
-      const [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows, aexp] =
+      const [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows, aexp, quos, qitems] =
         await Promise.all([
           sb.from("equipment_units").select("*"),
           sb.from("investors").select("*"),
@@ -54,11 +54,13 @@ window.SDB = (function () {
           sb.from("catalog_options").select("*"),
           sb.from("supplier_rfqs").select("*"),
           sb.from("supplier_rfq_items").select("*"),
-          sb.from("asset_expenses").select("*")
+          sb.from("asset_expenses").select("*"),
+          sb.from("quotations").select("*"),
+          sb.from("quotation_items").select("*")
         ]);
       // Resilient load: one failed table must not wipe the whole console.
       // Log any errors, but let the tables that DID load populate normally.
-      const _all = [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows, aexp];
+      const _all = [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows, aexp, quos, qitems];
       const _errs = _all.filter(r => r && r.error);
       if (_errs.length) console.warn("SDB: some tables failed to load —", _errs.map(r => r.error.message).join(" | "));
       // Expired / invalid session → tell boot() to show the login page, NOT a scary all-zero console.
@@ -130,10 +132,24 @@ window.SDB = (function () {
       });
 
       const customers = custs.data.map(c => ({ id: c.id, name: c.name, company: c.company_name || "", phone: c.phone || "" }));
+      // saved quotations → latest per request, mapped back to editable QB lines (preserves custom rates)
+      const quoByReq = {}; quos.data.forEach(q => { if (q.request_id) (quoByReq[q.request_id] ||= []).push(q); });
+      const itemsByQuo = {}; qitems.data.forEach(it => { (itemsByQuo[it.quotation_id] ||= []).push(it); });
+      const savedFor = reqUuid => {
+        const qs = (quoByReq[reqUuid] || []).slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1)); // latest first
+        const latest = qs[0]; if (!latest) return null;
+        const its = (itemsByQuo[latest.id] || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
+        return {
+          code: latest.quote_code, discount_inr: Number(latest.discount_inr || 0),
+          lines: its.map(it => ({ type: it.line_type || "item", name: it.label || "", rate: Number(it.daily_rate_inr || 0),
+            days: it.days || 1, qty: it.qty || 1, kind: it.line_kind || "own", spec: it.note || "", raw: it.raw || it.label || "",
+            supplierId: it.supplier_id || null, cost: it.cost_inr != null ? Number(it.cost_inr) : null }))
+        };
+      };
       const requests = reqs.data.map(r => ({
         id: r.request_code, _uuid: r.id, name: r.name, company: r.company || "", phone: r.phone, project: r.project || "",
         start: r.start_at, end: r.end_at, desc: r.description, status: r.status, notes: r.notes || "",
-        kit: Array.isArray(r.kit) ? r.kit : []
+        kit: Array.isArray(r.kit) ? r.kit : [], saved: savedFor(r.id)
       }));
       const optionRates = {}, optionCats = {};
       opts.data.forEach(o => { optionRates[o.name] = o.default_rate_inr != null ? Number(o.default_rate_inr) : 0; optionCats[o.name] = o.category; ids.optionByName[o.name] = o.id; });

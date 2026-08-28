@@ -237,9 +237,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828p"></script>
-<script src="console-data.js?v=20260828p"></script>
-<script src="console-db.js?v=20260828p"></script>
+<script src="supabase-config.js?v=20260828q"></script>
+<script src="console-data.js?v=20260828q"></script>
+<script src="console-db.js?v=20260828q"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -786,6 +786,19 @@ function qbRowToLine(row,days){
 }
 function qbFromRequest(r){
   const days=daysBetween(r.start,r.end); QB=[]; QB_SOURCE=''; QB_OPTS={discountVal:0,discountMode:'flat',depositFlat:0,validDays:7};
+  // If this request already has a saved quotation, reload THOSE lines (with your custom prices) — not inventory defaults.
+  if(r.saved && r.saved.lines && r.saved.lines.length){
+    r.saved.lines.forEach(sl=>{
+      if(sl.type==='header'){ QB.push({type:'header',_uid:++QB_UID,name:sl.name||''}); return; }
+      const l=qbLine(sl.name, sl.rate, sl.days||days, sl.kind);
+      l.qty=sl.qty||1; l.spec=sl.spec||''; l.raw=sl.raw||sl.name; l.supplierId=sl.supplierId||null; l.cost=(sl.cost!=null?sl.cost:null);
+      if(sl.kind==='hirein') l.offers=matchSuppliers(sl.name);
+      QB.push(l);
+    });
+    QB_OPTS={discountVal:r.saved.discount_inr||0, discountMode:'flat', depositFlat:0, validDays:7};
+    if(!QB.filter(l=>l.type==='item').length) QB.push(qbLine('',0,days,'own'));
+    QB_OPEN=qbFirstAttention(); renderQB(); return;
+  }
   const kit=r.kit||[];
   if(kit.length){ kit.forEach(k=>{ const rate=(DATA.optionRates||{})[k.name]; QB.push(qbLine(k.name, rate!=null?rate:0, days, rate!=null?'own':'custom')); });
     QB_SOURCE='Kit selected on website:\n'+kit.map(k=>'• '+k.name).join('\n'); }
@@ -873,7 +886,12 @@ function addDays(d,n){ const x=parseD(d); x.setDate(x.getDate()+(+n||0)); return
 function qbOptsPayload(){ let equip=0,svc=0; QB.forEach(l=>{ if(l.type!=='item'||!l.include||!l.name)return; const qty=l.qty||1; if(isEquip(l.kind))equip+=l.rate*billedDays(l.days)*qty; else svc+=l.rate*l.days*qty; });
   const subtotal=equip+svc; const discount=qbDiscount(subtotal);
   return { discount_inr:discount, deposit_inr:0, other_charges_inr:svc, valid_until:null }; }
-async function qbSave(){ const existing=!!QCTX.requestUuid; const u=await ensureRequest(); if(u===null)return; const code='QT-'+Date.now().toString().slice(-8); SDB.saveQuotation(u,code,QB,'draft',QB_SOURCE,qbOptsPayload()); if(existing){ toast('Quote saved'); } else { toast('Quote created · '+code); go('requests'); } }
+async function qbSave(){ const existing=!!QCTX.requestUuid; const u=await ensureRequest(); if(u===null)return; const code='QT-'+Date.now().toString().slice(-8); const opts=qbOptsPayload(); SDB.saveQuotation(u,code,QB,'draft',QB_SOURCE,opts); qbCacheSaved(u,code,opts); if(existing){ toast('Quote saved'); } else { toast('Quote created · '+code); go('requests'); } }
+/* Cache the just-saved lines onto the local request so reopening (before a refresh) reloads YOUR prices, not inventory defaults. */
+function qbCacheSaved(reqUuid,code,opts){
+  const req=(DATA.requests||[]).find(x=>x._uuid===reqUuid); if(!req)return;
+  req.saved={ code, discount_inr:(opts&&opts.discount_inr)||0, lines: QB.filter(l=>l.type==='header'||l.name).map(l=>({type:l.type,name:l.name,rate:l.rate,days:l.days,qty:l.qty,kind:l.kind,spec:l.spec,raw:l.raw,supplierId:l.supplierId,cost:l.cost})) };
+}
 async function convertReq(){
   if(!QCTX.name) return toast('Enter a customer name');
   if(!QCTX.start||!QCTX.end) return toast('Set shoot start & end dates');
