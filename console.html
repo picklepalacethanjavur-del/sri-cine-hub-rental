@@ -237,9 +237,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828q"></script>
-<script src="console-data.js?v=20260828q"></script>
-<script src="console-db.js?v=20260828q"></script>
+<script src="supabase-config.js?v=20260828r"></script>
+<script src="console-data.js?v=20260828r"></script>
+<script src="console-db.js?v=20260828r"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -788,6 +788,7 @@ function qbFromRequest(r){
   const days=daysBetween(r.start,r.end); QB=[]; QB_SOURCE=''; QB_OPTS={discountVal:0,discountMode:'flat',depositFlat:0,validDays:7};
   // If this request already has a saved quotation, reload THOSE lines (with your custom prices) — not inventory defaults.
   if(r.saved && r.saved.lines && r.saved.lines.length){
+    QB_SOURCE=r.saved.source_text||''; // restore the original pasted text too
     r.saved.lines.forEach(sl=>{
       if(sl.type==='header'){ QB.push({type:'header',_uid:++QB_UID,name:sl.name||''}); return; }
       const l=qbLine(sl.name, sl.rate, sl.days||days, sl.kind);
@@ -890,7 +891,7 @@ async function qbSave(){ const existing=!!QCTX.requestUuid; const u=await ensure
 /* Cache the just-saved lines onto the local request so reopening (before a refresh) reloads YOUR prices, not inventory defaults. */
 function qbCacheSaved(reqUuid,code,opts){
   const req=(DATA.requests||[]).find(x=>x._uuid===reqUuid); if(!req)return;
-  req.saved={ code, discount_inr:(opts&&opts.discount_inr)||0, lines: QB.filter(l=>l.type==='header'||l.name).map(l=>({type:l.type,name:l.name,rate:l.rate,days:l.days,qty:l.qty,kind:l.kind,spec:l.spec,raw:l.raw,supplierId:l.supplierId,cost:l.cost})) };
+  req.saved={ code, discount_inr:(opts&&opts.discount_inr)||0, source_text:QB_SOURCE||'', lines: QB.filter(l=>l.type==='header'||l.name).map(l=>({type:l.type,name:l.name,rate:l.rate,days:l.days,qty:l.qty,kind:l.kind,spec:l.spec,raw:l.raw,supplierId:l.supplierId,cost:l.cost})) };
 }
 async function convertReq(){
   if(!QCTX.name) return toast('Enter a customer name');

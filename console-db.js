@@ -140,7 +140,7 @@ window.SDB = (function () {
         const latest = qs[0]; if (!latest) return null;
         const its = (itemsByQuo[latest.id] || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
         return {
-          code: latest.quote_code, discount_inr: Number(latest.discount_inr || 0),
+          code: latest.quote_code, discount_inr: Number(latest.discount_inr || 0), source_text: latest.source_text || "",
           lines: its.map(it => ({ type: it.line_type || "item", name: it.label || "", rate: Number(it.daily_rate_inr || 0),
             days: it.days || 1, qty: it.qty || 1, kind: it.line_kind || "own", spec: it.note || "", raw: it.raw || it.label || "",
             supplierId: it.supplier_id || null, cost: it.cost_inr != null ? Number(it.cost_inr) : null }))
