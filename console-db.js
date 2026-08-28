@@ -36,7 +36,7 @@ window.SDB = (function () {
   async function bootstrap() {
     if (!ON) { console.info("SDB offline — using seed data (console-data.js)."); return false; }
     try {
-      const [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows] =
+      const [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows, aexp] =
         await Promise.all([
           sb.from("equipment_units").select("*"),
           sb.from("investors").select("*"),
@@ -53,11 +53,12 @@ window.SDB = (function () {
           sb.from("revenue_config").select("*"),
           sb.from("catalog_options").select("*"),
           sb.from("supplier_rfqs").select("*"),
-          sb.from("supplier_rfq_items").select("*")
+          sb.from("supplier_rfq_items").select("*"),
+          sb.from("asset_expenses").select("*")
         ]);
       // Resilient load: one failed table must not wipe the whole console.
       // Log any errors, but let the tables that DID load populate normally.
-      const _all = [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows];
+      const _all = [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows, aexp];
       const _errs = _all.filter(r => r && r.error);
       if (_errs.length) console.warn("SDB: some tables failed to load —", _errs.map(r => r.error.message).join(" | "));
       // Expired / invalid session → tell boot() to show the login page, NOT a scary all-zero console.
@@ -71,16 +72,20 @@ window.SDB = (function () {
       INV.forEach(i => ids.investorByName[i.name] = i.id);
       sups.data.forEach(s => ids.supplierById[s.id] = s);
 
-      // cameras / accessories (+ per-unit investors)
+      // cameras / accessories (+ per-unit investors + per-unit expenses)
       const invById = {}; INV.forEach(i => invById[i.id] = i);
       const investorsForUnit = uid => AINV.filter(a => a.unit_id === uid)
         .map(a => ({ name: invById[a.investor_id]?.name, loc: invById[a.investor_id]?.location || "", invested: Number(a.invested_amount_inr) }));
+      const expensesForUnit = uid => aexp.data.filter(e => e.unit_id === uid)
+        .sort((a, b) => (a.sort - b.sort) || (a.created_at < b.created_at ? -1 : 1))
+        .map(e => ({ id: e.id, n: e.description, usd: e.amount_usd != null ? Number(e.amount_usd) : null, inr: Number(e.amount_inr) }));
 
       const cameras = U.filter(u => u.kind === "camera").map(u => ({
         code: u.code, name: u.name, manufacturer: u.manufacturer, model: u.model, serial: u.serial_number,
         meterHours: Number(u.meter_hours || 0), location: u.location, status: u.status, optionName: optionNameById[u.option_id] || null,
         dailyRate: Number(u.default_daily_rate), cost: u.purchase_cost != null ? Number(u.purchase_cost) : undefined,
-        investors: investorsForUnit(u.id).length ? investorsForUnit(u.id) : undefined
+        investors: investorsForUnit(u.id).length ? investorsForUnit(u.id) : undefined,
+        expenses: expensesForUnit(u.id)
       }));
       const accessories = U.filter(u => u.kind === "accessory").map(u => ({
         code: u.code, name: u.name, category: u.category, serial: u.serial_number, status: u.status, dailyRate: Number(u.default_daily_rate), optionName: optionNameById[u.option_id] || null
@@ -258,6 +263,15 @@ window.SDB = (function () {
     if (!Object.keys(row).length) return;
     const { error } = await sb.from("equipment_units").update(row).eq("code", code); if (error) throw error;
   });
+  const addExpense = guard(async (unitCode, e) => {
+    const unit_id = ids.unitByCode[unitCode]; if (!unit_id) throw new Error("Unknown unit " + unitCode);
+    const { data, error } = await sb.from("asset_expenses").insert({
+      unit_id, description: e.description, amount_usd: (e.amount_usd != null ? e.amount_usd : null), amount_inr: e.amount_inr, sort: e.sort || 999
+    }).select("id").single(); if (error) throw error; return data.id;
+  });
+  const deleteExpense = guard(async (id) => {
+    const { error } = await sb.from("asset_expenses").delete().eq("id", id); if (error) throw error;
+  });
   const setRequestStatus = guard(async (reqUuid, status) => {
     const { error } = await sb.from("quote_requests").update({ status }).eq("id", reqUuid); if (error) throw error;
   });
@@ -369,5 +383,5 @@ window.SDB = (function () {
     }
     console.log("SDB.debug →", out); return out;
   }
-  return { on: ON, bootstrap, debug, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
+  return { on: ON, bootstrap, debug, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, addExpense, deleteExpense, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
 })();

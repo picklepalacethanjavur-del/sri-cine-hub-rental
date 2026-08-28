@@ -237,9 +237,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828l"></script>
-<script src="console-data.js?v=20260828l"></script>
-<script src="console-db.js?v=20260828l"></script>
+<script src="supabase-config.js?v=20260828m"></script>
+<script src="console-data.js?v=20260828m"></script>
+<script src="console-db.js?v=20260828m"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -1514,39 +1514,60 @@ function receiptView(code){
 /* ---- Investor Portal — per-camera investment portfolio ---- */
 const round1=n=>Math.round(n*10)/10;
 let INVEST={cam:null,period:"2026"};
-/* Static ARRI S35 expense sheet (INR @ ₹96/USD) — reference panel in the portal. */
-const ARRI_S35_COSTS=[
-  {n:"Camera + accessories, full setup (3 cards)", usd:60000, inr:5760000},
-  {n:"Inspection", usd:390, inr:37440},
-  {n:"Monitor + battery charger", usd:1800, inr:172800},
-  {n:"Batteries — B-mount (2) + ground (2), chargers", inr:170000},
-  {n:"Transport & research", usd:1000, inr:96000},
-  {n:"Video transmitter (c-Motion)", inr:275000},
-  {n:"Tripod (O'Connor)", inr:450000},
-  {n:"Wireless follow focus", inr:225000},
-  {n:"Other accessories, allen key, cables, magic arm", inr:100000},
-  {n:"Mattebox & filter", inr:300000},
-  {n:"Shoulder pad, handle & small hood", inr:120000},
-  {n:"Shogun & director monitor", inr:350000},
-  {n:"Shipping Charges & Travel Insurance", usd:1000, inr:96000},
-  {n:"Port of Authority / Duty Paid", inr:20000}
-];
-function arriCostPanel(){
+/* Per-camera expense breakdown (from srchub.asset_expenses) — editable reference panel in the portal. */
+function assetExpensePanel(){
+  const cam=DATA.cameras.find(c=>c.code===INVEST.cam)||DATA.cameras.find(c=>c.expenses&&c.expenses.length)||DATA.cameras[0];
+  if(!cam) return `<div class="card"><div class="card-h"><h3>Expenses</h3></div><div class="empty" style="padding:20px">No camera yet.</div></div>`;
+  const exp=cam.expenses||[];
   const fmt=n=>'₹'+Number(n).toLocaleString('en-IN');
-  const total=ARRI_S35_COSTS.reduce((a,x)=>a+x.inr,0);
-  const rows=ARRI_S35_COSTS.map((x,i)=>`<tr style="border-bottom:1px solid var(--line)">
+  const total=exp.reduce((a,x)=>a+(x.inr||0),0);
+  const isAdmin=ROLE==='admin';
+  const rows=exp.map((x,i)=>`<tr style="border-bottom:1px solid var(--line)">
     <td style="color:var(--mut);padding:8px 6px 8px 0;vertical-align:top;font-size:12px">${i+1}</td>
-    <td style="padding:8px 8px;vertical-align:top;font-size:13px;line-height:1.35">${x.n}</td>
-    <td style="text-align:right;white-space:nowrap;padding:8px 0;vertical-align:top;font-size:13px">${x.usd?`<div class="muted" style="font-size:11px">$${x.usd.toLocaleString('en-US')}</div>`:''}${fmt(x.inr)}</td></tr>`).join('');
+    <td style="padding:8px 8px;vertical-align:top;font-size:13px;line-height:1.35">${(x.n||'').replace(/</g,'&lt;')}</td>
+    <td style="text-align:right;white-space:nowrap;padding:8px 0;vertical-align:top;font-size:13px">${x.usd?`<div class="muted" style="font-size:11px">$${x.usd.toLocaleString('en-US')}</div>`:''}${fmt(x.inr)}</td>
+    ${isAdmin?`<td style="padding:8px 0 8px 8px;vertical-align:top"><span class="cart-x" title="Delete" onclick="delAssetExpense('${cam.code}','${x.id}')">×</span></td>`:''}</tr>`).join('')||`<tr><td colspan="4" class="empty" style="padding:16px">No expenses yet. Use ＋ Add.</td></tr>`;
   return `<div class="card" style="position:sticky;top:80px">
-    <div class="card-h"><h3>ARRI S35 — expenses</h3><span class="pill">@ ₹96/$</span></div>
+    <div class="card-h"><h3>${cam.name} — expenses</h3><button class="btn btn-ghost btn-sm" onclick="addAssetExpenseForm('${cam.code}')">＋ Add</button></div>
     <div style="padding:10px 16px 16px">
       <table style="width:100%;border-collapse:collapse"><tbody>${rows}</tbody></table>
       <div style="display:flex;justify-content:space-between;font-family:var(--font-display);font-size:18px;margin-top:12px;border-top:2px solid var(--line);padding-top:10px"><span>Total cost</span><span class="gold">${fmt(total)}</span></div>
     </div>
   </div>`;
 }
-VIEWS.investor=()=>`<div class="inv-grid"><div style="min-width:0">${investorBody()}</div>${arriCostPanel()}</div>`;
+function addAssetExpenseForm(camCode){
+  openModal(`<h3>Add expense</h3><p class="mut">Adds a line to this camera's cost breakdown.</p>
+    <div class="field"><label>Description *</label><input id="ex-desc" placeholder="e.g. Lens control motor"></div>
+    <div class="r2"><div class="field"><label>Amount *</label><input id="ex-amt" type="number" placeholder="0"></div>
+      <div class="field"><label>Currency</label><select id="ex-cur" onchange="exCurToggle()"><option value="INR">₹ INR</option><option value="USD">$ USD</option></select></div></div>
+    <div class="field" id="ex-rate-wrap" style="display:none"><label>USD → INR rate</label><input id="ex-rate" type="number" value="96"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveAssetExpense('${camCode}')">Add expense</button>`);
+}
+function exCurToggle(){ const w=$("#ex-rate-wrap"); if(w)w.style.display=($("#ex-cur").value==='USD')?'':'none'; }
+async function saveAssetExpense(camCode){
+  const desc=($("#ex-desc").value||"").trim(), amt=+($("#ex-amt").value||0);
+  if(!desc)return toast("Enter a description");
+  if(!amt||amt<=0)return toast("Enter an amount");
+  const usd=$("#ex-cur").value==='USD', rate=+($("#ex-rate").value||96)||96;
+  const amount_usd=usd?amt:null, amount_inr=usd?Math.round(amt*rate):amt;
+  const cam=DATA.cameras.find(c=>c.code===camCode); if(!cam)return;
+  cam.expenses=cam.expenses||[];
+  const obj={id:'tmp-'+Date.now(),n:desc,usd:amount_usd,inr:amount_inr};
+  cam.expenses.push(obj);
+  const id=await SDB.addExpense(camCode,{description:desc,amount_usd,amount_inr,sort:cam.expenses.length*10});
+  if(id)obj.id=id;
+  closeModal();go('investor');toast("Expense added");
+}
+function delAssetExpense(camCode,id){
+  if(ROLE!=='admin')return toast("Only admins can delete");
+  const cam=DATA.cameras.find(c=>c.code===camCode); if(!cam)return;
+  const ex=(cam.expenses||[]).find(x=>x.id===id);
+  if(!confirm(`Delete "${ex?ex.n:'this expense'}"?`))return;
+  cam.expenses=(cam.expenses||[]).filter(x=>x.id!==id);
+  SDB.deleteExpense(id);
+  go('investor');toast("Expense deleted");
+}
+VIEWS.investor=()=>`<div class="inv-grid"><div style="min-width:0">${investorBody()}</div>${assetExpensePanel()}</div>`;
 function investorBody(){
   const invCams=DATA.cameras.filter(c=>c.investors&&c.investors.length);
   if(!invCams.length)return `<div class="empty" style="padding:48px;text-align:center">
