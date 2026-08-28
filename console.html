@@ -237,9 +237,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828m"></script>
-<script src="console-data.js?v=20260828m"></script>
-<script src="console-db.js?v=20260828m"></script>
+<script src="supabase-config.js?v=20260828n"></script>
+<script src="console-data.js?v=20260828n"></script>
+<script src="console-db.js?v=20260828n"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -1527,11 +1527,15 @@ function assetExpensePanel(){
     <td style="padding:8px 8px;vertical-align:top;font-size:13px;line-height:1.35">${(x.n||'').replace(/</g,'&lt;')}</td>
     <td style="text-align:right;white-space:nowrap;padding:8px 0;vertical-align:top;font-size:13px">${x.usd?`<div class="muted" style="font-size:11px">$${x.usd.toLocaleString('en-US')}</div>`:''}${fmt(x.inr)}</td>
     ${isAdmin?`<td style="padding:8px 0 8px 8px;vertical-align:top"><span class="cart-x" title="Delete" onclick="delAssetExpense('${cam.code}','${x.id}')">×</span></td>`:''}</tr>`).join('')||`<tr><td colspan="4" class="empty" style="padding:16px">No expenses yet. Use ＋ Add.</td></tr>`;
+  const invested=(cam.investors||[]).reduce((a,i)=>a+(i.invested||0),0);
+  const gap=total-invested;
   return `<div class="card" style="position:sticky;top:80px">
     <div class="card-h"><h3>${cam.name} — expenses</h3><button class="btn btn-ghost btn-sm" onclick="addAssetExpenseForm('${cam.code}')">＋ Add</button></div>
     <div style="padding:10px 16px 16px">
       <table style="width:100%;border-collapse:collapse"><tbody>${rows}</tbody></table>
       <div style="display:flex;justify-content:space-between;font-family:var(--font-display);font-size:18px;margin-top:12px;border-top:2px solid var(--line);padding-top:10px"><span>Total cost</span><span class="gold">${fmt(total)}</span></div>
+      <div class="muted" style="font-size:11px;margin-top:4px">= this camera's recorded value (auto-synced)</div>
+      ${invested>0&&Math.abs(gap)>=1?`<div style="font-size:11.5px;margin-top:6px;color:var(--warn)">⚠ Investor stakes total ${fmt(invested)} — ${gap>0?fmt(gap)+' not yet attributed to an investor':fmt(-gap)+' over-attributed'}.</div>`:''}
     </div>
   </div>`;
 }
@@ -1554,6 +1558,7 @@ async function saveAssetExpense(camCode){
   cam.expenses=cam.expenses||[];
   const obj={id:'tmp-'+Date.now(),n:desc,usd:amount_usd,inr:amount_inr};
   cam.expenses.push(obj);
+  cam.cost=cam.expenses.reduce((a,x)=>a+(x.inr||0),0); // keep camera cost = expense total (DB trigger does the same)
   const id=await SDB.addExpense(camCode,{description:desc,amount_usd,amount_inr,sort:cam.expenses.length*10});
   if(id)obj.id=id;
   closeModal();go('investor');toast("Expense added");
@@ -1564,6 +1569,7 @@ function delAssetExpense(camCode,id){
   const ex=(cam.expenses||[]).find(x=>x.id===id);
   if(!confirm(`Delete "${ex?ex.n:'this expense'}"?`))return;
   cam.expenses=(cam.expenses||[]).filter(x=>x.id!==id);
+  cam.cost=cam.expenses.reduce((a,x)=>a+(x.inr||0),0); // keep camera cost = expense total
   SDB.deleteExpense(id);
   go('investor');toast("Expense deleted");
 }
