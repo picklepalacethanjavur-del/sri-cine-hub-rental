@@ -235,9 +235,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260827f"></script>
-<script src="console-data.js?v=20260827f"></script>
-<script src="console-db.js?v=20260827f"></script>
+<script src="supabase-config.js?v=20260828a"></script>
+<script src="console-data.js?v=20260828a"></script>
+<script src="console-db.js?v=20260828a"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -1097,10 +1097,12 @@ VIEWS.calendar=()=>{
 
 /* ---- Inventory ---- */
 let INV={tab:"cameras",status:"all",q:""};
+const INV_TABS=[["cameras","Cameras"],["Lenses","Lenses"],["Lights","Lights"],["Accessories","Accessories"],["Grip","Grip"],["Transport","Transport"],["Genset","Genset"]];
+const invCount=k=>k==='cameras'?(DATA.cameras||[]).length:(DATA.accessories||[]).filter(a=>a.category===k).length;
 VIEWS.inventory=()=>{
-  return `<div class="tabs">
-    <div class="tab ${INV.tab==='cameras'?'active':''}" onclick="INV.tab='cameras';go('inventory')">Cameras <span class="pill">${DATA.cameras.length}</span></div>
-    <div class="tab ${INV.tab==='accessories'?'active':''}" onclick="INV.tab='accessories';go('inventory')">Accessories <span class="pill">${DATA.accessories.length}</span></div>
+  if(INV.tab==='accessories')INV.tab='Lenses'; // migrate old tab value
+  return `<div class="tabs" style="flex-wrap:wrap">
+    ${INV_TABS.map(([k,l])=>`<div class="tab ${INV.tab===k?'active':''}" onclick="INV.tab='${k}';go('inventory')">${l} <span class="pill">${invCount(k)}</span></div>`).join("")}
     <div class="tsearch" style="margin-left:auto"><input placeholder="Search…" value="${INV.q}" oninput="INV.q=this.value;renderInvTable()" style="padding-left:14px"></div>
     <button class="btn btn-primary btn-sm" onclick="addUnitForm()">＋ Add</button>
   </div>
@@ -1143,10 +1145,10 @@ function renderInvTable(){
       <td class="muted">${dash(c.serial)}</td><td>${c.meterHours||0}h</td><td class="amt">${money(c.dailyRate)}</td><td>${statusBadge(c.status)}</td>
       <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${c.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No matches.</td></tr>`}</tbody></table>`;
   }else{
-    let rows=DATA.accessories.filter(a=>(INV.status==="all"||a.status===INV.status)&&(!q||((a.name||'')+(a.code||'')+(a.category||'')+(a.serial||'')).toLowerCase().includes(q)));
-    el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Serial</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
-    ${rows.map(a=>`<tr><td>${a.code}</td><td><b>${a.name}</b></td><td class="muted">${dash(a.category)}</td><td class="muted">${dash(a.serial)}</td><td class="amt">${money(a.dailyRate)}</td><td>${statusBadge(a.status)}</td>
-      <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${a.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No matches.</td></tr>`}</tbody></table>`;
+    let rows=DATA.accessories.filter(a=>a.category===INV.tab&&(INV.status==="all"||a.status===INV.status)&&(!q||((a.name||'')+(a.code||'')+(a.serial||'')).toLowerCase().includes(q)));
+    el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Serial</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
+    ${rows.map(a=>`<tr><td>${a.code}</td><td><b>${a.name}</b></td><td class="muted">${dash(a.serial)}</td><td class="amt">${money(a.dailyRate)}</td><td>${statusBadge(a.status)}</td>
+      <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${a.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="6" class="empty">No ${INV.tab.toLowerCase()} yet. Use ＋ Add to create one.</td></tr>`}</tbody></table>`;
   }
 }
 
@@ -1157,14 +1159,15 @@ function nextUnitCode(prefix){let max=0;[...DATA.cameras,...DATA.accessories].fo
 function nextForCat(cat){return nextUnitCode(ACC_PREFIX[cat]||"ACC");}
 function addUnitForm(){
   const cam=INV.tab==="cameras";
+  const curCat=(!cam&&ACC_CATS.includes(INV.tab))?INV.tab:ACC_CATS[0];
   const statusOpts=s=>["available","maintenance","retired"].map(x=>`<option value="${x}" ${s===x?"selected":""}>${x}</option>`).join("");
-  openModal(`<h3>Add ${cam?"camera":"accessory"}</h3><p class="mut">Registers a new serialized unit in your inventory.</p>
-    <div class="r2"><div class="field"><label>Code *</label><input id="u-code" value="${cam?nextUnitCode("CAM"):nextForCat(ACC_CATS[0])}"></div>
+  openModal(`<h3>Add ${cam?"camera":curCat.replace(/s$/,'').toLowerCase()}</h3><p class="mut">Registers a new serialized unit in your inventory.</p>
+    <div class="r2"><div class="field"><label>Code *</label><input id="u-code" value="${cam?nextUnitCode("CAM"):nextForCat(curCat)}"></div>
       <div class="field"><label>Rate per day (₹)</label><input id="u-rate" type="number" placeholder="0"></div></div>
     <div class="field"><label>Name *</label><input id="u-name" placeholder="${cam?"e.g. ARRI Alexa Mini LF":"e.g. SkyPanel S60"}"></div>
     ${cam?`<div class="r2"><div class="field"><label>Manufacturer</label><input id="u-manu" placeholder="ARRI"></div><div class="field"><label>Model</label><input id="u-model" placeholder="Alexa Mini LF"></div></div>
       <div class="r2"><div class="field"><label>Serial no.</label><input id="u-serial"></div><div class="field"><label>Meter hours</label><input id="u-meter" type="number" value="0"></div></div>`
-    :`<div class="r2"><div class="field"><label>Category</label><select id="u-cat" onchange="document.getElementById('u-code').value=nextForCat(this.value)">${ACC_CATS.map(c=>`<option value="${c}">${c}</option>`).join("")}</select></div>
+    :`<div class="r2"><div class="field"><label>Category</label><select id="u-cat" onchange="document.getElementById('u-code').value=nextForCat(this.value)">${ACC_CATS.map(c=>`<option value="${c}" ${c===curCat?"selected":""}>${c}</option>`).join("")}</select></div>
       <div class="field"><label>Serial no.</label><input id="u-serial" placeholder="optional"></div></div>`}
     <div class="field"><label>Status</label><select id="u-status">${statusOpts("available")}</select></div>
     <button class="btn btn-primary" style="width:100%" onclick="saveUnit()">Add to inventory</button>`);
