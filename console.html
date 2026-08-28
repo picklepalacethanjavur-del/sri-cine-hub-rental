@@ -237,9 +237,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828t"></script>
-<script src="console-data.js?v=20260828t"></script>
-<script src="console-db.js?v=20260828t"></script>
+<script src="supabase-config.js?v=20260828u"></script>
+<script src="console-data.js?v=20260828u"></script>
+<script src="console-db.js?v=20260828u"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -792,7 +792,7 @@ function qbFromRequest(r){
     r.saved.lines.forEach(sl=>{
       if(sl.type==='header'){ QB.push({type:'header',_uid:++QB_UID,name:sl.name||''}); return; }
       const l=qbLine(sl.name, sl.rate, sl.days||days, sl.kind);
-      l.qty=sl.qty||1; l.spec=sl.spec||''; l.raw=sl.raw||sl.name; l.supplierId=sl.supplierId||null; l.cost=(sl.cost!=null?sl.cost:null);
+      l.qty=sl.qty||1; l.spec=sl.spec||''; l.raw=sl.raw||sl.name; l.supplierId=sl.supplierId||null; l.cost=(sl.cost!=null?sl.cost:null); l.include=(sl.include!==false);
       if(sl.kind==='hirein') l.offers=matchSuppliers(sl.name);
       QB.push(l);
     });
@@ -892,15 +892,17 @@ async function qbSave(){ const existing=!!QCTX.requestUuid; const u=await ensure
 /* Cache the just-saved lines onto the local request so reopening (before a refresh) reloads YOUR prices, not inventory defaults. */
 function qbCacheSaved(reqUuid,code,opts){
   const req=(DATA.requests||[]).find(x=>x._uuid===reqUuid); if(!req)return;
-  req.saved={ code, discount_inr:(opts&&opts.discount_inr)||0, source_text:QB_SOURCE||'', lines: QB.filter(l=>l.type==='header'||l.name).map(l=>({type:l.type,name:l.name,rate:l.rate,days:l.days,qty:l.qty,kind:l.kind,spec:l.spec,raw:l.raw,supplierId:l.supplierId,cost:l.cost})) };
+  req.saved={ code, discount_inr:(opts&&opts.discount_inr)||0, source_text:QB_SOURCE||'', lines: QB.filter(l=>l.type==='header'||l.name).map(l=>({type:l.type,name:l.name,rate:l.rate,days:l.days,qty:l.qty,kind:l.kind,spec:l.spec,raw:l.raw,supplierId:l.supplierId,cost:l.cost,include:l.include})) };
 }
 async function convertReq(){
   if(!QCTX.name) return toast('Enter a customer name');
   if(!QCTX.start||!QCTX.end) return toast('Set shoot start & end dates');
   const u=await ensureRequest(); const qcode='QT-'+Date.now().toString().slice(-8); const opts=qbOptsPayload();
   const res=await SDB.convertQuote(u,{name:QCTX.name,company:QCTX.company,phone:QCTX.phone,project:QCTX.project,start:QCTX.start,end:QCTX.end},qcode,QB,QB_SOURCE,opts);
+  if(!res||res.error){ return; } // DB convert failed — fail() already toasted; don't fake success
   const eq=QB.filter(l=>l.type==='item'&&l.include&&l.name&&isEquip(l.kind));
-  const toLine=l=>({code:l.kind==='hirein'?'(hire-in)':'(assign at checkout)',name:l.name,rate:l.rate,qty:l.qty||1,lineKind:l.kind,supplierId:l.supplierId,cost:l.cost});
+  if(res.lineIds) eq.forEach((l,i)=>{ l._lineId=res.lineIds[i]; }); // so same-session checkout can persist the unit assignment
+  const toLine=l=>({code:l.kind==='hirein'?'(hire-in)':'(assign at checkout)',name:l.name,rate:l.rate,qty:l.qty||1,lineKind:l.kind,supplierId:l.supplierId,cost:l.cost,_lineId:l._lineId});
   const b={code:res.code,customer:res.customer_id||'',production:QCTX.company||QCTX.name,project:QCTX.project||('Booking — '+QCTX.name),contact:QCTX.name,phone:QCTX.phone,status:'confirmed',start:QCTX.start,end:QCTX.end,pickup:'Studio floor',operator:'',
     otherCharges:opts.other_charges_inr||0,discount:opts.discount_inr||0,deposit:opts.deposit_inr||0,
     cameras:eq.filter(l=>(DATA.optionCats||{})[l.name]==='Cameras').map(toLine),
@@ -1207,7 +1209,7 @@ function addUnitForm(){
   const cam=INV.tab==="cameras";
   const curCat=cam?ACC_CATS[0]:(invTabCats(INV.tab).find(c=>ACC_CATS.includes(c))||ACC_CATS[0]);
   const statusOpts=s=>["available","maintenance","retired"].map(x=>`<option value="${x}" ${s===x?"selected":""}>${x}</option>`).join("");
-  openModal(`<h3>Add ${cam?"camera":curCat.replace(/s$/,'').toLowerCase()}</h3><p class="mut">Registers a new serialized unit in your inventory.</p>
+  openModal(`<h3>Add ${cam?"camera":"unit"}${cam?"":` <span class="muted" style="font-weight:400;font-size:13px">· ${curCat}</span>`}</h3><p class="mut">Registers a new serialized unit in your inventory.</p>
     <div class="r2"><div class="field"><label>Code *</label><input id="u-code" value="${cam?nextUnitCode("CAM"):nextForCat(curCat)}"></div>
       <div class="field"><label>Rate per day (₹)</label><input id="u-rate" type="number" placeholder="0"></div></div>
     <div class="field"><label>Name *</label><input id="u-name" placeholder="${cam?"e.g. ARRI Alexa Mini LF":"e.g. SkyPanel S60"}"></div>
@@ -1563,7 +1565,7 @@ function assetExpensePanel(){
   const invested=(cam.investors||[]).reduce((a,i)=>a+(i.invested||0),0);
   const gap=total-invested;
   return `<div class="card" style="position:sticky;top:80px">
-    <div class="card-h"><h3>${cam.name} — expenses</h3><button class="btn btn-ghost btn-sm" onclick="addAssetExpenseForm('${cam.code}')">＋ Add</button></div>
+    <div class="card-h"><h3>${cam.name} — expenses</h3>${ROLE==='admin'?`<button class="btn btn-ghost btn-sm" onclick="addAssetExpenseForm('${cam.code}')">＋ Add</button>`:''}</div>
     <div style="padding:10px 16px 16px">
       <table style="width:100%;border-collapse:collapse"><tbody>${rows}</tbody></table>
       <div style="display:flex;justify-content:space-between;font-family:var(--font-display);font-size:18px;margin-top:12px;border-top:2px solid var(--line);padding-top:10px"><span>Total cost</span><span class="gold">${fmt(total)}</span></div>
@@ -1582,6 +1584,7 @@ function addAssetExpenseForm(camCode){
 }
 function exCurToggle(){ const w=$("#ex-rate-wrap"); if(w)w.style.display=($("#ex-cur").value==='USD')?'':'none'; }
 async function saveAssetExpense(camCode){
+  if(ROLE!=='admin')return toast("Only admins can add expenses");
   const desc=($("#ex-desc").value||"").trim(), amt=+($("#ex-amt").value||0);
   if(!desc)return toast("Enter a description");
   if(!amt||amt<=0)return toast("Enter an amount");
@@ -1691,7 +1694,7 @@ function investorBody(){
       return `<tr><td><b>${mlabel}</b></td><td>${m.bookings}</td><td class="amt">${money(m.recv)}</td>
         <td class="amt" style="color:var(--ok)">${money(mpool)}</td>
         <td class="muted" style="font-size:12px;line-height:1.7">${split}</td>
-        <td style="text-align:right">${st?`<span class="badge b-ok">✓ settled ${fmtDate(st.date)}</span>`:`<button class="btn btn-primary btn-sm" onclick="settleMonth('${cam.code}','${mk}')">Settle up →</button>`}</td></tr>`;}).join(""):`<tr><td colspan="6" class="empty">No revenue to settle in this period.</td></tr>`}
+        <td style="text-align:right">${st?`<span class="badge b-ok">✓ settled ${fmtDate(st.date)}</span>`:(ROLE==='admin'?`<button class="btn btn-primary btn-sm" onclick="settleMonth('${cam.code}','${mk}')">Settle up →</button>`:`<span class="muted" style="font-size:12px">pending</span>`)}</td></tr>`;}).join(""):`<tr><td colspan="6" class="empty">No revenue to settle in this period.</td></tr>`}
     </tbody></table></div>
 
   <div class="card" style="margin-bottom:18px"><div class="card-h"><h3>All ${cam.manufacturer} bookings · ${periodLbl}</h3></div>
@@ -1705,6 +1708,7 @@ function investorBody(){
       <div class="amt gold">${money(r.billed)}</div></div>`).join(""):'<div class="empty">No receipts in this period.</div>'}</div>`;
 };
 function settleMonth(camCode,mk){
+  if(ROLE!=='admin')return toast("Only admins can settle payouts");
   const cam=DATA.cameras.find(c=>c.code===camCode);
   const totalInvested=cam.investors.reduce((a,i)=>a+i.invested,0);
   const poolPct=1-DATA.config.maintenancePct-DATA.config.managerPct;

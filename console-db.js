@@ -85,7 +85,7 @@ window.SDB = (function () {
       const cameras = U.filter(u => u.kind === "camera").map(u => ({
         code: u.code, name: u.name, manufacturer: u.manufacturer, model: u.model, serial: u.serial_number,
         meterHours: Number(u.meter_hours || 0), location: u.location, status: u.status, optionName: optionNameById[u.option_id] || null,
-        dailyRate: Number(u.default_daily_rate), cost: u.purchase_cost != null ? Number(u.purchase_cost) : undefined,
+        dailyRate: Number(u.default_daily_rate), cost: u.purchase_cost != null ? Number(u.purchase_cost) : (expensesForUnit(u.id).reduce((a, e) => a + (e.inr || 0), 0) || undefined),
         investors: investorsForUnit(u.id).length ? investorsForUnit(u.id) : undefined,
         expenses: expensesForUnit(u.id)
       }));
@@ -143,7 +143,7 @@ window.SDB = (function () {
           code: latest.quote_code, discount_inr: Number(latest.discount_inr || 0), source_text: latest.source_text || "",
           lines: its.map(it => ({ type: it.line_type || "item", name: it.label || "", rate: Number(it.daily_rate_inr || 0),
             days: it.days || 1, qty: it.qty || 1, kind: it.line_kind || "own", spec: it.note || "", raw: it.raw || it.label || "",
-            supplierId: it.supplier_id || null, cost: it.cost_inr != null ? Number(it.cost_inr) : null }))
+            supplierId: it.supplier_id || null, cost: it.cost_inr != null ? Number(it.cost_inr) : null, include: it.included !== false }))
         };
       };
       const requests = reqs.data.map(r => ({
@@ -200,9 +200,12 @@ window.SDB = (function () {
     }).select("id").single();
     if (be) throw be;
     ids.bookingByCode[b.code] = bk.id;
-    const rows = [...b.cameras.map(c => ({ ...c, kind: "camera" })), ...b.accessories.map(a => ({ ...a, kind: "accessory" }))]
-      .map(l => ({ booking_id: bk.id, unit_id: ids.unitByCode[l.code], kind: l.kind, daily_rate_inr: l.rate, quantity: l.qty || 1 }));
-    if (rows.length) { const { error } = await sb.from("booking_lines").insert(rows); if (error) throw error; }
+    const src = [...b.cameras.map(c => ({ ...c, kind: "camera" })), ...b.accessories.map(a => ({ ...a, kind: "accessory" }))];
+    const rows = src.map(l => ({ booking_id: bk.id, unit_id: ids.unitByCode[l.code], kind: l.kind, daily_rate_inr: l.rate, quantity: l.qty || 1 }));
+    if (rows.length) {
+      const { data: ins, error } = await sb.from("booking_lines").insert(rows).select("id"); if (error) throw error;
+      (ins || []).forEach((r, i) => { const code = src[i] && src[i].code; if (code) ids.lineKey[bk.id + "|" + code] = r.id; });
+    }
     return b.code;
   });
 
@@ -317,7 +320,7 @@ window.SDB = (function () {
     quotation_id: qid, label: l.name || "", line_type: l.type || "item", note: l.spec || null, raw: l.raw || null,
     daily_rate_inr: (l.type === "header" ? 0 : (l.rate || 0)), days: l.days || 1, qty: l.qty || 1, sort: i,
     line_kind: l.kind || "own", supplier_id: l.supplierId || null, cost_inr: (l.cost != null ? l.cost : null),
-    catalog_option_id: (ids.optionByName[l.name] || null)
+    included: l.include !== false, catalog_option_id: (ids.optionByName[l.name] || null)
   }));
   // persist a quotation (with the verbatim original + pricing) + its line items
   const saveQuotation = guard(async (reqUuid, quoteCode, lines, status, sourceText, opts) => {
@@ -337,7 +340,7 @@ window.SDB = (function () {
   async function convertQuote(reqUuid, req, quoteCode, lines, sourceText, opts) {
     opts = opts || {};
     const code = "BK-2026-" + String(Date.now()).slice(-6);
-    const cd = Math.max(1, Math.ceil((new Date(req.end) - new Date(req.start)) / 86400000));
+    const cd = Math.max(1, Math.round((new Date(req.end) - new Date(req.start)) / 86400000) + 1); // inclusive, matches daysBetween
     const billed = d => { d = d || cd; if (!opts.weekMode || d < 7) return d; const w = Math.floor(d / 7), rem = d % 7, dpw = opts.daysPerWeek || 4; return w * dpw + Math.min(rem, dpw); };
     const items = lines.filter(l => l.type !== "header" && l.name && l.include !== false && ["own", "hirein", "custom"].includes(l.kind));
     if (!ON) return { code };
@@ -356,7 +359,8 @@ window.SDB = (function () {
         return { booking_id: b.id, unit_id: null, kind, label: l.name, catalog_option_id: (ids.optionByName[l.name] || null),
           line_kind: l.kind || "own", supplier_id: l.supplierId || null, cost_inr: (l.cost != null ? l.cost : null),
           daily_rate_inr: eff, quantity: l.qty || 1 }; });
-      if (rows.length) { const { error: le } = await sb.from("booking_lines").insert(rows); if (le) throw le; }
+      let lineIds = [];
+      if (rows.length) { const { data: ins, error: le } = await sb.from("booking_lines").insert(rows).select("id"); if (le) throw le; lineIds = (ins || []).map(r => r.id); }
       const { data: q } = await sb.from("quotations").insert({ quote_code: quoteCode, request_id: reqUuid || null, booking_id: b.id, status: "accepted", source_text: sourceText || null, discount_inr: opts.discount_inr || 0, deposit_inr: opts.deposit_inr || 0, valid_until: opts.valid_until || null }).select("id").single();
       if (q) { const qi = qItems(q.id, lines); if (qi.length) await sb.from("quotation_items").insert(qi); }
       // hire-in RFQs — one per supplier
@@ -366,7 +370,7 @@ window.SDB = (function () {
         if (rfq) await sb.from("supplier_rfq_items").insert(bySup[sid].map(l => ({ rfq_id: rfq.id, item: l.name, qty: l.qty || 1, requested_rate_inr: l.cost || null })));
       }
       if (reqUuid) await sb.from("quote_requests").update({ status: "converted" }).eq("id", reqUuid);
-      return { code, customer_id: c.id };
+      return { code, customer_id: c.id, lineIds };
     } catch (e) { fail(e, "convert"); return { code, error: String(e && e.message || e) }; }
   }
 
