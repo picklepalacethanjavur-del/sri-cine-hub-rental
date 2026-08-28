@@ -235,9 +235,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828c"></script>
-<script src="console-data.js?v=20260828c"></script>
-<script src="console-db.js?v=20260828c"></script>
+<script src="supabase-config.js?v=20260828d"></script>
+<script src="console-data.js?v=20260828d"></script>
+<script src="console-db.js?v=20260828d"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -424,7 +424,7 @@ VIEWS.dashboard=()=>{
 };
 
 /* ---- Quick Rent ---- */
-let QR={cart:[],start:TODAY,end:"",tab:"all",q:""};
+let QR={cart:[],start:TODAY,end:"",tab:"all",q:"",name:"",phone:"",prod:""};
 VIEWS.quickrent=()=>{
   return `<div class="qr">
     <div>
@@ -437,9 +437,9 @@ VIEWS.quickrent=()=>{
     <div class="card" style="position:sticky;top:80px">
       <div class="card-h"><h3>New booking</h3><span class="pill">under 60 sec</span></div>
       <div style="padding:16px">
-        <div class="field"><label>Customer name *</label><input id="qr-name" placeholder="Walk-in / caller name"></div>
-        <div class="r2"><div class="field"><label>Phone</label><input id="qr-phone" placeholder="+91"></div>
-        <div class="field"><label>Production</label><input id="qr-prod" placeholder="Company"></div></div>
+        <div class="field"><label>Customer name *</label><input id="qr-name" placeholder="Walk-in / caller name" value="${escAttr(QR.name||'')}" oninput="QR.name=this.value"></div>
+        <div class="r2"><div class="field"><label>Phone</label><input id="qr-phone" placeholder="+91" value="${escAttr(QR.phone||'')}" oninput="QR.phone=this.value"></div>
+        <div class="field"><label>Production</label><input id="qr-prod" placeholder="Company" value="${escAttr(QR.prod||'')}" oninput="QR.prod=this.value"></div></div>
         <div class="r2"><div class="field"><label>Checkout</label><input type="date" id="qr-start" value="${QR.start}" onchange="QR.start=this.value;renderCart()"></div>
         <div class="field"><label>Return</label><input type="date" id="qr-end" value="${QR.end}" onchange="QR.end=this.value;renderCart()"></div></div>
         <div id="qr-dur" class="muted" style="font-size:12.5px;margin:-4px 0 12px"></div>
@@ -505,7 +505,7 @@ function unitClashes(codes,start,end){
   return out;
 }
 async function checkoutQR(){
-  const name=$("#qr-name").value.trim();
+  const name=(QR.name||"").trim();
   if(!name)return toast("Enter a customer name");
   if(!QR.cart.length)return toast("Add at least one item");
   if(!QR.end)return toast("Set a return date");
@@ -514,7 +514,7 @@ async function checkoutQR(){
   const clash=unitClashes(QR.cart.map(c=>c.code),QR.start,QR.end);
   if(clash.length&&!confirm(clash.join("\n")+"\n\nThese are already booked for overlapping dates. Create this booking anyway?"))return;
   const code="BK-2026-"+String(Date.now()).slice(-6);
-  const prod=$("#qr-prod").value, phone=$("#qr-phone").value;
+  const prod=(QR.prod||"").trim(), phone=(QR.phone||"").trim();
   const b={code,customer:"CUS-new",production:prod||name,project:prod||"Walk-in booking",
     contact:name,phone,status:"confirmed",start:QR.start,end:QR.end,pickup:"Studio floor",operator:"",
     cameras:QR.cart.filter(c=>c.type==="camera").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1,lineKind:'own'})),
@@ -531,7 +531,7 @@ async function checkoutQR(){
   DATA.customers.push({id:"CUS-new",name,company:prod||"",phone});
   QR.cart.forEach(c=>{const src=c.type==="camera"?DATA.cameras:DATA.accessories;const u=src.find(x=>x.code===c.code);if(u&&u.status==="available")u.status="booked";});
   DATA.bookings.unshift(b);
-  QR={cart:[],start:TODAY,end:"",tab:"all",q:""};
+  QR={cart:[],start:TODAY,end:"",tab:"all",q:"",name:"",phone:"",prod:""};
   toast("Booking "+code+" created");openBooking(code);
 }
 
