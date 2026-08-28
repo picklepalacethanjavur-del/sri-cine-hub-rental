@@ -235,9 +235,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828g"></script>
-<script src="console-data.js?v=20260828g"></script>
-<script src="console-db.js?v=20260828g"></script>
+<script src="supabase-config.js?v=20260828h"></script>
+<script src="console-data.js?v=20260828h"></script>
+<script src="console-db.js?v=20260828h"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -250,6 +250,16 @@ function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");cl
 /* ---- WhatsApp (Phase 1: click-to-chat, staff taps send) ---- */
 const waEsc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'");
 const escAttr=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+/* Set a meaningful PDF filename (browsers use document.title) then print, restoring the title after. */
+function printAs(title){
+  const prev=document.title;
+  document.title=String(title||"document").replace(/[\\/:*?"<>|]+/g,"-").replace(/\s+/g," ").trim().slice(0,120);
+  const restore=()=>{document.title=prev;window.removeEventListener("afterprint",restore);};
+  window.addEventListener("afterprint",restore);
+  window.print();
+  setTimeout(restore,4000);
+}
+const fnameSafe=s=>String(s||"").replace(/['"\n\r]/g,"").trim();
 function waSend(phone,msg){const d=(phone||"").replace(/[^0-9]/g,"");if(!d)return toast("No phone number on file");window.open(`https://wa.me/${d}?text=${encodeURIComponent(msg)}`,"_blank");}
 async function sendQuoteWA(){
   const u=await ensureRequest(); if(u===null)return;
@@ -281,9 +291,10 @@ function quoteLetter(){
   const discount=qbDiscount(subtotal); const total=Math.max(0,subtotal-discount);
   const days=(QCTX.start&&QCTX.end)?daysBetween(QCTX.start,QCTX.end):0;
   const period=(QCTX.start&&QCTX.end)?`${fmtDate(QCTX.start)} – ${fmtDate(QCTX.end)}${days?'<br>'+days+' days':''}`:'To be confirmed';
+  const fname=fnameSafe('Sri Cine Hub Quotation'+(QCTX.name?' - '+QCTX.name:'')+(QCTX.project?' - '+QCTX.project:'')+' - '+fmtDate(TODAY));
   return `<div class="rc-actions no-print">
     <button class="btn btn-ghost" onclick="renderQuoteBuilder()">← Back to quote</button>
-    <button class="btn btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <button class="btn btn-primary" onclick="printAs('${fname}')">🖨 Print / Save as PDF</button>
   </div>
   <div class="receipt" id="receipt">
     <div class="rc-head">
@@ -1430,11 +1441,12 @@ function rfqLetter(id){
   const sup=(DATA.suppliers||[]).find(s=>s.id===q.supplierId)||{name:q.supplierName,contact:q.supplierContact};
   const days=rfqDays(q);
   const rows=q.items.map((it,i)=>`<tr><td class="c">${i+1}</td><td><b>${it.item}</b></td><td class="r">${it.qty||1}</td><td class="r" style="min-width:130px">${it.quotedRate!=null?money(it.quotedRate):'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</td></tr>`).join('');
+  const fname=fnameSafe('Sri Cine Hub RFQ '+q.code+' - '+(sup.name||q.supplierName||'supplier'));
   return `<div class="rc-actions no-print">
     <button class="btn btn-ghost" onclick="go('hirein')">← Hire-In</button>
     <button class="btn btn-ghost" onclick="editRFQ('${q.id}')">✏️ Edit items</button>
     <button class="btn btn-ghost" onclick="rfqWA('${q.id}')">💬 Send to supplier</button>
-    <button class="btn btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button></div>
+    <button class="btn btn-primary" onclick="printAs('${fname}')">🖨 Print / Save as PDF</button></div>
   <div class="receipt" id="receipt">
     <div class="rc-head">
       <div class="rc-brand"><img src="logo.png" alt="SRC"><div><b>${STUDIO.name}</b><span>${STUDIO.tagline}<br>${STUDIO.addr}<br>${STUDIO.phone} · ${STUDIO.web}</span></div></div>
@@ -1465,10 +1477,11 @@ function receiptView(code){
   const items=[...b.cameras,...b.accessories].map(l=>{const days=lineDays(b,l);const s=l.start||b.start,e=l.returnedAt||l.end||b.end;
     const qty=l.qty||1;return `<tr><td><b>${l.name}</b></td><td class="c">${l.code}</td><td>${fmtDate(s)}–${fmtDate(e)}</td><td class="r">${money(l.rate)}</td><td class="r">${days}</td><td class="r">${qty}</td><td class="r">${money(l.rate*days*qty)}</td></tr>`;}).join("");
   const pays=b.payments.length?b.payments.map(p=>`<div class="p"><span>${fmtDate(p.date)} · ${p.type} · ${p.method}${p.ref?' · '+p.ref:''}</span><span>${money(p.amount)}</span></div>`).join(""):'<div class="p"><span>No payments recorded yet</span><span>₹0</span></div>';
+  const fname=fnameSafe('Sri Cine Hub Invoice '+rc+' - '+(b.contact||b.project||'customer'));
   return `<div class="rc-actions no-print">
     <button class="btn btn-ghost" onclick="go('receipts')">← Invoices</button>
     <button class="btn btn-ghost" onclick="sendReceiptWA('${code}')">💬 Send on WhatsApp</button>
-    <button class="btn btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <button class="btn btn-primary" onclick="printAs('${fname}')">🖨 Print / Save as PDF</button>
   </div>
   <div class="receipt" id="receipt">
     <div class="rc-head">
