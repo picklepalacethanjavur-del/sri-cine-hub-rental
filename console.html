@@ -235,9 +235,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828b"></script>
-<script src="console-data.js?v=20260828b"></script>
-<script src="console-db.js?v=20260828b"></script>
+<script src="supabase-config.js?v=20260828c"></script>
+<script src="console-data.js?v=20260828c"></script>
+<script src="console-db.js?v=20260828c"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -793,6 +793,7 @@ function renderQB(){
   const el=$("#qb-lines"); if(!el) return;
   const inp=(w)=>`width:${w}px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px;color:var(--text);text-align:right`;
   const badge=k=>({hirein:'<span class="badge b-info">hire-in</span>',custom:'<span class="badge b-warn">custom</span>',crew:'<span class="badge b-mut">crew</span>',service:'<span class="badge b-mut">service</span>',own:'<span class="badge b-ok">own</span>'})[k]||'';
+  const supName=id=>((DATA.suppliers||[]).find(s=>s.id===id)||{}).name||'';
   const kindSel=(i,k)=>`<select onchange="qbSetKind(${i},this.value)" style="background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px;color:var(--text);font-size:12px">${['own','hirein','custom','crew','service'].map(o=>`<option value="${o}" ${o===k?'selected':''}>${o==='hirein'?'hire-in':o}</option>`).join('')}</select>`;
   el.innerHTML=QB.map((l,i)=>{
     if(l.type==='sep') return `<div style="border-top:1px dashed var(--line);margin:8px 0"></div>`;
@@ -803,7 +804,7 @@ function renderQB(){
       const attn=(!l.name||!l.rate)?'<span title="needs input" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warn);flex-shrink:0"></span>':'';
       return `<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:9px 10px;margin-bottom:6px;opacity:${l.include?1:.5};cursor:pointer" onclick="qbOpen(${l._uid})">
         <input type="checkbox" ${l.include?'checked':''} onclick="event.stopPropagation()" onchange="qbToggleInclude(${i})" style="cursor:pointer">
-        ${attn}${badgeH}<span style="flex:1;font-size:13.5px;${l.name?'':'color:var(--mut)'}">${(l.name||'(unnamed)').replace(/</g,'&lt;')}</span>
+        ${attn}${badgeH}<div style="flex:1;min-width:0"><div style="font-size:13.5px;${l.name?'':'color:var(--mut)'}">${(l.name||'(unnamed)').replace(/</g,'&lt;')}</div>${l.kind==='hirein'?`<div style="font-size:12px;color:var(--info);margin-top:1px">via ${supName(l.supplierId)||'— pick supplier'}</div>`:''}</div>
         <span class="muted" style="font-size:12px;white-space:nowrap">×${qty} · ₹${(l.rate||0).toLocaleString('en-IN')}×${bd}</span>
         <b class="gold" style="font-size:13px;white-space:nowrap;min-width:60px;text-align:right">${money(lt)}</b><span class="muted">▸</span></div>`;
     }
@@ -812,7 +813,7 @@ function renderQB(){
     let hire='';
     if(l.kind==='hirein'){
       const opts=(l.offers&&l.offers.length)? l.offers.map((o,idx)=>`<option value="o:${idx}" ${o.supplierId===l.supplierId&&o.rate===l.cost?'selected':''}>${o.supplier} · ₹${o.rate} (${o.item})</option>`).join('') : (DATA.suppliers||[]).map(s=>`<option value="s:${s.id}" ${s.id===l.supplierId?'selected':''}>${s.name}</option>`).join('');
-      hire=`<div style="display:flex;align-items:center;gap:7px;font-size:12px;margin-top:8px;color:var(--mut);flex-wrap:wrap"><span>via</span><select onchange="qbSupplier(${i},this.value)" style="background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px;color:var(--text);max-width:190px">${opts}</select><span>cost ₹</span>${numi('cost',58)}<span>markup</span>${numi('markup',40)}<span>%</span><span class="gold">margin ${money((l.rate-(l.cost||0))*bd*qty)}</span></div>`;
+      hire=`<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:10px;color:var(--text);flex-wrap:wrap"><span class="muted" style="font-weight:600">Supplier</span><select onchange="qbSupplier(${i},this.value)" style="background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;color:var(--text);font-size:14px;min-width:210px;max-width:300px">${opts}</select><span class="muted">cost ₹</span>${numi('cost',60)}<span class="muted">markup</span>${numi('markup',42)}<span class="muted">%</span><span class="gold" style="font-size:12.5px">margin ${money((l.rate-(l.cost||0))*bd*qty)}</span></div>`;
     }
     const specNote=l.spec?`<div class="muted" style="font-size:11.5px;margin-top:3px">📎 ${l.spec.replace(/</g,'&lt;')}</div>`:'';
     const rawNote=(l.raw&&qbNorm(l.raw)!==qbNorm(l.name))?`<div class="muted" style="font-size:11px;margin-top:2px;opacity:.7">from: “${(l.raw||'').replace(/</g,'&lt;')}”</div>`:'';
