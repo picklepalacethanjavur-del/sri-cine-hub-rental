@@ -163,7 +163,9 @@ window.SDB = (function () {
   }
 
   // ---- writes (fire-and-forget; safe no-op offline) ----
-  const guard = fn => (...a) => { if (!ON) return; fn(...a).catch(e => fail(e, "save")); };
+  // Returns the promise so callers can await the result (resolves to the fn's return value on success,
+  // undefined on error after fail() runs, null when offline).
+  const guard = fn => (...a) => { if (!ON) return Promise.resolve(null); return fn(...a).catch(e => { fail(e, "save"); return undefined; }); };
 
   const createBooking = guard(async (b, cust) => {
     let customer_id = null;
