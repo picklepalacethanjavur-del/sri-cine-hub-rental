@@ -237,9 +237,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828r"></script>
-<script src="console-data.js?v=20260828r"></script>
-<script src="console-db.js?v=20260828r"></script>
+<script src="supabase-config.js?v=20260828s"></script>
+<script src="console-data.js?v=20260828s"></script>
+<script src="console-db.js?v=20260828s"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -1140,10 +1140,11 @@ VIEWS.calendar=()=>{
 
 /* ---- Inventory ---- */
 let INV={tab:"cameras",status:"all",q:""};
-const INV_TABS=[["cameras","Cameras"],["Lenses","Lenses"],["Lights","Lights"],["Accessories","Accessories"],["Grip","Grip"],["Transport","Transport"],["Genset","Genset"]];
-const invCount=k=>k==='cameras'?(DATA.cameras||[]).length:(DATA.accessories||[]).filter(a=>a.category===k).length;
+const INV_TABS=[["cameras","Cameras"],["Lenses","Lenses"],["Lights","Lights"],["Accessories","Accessories"],["Grip","Grip"],["Transport & Genset","Transport & Genset"]];
+const invTabCats=k=>k==='Transport & Genset'?['Transport','Genset']:[k];
+const invCount=k=>k==='cameras'?(DATA.cameras||[]).length:(DATA.accessories||[]).filter(a=>invTabCats(k).includes(a.category)).length;
 VIEWS.inventory=()=>{
-  if(INV.tab==='accessories')INV.tab='Lenses'; // migrate old tab value
+  if(INV.tab==='accessories'||INV.tab==='Transport'||INV.tab==='Genset')INV.tab=(INV.tab==='accessories'?'Lenses':'Transport & Genset'); // migrate old tab values
   return `<div class="tabs" style="flex-wrap:wrap">
     ${INV_TABS.map(([k,l])=>`<div class="tab ${INV.tab===k?'active':''}" onclick="INV.tab='${k}';go('inventory')">${l} <span class="pill">${invCount(k)}</span></div>`).join("")}
     <div class="tsearch" style="margin-left:auto"><input placeholder="Search…" value="${INV.q}" oninput="INV.q=this.value;renderInvTable()" style="padding-left:14px"></div>
@@ -1188,10 +1189,11 @@ function renderInvTable(){
       <td class="muted">${dash(c.serial)}</td><td>${c.meterHours||0}h</td><td class="amt">${money(c.dailyRate)}</td><td>${statusBadge(c.status)}</td>
       <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${c.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No matches.</td></tr>`}</tbody></table>`;
   }else{
-    let rows=DATA.accessories.filter(a=>a.category===INV.tab&&(INV.status==="all"||a.status===INV.status)&&(!q||((a.name||'')+(a.code||'')+(a.serial||'')).toLowerCase().includes(q)));
-    el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th><th>Serial</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
-    ${rows.map(a=>`<tr><td>${a.code}</td><td><b>${a.name}</b></td><td class="muted">${dash(a.serial)}</td><td class="amt">${money(a.dailyRate)}</td><td>${statusBadge(a.status)}</td>
-      <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${a.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="6" class="empty">No ${INV.tab.toLowerCase()} yet. Use ＋ Add to create one.</td></tr>`}</tbody></table>`;
+    const cats=invTabCats(INV.tab), multi=cats.length>1;
+    let rows=DATA.accessories.filter(a=>cats.includes(a.category)&&(INV.status==="all"||a.status===INV.status)&&(!q||((a.name||'')+(a.code||'')+(a.serial||'')+(a.category||'')).toLowerCase().includes(q)));
+    el.innerHTML=`<table><thead><tr><th>Code</th><th>Name</th>${multi?'<th>Category</th>':''}<th>Serial</th><th>Rate/day</th><th>Status</th><th></th></tr></thead><tbody>
+    ${rows.map(a=>`<tr><td>${a.code}</td><td><b>${a.name}</b></td>${multi?`<td class="muted">${dash(a.category)}</td>`:''}<td class="muted">${dash(a.serial)}</td><td class="amt">${money(a.dailyRate)}</td><td>${statusBadge(a.status)}</td>
+      <td><span class="lnk gold" style="cursor:pointer" onclick="editUnitForm('${a.code}')">Edit</span></td></tr>`).join("")||`<tr><td colspan="${multi?7:6}" class="empty">No ${INV.tab.toLowerCase()} yet. Use ＋ Add to create one.</td></tr>`}</tbody></table>`;
   }
 }
 
@@ -1202,7 +1204,7 @@ function nextUnitCode(prefix){let max=0;[...DATA.cameras,...DATA.accessories].fo
 function nextForCat(cat){return nextUnitCode(ACC_PREFIX[cat]||"ACC");}
 function addUnitForm(){
   const cam=INV.tab==="cameras";
-  const curCat=(!cam&&ACC_CATS.includes(INV.tab))?INV.tab:ACC_CATS[0];
+  const curCat=cam?ACC_CATS[0]:(invTabCats(INV.tab).find(c=>ACC_CATS.includes(c))||ACC_CATS[0]);
   const statusOpts=s=>["available","maintenance","retired"].map(x=>`<option value="${x}" ${s===x?"selected":""}>${x}</option>`).join("");
   openModal(`<h3>Add ${cam?"camera":curCat.replace(/s$/,'').toLowerCase()}</h3><p class="mut">Registers a new serialized unit in your inventory.</p>
     <div class="r2"><div class="field"><label>Code *</label><input id="u-code" value="${cam?nextUnitCode("CAM"):nextForCat(curCat)}"></div>
