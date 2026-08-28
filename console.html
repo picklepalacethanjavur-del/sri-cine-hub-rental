@@ -237,9 +237,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828i"></script>
-<script src="console-data.js?v=20260828i"></script>
-<script src="console-db.js?v=20260828i"></script>
+<script src="supabase-config.js?v=20260828j"></script>
+<script src="console-data.js?v=20260828j"></script>
+<script src="console-db.js?v=20260828j"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -1514,38 +1514,71 @@ function receiptView(code){
 /* ---- Investor Portal — per-camera investment portfolio ---- */
 const round1=n=>Math.round(n*10)/10;
 let INVEST={cam:null,period:"2026"};
-/* Static ARRI S35 build-cost sheet (converted to INR @ ₹96/USD). */
+/* Static ARRI S35 build-cost sheet (INR @ ₹96/USD) with indicative market range + assessment. */
+const COST_FLAG={good:{t:"Good value",c:"var(--ok)",e:"🟢"},fair:{t:"Fair",c:"var(--mut)",e:"⚪"},high:{t:"Looks high",c:"var(--bad)",e:"🔴"},check:{t:"Verify brand",c:"var(--warn)",e:"🟡"},review:{t:"Itemise",c:"var(--warn)",e:"🟡"},na:{t:"Non-equipment",c:"var(--mut)",e:""}};
 const ARRI_S35_COSTS=[
-  {n:"Camera + accessories, full setup (3 cards)", usd:60000, inr:5760000, equip:true},
-  {n:"Inspection", usd:390, inr:37440, equip:false},
-  {n:"Monitor + battery charger", usd:1800, inr:172800, equip:true},
-  {n:"Batteries — B-mount (2) + ground (2), chargers", inr:170000, equip:true},
-  {n:"Transport & research", usd:1000, inr:96000, equip:false},
-  {n:"Video transmitter (c-Motion)", inr:275000, equip:true},
-  {n:"Tripod (O'Connor)", inr:450000, equip:true},
-  {n:"Wireless follow focus", inr:225000, equip:true},
-  {n:"Other accessories, allen key, cables, magic arm", inr:100000, equip:true},
-  {n:"Mattebox & filter", inr:300000, equip:true},
-  {n:"Shoulder pad, handle & small hood", inr:120000, equip:true},
-  {n:"Shogun & director monitor", inr:350000, equip:true},
-  {n:"Shipping Charges & Travel Insurance", usd:1000, inr:96000, equip:false},
-  {n:"Port of Authority / Duty Paid", inr:20000, equip:false}
+  {n:"Camera + accessories, full setup (3 cards)", usd:60000, inr:5760000, equip:true, market:"$55k–80k package", flag:"fair"},
+  {n:"Inspection", usd:390, inr:37440, equip:false, flag:"na"},
+  {n:"Monitor + battery charger", usd:1800, inr:172800, equip:true, market:"₹1.2–2.0 L", flag:"fair"},
+  {n:"Batteries — B-mount (2) + ground (2), chargers", inr:170000, equip:true, market:"₹1.3–1.9 L", flag:"fair"},
+  {n:"Transport & research", usd:1000, inr:96000, equip:false, flag:"na"},
+  {n:"Video transmitter (c-Motion)", inr:275000, equip:true, market:"₹2.5–5 L (Teradek)", flag:"fair"},
+  {n:"Tripod (O'Connor)", inr:450000, equip:true, market:"₹8–13 L new", flag:"good"},
+  {n:"Wireless follow focus", inr:225000, equip:true, market:"₹0.9–1.1 L (Tilta) · ₹4–7 L (cmotion)", flag:"check"},
+  {n:"Other accessories, allen key, cables, magic arm", inr:100000, equip:true, market:"itemise to verify", flag:"review"},
+  {n:"Mattebox & filter", inr:300000, equip:true, market:"₹2.5–4.5 L", flag:"fair"},
+  {n:"Shoulder pad, handle & small hood", inr:120000, equip:true, market:"₹0.4–0.8 L", flag:"high"},
+  {n:"Shogun & director monitor", inr:350000, equip:true, market:"₹2.5–4.5 L", flag:"fair"},
+  {n:"Shipping Charges & Travel Insurance", usd:1000, inr:96000, equip:false, flag:"na"},
+  {n:"Port of Authority / Duty Paid", inr:20000, equip:false, flag:"na"}
 ];
+const costFmt=n=>'₹'+Number(n).toLocaleString('en-IN');
 function arriCostPanel(){
-  const fmt=n=>'₹'+Number(n).toLocaleString('en-IN');
   const equipTotal=ARRI_S35_COSTS.filter(x=>x.equip).reduce((a,x)=>a+x.inr,0);
   const total=ARRI_S35_COSTS.reduce((a,x)=>a+x.inr,0);
-  const rows=ARRI_S35_COSTS.map((x,i)=>`<tr style="border-bottom:1px solid var(--line)">
+  const rows=ARRI_S35_COSTS.map((x,i)=>{const f=COST_FLAG[x.flag]||COST_FLAG.fair;return `<tr style="border-bottom:1px solid var(--line)">
     <td style="color:var(--mut);padding:5px 0;vertical-align:top">${i+1}</td>
-    <td style="padding:5px 8px;vertical-align:top">${x.n}${x.equip?'':' <span class="badge b-mut" style="font-size:9px">non-gear</span>'}</td>
-    <td style="text-align:right;white-space:nowrap;padding:5px 0;vertical-align:top">${x.usd?`<div class="muted" style="font-size:10px">$${x.usd.toLocaleString('en-US')}</div>`:''}${fmt(x.inr)}</td></tr>`).join('');
+    <td style="padding:5px 8px;vertical-align:top">${x.n}${x.equip?(x.flag&&x.flag!=='fair'?' '+f.e:''):' <span class="badge b-mut" style="font-size:9px">non-gear</span>'}${x.market?`<div class="muted" style="font-size:10px">mkt: ${x.market}</div>`:''}</td>
+    <td style="text-align:right;white-space:nowrap;padding:5px 0;vertical-align:top">${x.usd?`<div class="muted" style="font-size:10px">$${x.usd.toLocaleString('en-US')}</div>`:''}${costFmt(x.inr)}</td></tr>`;}).join('');
   return `<div class="card" style="position:sticky;top:80px">
-    <div class="card-h"><h3>ARRI S35 — build cost</h3><span class="pill">@ ₹96/$</span></div>
+    <div class="card-h"><h3>ARRI S35 — build cost</h3><span class="lnk gold" style="cursor:pointer;font-size:12px" onclick="openArriCost()">📊 Full analysis →</span></div>
     <div style="padding:8px 14px 14px">
       <table style="width:100%;border-collapse:collapse;font-size:11.5px"><tbody>${rows}</tbody></table>
-      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12.5px"><span class="muted">Equipment only</span><b>${fmt(equipTotal)}</b></div>
-      <div style="display:flex;justify-content:space-between;font-family:var(--font-display);font-size:17px;margin-top:6px;border-top:1px solid var(--line);padding-top:8px"><span>Total build cost</span><span class="gold">${fmt(total)}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12.5px"><span class="muted">Equipment only</span><b>${costFmt(equipTotal)}</b></div>
+      <div style="display:flex;justify-content:space-between;font-family:var(--font-display);font-size:17px;margin-top:6px;border-top:1px solid var(--line);padding-top:8px"><span>Total build cost</span><span class="gold">${costFmt(total)}</span></div>
+      <div class="muted" style="font-size:10.5px;margin-top:8px">🔴 high · 🟡 verify · 🟢 good value · @ ₹96/$</div>
     </div>
+  </div>`;
+}
+function openArriCost(){ CUR=''; buildNav(); $("#pageTitle").textContent='ARRI S35 Cost Analysis'; $("#content").innerHTML=arriCostReport(); window.scrollTo(0,0); }
+function arriCostReport(){
+  const equipTotal=ARRI_S35_COSTS.filter(x=>x.equip).reduce((a,x)=>a+x.inr,0);
+  const total=ARRI_S35_COSTS.reduce((a,x)=>a+x.inr,0);
+  const flagCell=f=>{const m=COST_FLAG[f]||COST_FLAG.fair;return `<span style="color:${m.c};font-weight:600;white-space:nowrap">${m.e?m.e+' ':''}${m.t}</span>`;};
+  const rows=ARRI_S35_COSTS.map((x,i)=>`<tr>
+    <td class="r">${i+1}</td>
+    <td><b>${x.n}</b></td>
+    <td class="r">${x.usd?'$'+x.usd.toLocaleString('en-US'):'—'}</td>
+    <td class="r">${costFmt(x.inr)}</td>
+    <td>${x.market||'—'}</td>
+    <td>${x.equip?flagCell(x.flag):'<span style="color:#999">non-equipment</span>'}</td></tr>`).join('');
+  const fname=fnameSafe('Sri Cine Hub - ARRI S35 Equipment Cost Analysis - '+fmtDate(TODAY));
+  return `<div class="rc-actions no-print">
+    <button class="btn btn-ghost" onclick="go('investor')">← Investor Portal</button>
+    <button class="btn btn-primary" onclick="printAs('${fname}')">🖨 Print / Save as PDF</button>
+  </div>
+  <div class="receipt" id="receipt">
+    <div class="rc-head">
+      <div class="rc-brand"><img src="logo.png" alt="SRC"><div><b>${STUDIO.name}</b><span>${STUDIO.tagline}<br>${STUDIO.addr}<br>${STUDIO.phone} · ${STUDIO.web}</span></div></div>
+      <div class="rc-meta"><h2>COST ANALYSIS</h2><div>ARRI S35 package</div><div>${fmtDate(TODAY)}</div><div>Rate: ₹96 / USD</div></div>
+    </div>
+    <table class="rc-table"><thead><tr><th class="r">#</th><th>Item</th><th class="r">USD</th><th class="r">Paid (₹)</th><th>Indicative market</th><th>Assessment</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="rc-totals" style="width:360px">
+      <div class="row"><span>Equipment only</span><span>${costFmt(equipTotal)}</span></div>
+      <div class="row grand"><span>Total build cost</span><span>${costFmt(total)}</span></div>
+    </div>
+    <div style="clear:both"></div>
+    <div class="rc-foot" style="text-align:left">Assessment is indicative only — market ranges depend on brand, model and condition (new vs used / gray-import). Verify flagged items against 2–3 dealer quotes before finalising.<br><b>🔴 Looks high</b> · <b>🟡 Verify / itemise</b> · <b>🟢 Good value</b> · ⚪ Fair.</div>
   </div>`;
 }
 VIEWS.investor=()=>`<div class="inv-grid"><div style="min-width:0">${investorBody()}</div>${arriCostPanel()}</div>`;
