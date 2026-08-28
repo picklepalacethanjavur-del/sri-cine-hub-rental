@@ -237,9 +237,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828s"></script>
-<script src="console-data.js?v=20260828s"></script>
-<script src="console-db.js?v=20260828s"></script>
+<script src="supabase-config.js?v=20260828t"></script>
+<script src="console-data.js?v=20260828t"></script>
+<script src="console-db.js?v=20260828t"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -808,11 +808,12 @@ function qbFromRequest(r){
   if(!QB.filter(l=>l.type==='item').length) QB.push(qbLine('',0,days,'custom'));
   renderQB();
 }
+const qctxDays=()=>(QCTX.start&&QCTX.end)?daysBetween(QCTX.start,QCTX.end):((QB.find(l=>l.days)||{days:1}).days);
 function qbParse(){ const t=$("#qb-paste").value; if(!t.trim()) return toast('Paste a message first');
-  const days=(QB.find(l=>l.days)||{days:1}).days; QB_SOURCE=(QB_SOURCE?QB_SOURCE+'\n':'')+t.trim();
+  const days=qctxDays(); QB_SOURCE=(QB_SOURCE?QB_SOURCE+'\n':'')+t.trim();
   let n=0; parseRows(t).forEach(row=>{ QB.push(qbRowToLine(row,days)); if(row.type==='item')n++; });
   const m=qbMergeDupes(); $("#qb-paste").value=''; QB_OPEN=qbFirstAttention(); renderQB(); toast('Added '+n+' item'+(n===1?'':'s')+(m?', merged '+m+' dup'+(m>1?'s':''):'')); }
-function qbAdd(){ const l=qbLine('',0,(QB.find(x=>x.days)||{days:1}).days,'own'); QB.push(l); QB_OPEN=l._uid; renderQB(); }
+function qbAdd(){ const l=qbLine('',0,qctxDays(),'own'); QB.push(l); QB_OPEN=l._uid; renderQB(); }
 function qbName(i,v){QB[i].name=v;}
 function qbNum(i,f,v){QB[i][f]=+v||0; if(QB[i].kind==='hirein'&&(f==='cost'||f==='markup')) QB[i].rate=Math.round((QB[i].cost||0)*(1+(QB[i].markup||0)/100)); renderQB();}
 function qbDel(i){QB.splice(i,1);renderQB();}
