@@ -83,7 +83,7 @@ window.SDB = (function () {
         investors: investorsForUnit(u.id).length ? investorsForUnit(u.id) : undefined
       }));
       const accessories = U.filter(u => u.kind === "accessory").map(u => ({
-        code: u.code, name: u.name, category: u.category, status: u.status, dailyRate: Number(u.default_daily_rate), optionName: optionNameById[u.option_id] || null
+        code: u.code, name: u.name, category: u.category, serial: u.serial_number, status: u.status, dailyRate: Number(u.default_daily_rate), optionName: optionNameById[u.option_id] || null
       }));
 
       // bookings (+ lines split by kind, + payments)
