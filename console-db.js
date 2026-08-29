@@ -125,7 +125,7 @@ window.SDB = (function () {
           cameras: ls.filter(l => l.kind === "camera").map(mapLine),
           accessories: ls.filter(l => l.kind === "accessory").map(mapLine),
           payments: (paysByBooking[b.id] || []).map(p => ({
-            amount: Number(p.amount_inr), type: p.transaction_type, method: METHOD_FROM_DB[p.method] || p.method,
+            _id: p.id, amount: Number(p.amount_inr), type: p.transaction_type, method: METHOD_FROM_DB[p.method] || p.method,
             date: p.received_at, ref: p.reference || ""
           }))
         };
@@ -210,10 +210,47 @@ window.SDB = (function () {
   });
 
   const addPayment = guard(async (code, p) => {
-    const { error } = await sb.from("payments").insert({
+    const { data, error } = await sb.from("payments").insert({
       booking_id: ids.bookingByCode[code], amount_inr: p.amount, transaction_type: p.type,
       method: METHOD_TO_DB[p.method] || "upi", received_at: p.date, reference: p.ref || null
-    }); if (error) throw error;
+    }).select("id").single(); if (error) throw error; return data.id;
+  });
+  const editPayment = guard(async (id, p) => {
+    const { error } = await sb.from("payments").update({
+      amount_inr: p.amount, transaction_type: p.type, method: METHOD_TO_DB[p.method] || "upi", received_at: p.date, reference: p.ref || null
+    }).eq("id", id); if (error) throw error;
+  });
+  const deletePayment = guard(async (id) => {
+    const { error } = await sb.from("payments").delete().eq("id", id); if (error) throw error;
+  });
+  const updateBooking = guard(async (code, patch) => {
+    const MAP = { start: "start_at", end: "end_at", contact: "contact_name", phone: "contact_phone", production: "production_name", project: "project_name", pickup: "pickup_location", operator: "operator_name" };
+    const row = {}; Object.keys(patch).forEach(k => { if (MAP[k]) row[MAP[k]] = patch[k]; });
+    if (!Object.keys(row).length) return;
+    const { error } = await sb.from("bookings").update(row).eq("id", ids.bookingByCode[code]); if (error) throw error;
+  });
+  const updateSupplier = guard(async (id, patch) => {
+    const MAP = { name: "name", contact: "contact", specialisation: "specialisation", notes: "notes" };
+    const row = {}; Object.keys(patch).forEach(k => { if (MAP[k]) row[MAP[k]] = patch[k]; });
+    const { error } = await sb.from("suppliers").update(row).eq("id", id); if (error) throw error;
+  });
+  const updateCustomer = guard(async (id, patch) => {
+    const MAP = { name: "name", company: "company_name", phone: "phone" };
+    const row = {}; Object.keys(patch).forEach(k => { if (MAP[k]) row[MAP[k]] = patch[k]; });
+    const { error } = await sb.from("customers").update(row).eq("id", id); if (error) throw error;
+  });
+  const updateRequestDetails = guard(async (reqUuid, patch) => {
+    const MAP = { name: "name", company: "company", phone: "phone", project: "project", start: "start_at", end: "end_at", desc: "description" };
+    const row = {}; Object.keys(patch).forEach(k => { if (MAP[k]) row[MAP[k]] = (patch[k] === "" ? null : patch[k]); });
+    if (!Object.keys(row).length) return;
+    const { error } = await sb.from("quote_requests").update(row).eq("id", reqUuid); if (error) throw error;
+  });
+  const editExpense = guard(async (id, patch) => {
+    const row = {};
+    if (patch.description != null) row.description = patch.description;
+    if ("amount_usd" in patch) row.amount_usd = patch.amount_usd;
+    if (patch.amount_inr != null) row.amount_inr = patch.amount_inr;
+    const { error } = await sb.from("asset_expenses").update(row).eq("id", id); if (error) throw error;
   });
 
   const returnEarly = guard(async (code, unitCode, date, cond) => {
@@ -403,5 +440,5 @@ window.SDB = (function () {
     }
     console.log("SDB.debug →", out); return out;
   }
-  return { on: ON, bootstrap, debug, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, addExpense, deleteExpense, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
+  return { on: ON, bootstrap, debug, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, editPayment, deletePayment, updateBooking, updateSupplier, updateCustomer, updateRequestDetails, editExpense, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, addExpense, deleteExpense, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
 })();

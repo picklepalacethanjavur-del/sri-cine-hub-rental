@@ -237,9 +237,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=20260828u"></script>
-<script src="console-data.js?v=20260828u"></script>
-<script src="console-db.js?v=20260828u"></script>
+<script src="supabase-config.js?v=20260828v"></script>
+<script src="console-data.js?v=20260828v"></script>
+<script src="console-db.js?v=20260828v"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -888,7 +888,12 @@ function addDays(d,n){ const x=parseD(d); x.setDate(x.getDate()+(+n||0)); return
 function qbOptsPayload(){ let equip=0,svc=0; QB.forEach(l=>{ if(l.type!=='item'||!l.include||!l.name)return; const qty=l.qty||1; if(isEquip(l.kind))equip+=l.rate*billedDays(l.days)*qty; else svc+=l.rate*l.days*qty; });
   const subtotal=equip+svc; const discount=qbDiscount(subtotal);
   return { discount_inr:discount, deposit_inr:0, other_charges_inr:svc, valid_until:null }; }
-async function qbSave(){ const existing=!!QCTX.requestUuid; const u=await ensureRequest(); if(u===null)return; const code='QT-'+Date.now().toString().slice(-8); const opts=qbOptsPayload(); SDB.saveQuotation(u,code,QB,'draft',QB_SOURCE,opts); qbCacheSaved(u,code,opts); if(existing){ toast('Quote saved'); } else { toast('Quote created · '+code); go('requests'); } }
+async function qbSave(){ const existing=!!QCTX.requestUuid; const u=await ensureRequest(); if(u===null)return; const code='QT-'+Date.now().toString().slice(-8); const opts=qbOptsPayload();
+  if(existing){ // persist edited customer/project/date details back to the request
+    SDB.updateRequestDetails(u,{name:QCTX.name,company:QCTX.company,phone:QCTX.phone,project:QCTX.project,start:QCTX.start,end:QCTX.end});
+    const req=(DATA.requests||[]).find(x=>x._uuid===u); if(req){req.name=QCTX.name;req.company=QCTX.company;req.phone=QCTX.phone;req.project=QCTX.project;req.start=QCTX.start;req.end=QCTX.end;}
+  }
+  SDB.saveQuotation(u,code,QB,'draft',QB_SOURCE,opts); qbCacheSaved(u,code,opts); if(existing){ toast('Quote saved'); } else { toast('Quote created · '+code); go('requests'); } }
 /* Cache the just-saved lines onto the local request so reopening (before a refresh) reloads YOUR prices, not inventory defaults. */
 function qbCacheSaved(reqUuid,code,opts){
   const req=(DATA.requests||[]).find(x=>x._uuid===reqUuid); if(!req)return;
@@ -946,7 +951,8 @@ function bookingDetail(code){
   return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('bookings')">← All bookings</div>
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><h1 class="disp" style="font-size:26px">${b.contact||b.project}</h1>${badge(b.status)}
     ${isReady?`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go('checkout','${code}')">Check out →</button>`:isOut?`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go('checkout','${code}')">Return →</button>`:''}
-    <button class="btn btn-ghost btn-sm" ${isReady||isOut?'':'style="margin-left:auto"'} onclick="openReceipt('${code}')">🧾 Invoice</button>
+    <button class="btn btn-ghost btn-sm" ${isReady||isOut?'':'style="margin-left:auto"'} onclick="editBookingForm('${code}')">✏️ Edit</button>
+    <button class="btn btn-ghost btn-sm" onclick="openReceipt('${code}')">🧾 Invoice</button>
     ${ROLE==='admin'?`<button class="btn btn-ghost btn-sm btn-danger" onclick="deleteBooking('${code}')">🗑 Delete</button>`:''}</div>
   <div class="muted" style="margin-bottom:20px">${b.code}${b.production&&b.production!==b.contact?' · '+b.production:''}${b.project&&b.project!==b.contact&&b.project!=='Walk-in booking'?' · '+b.project:''}${b.phone?' · '+b.phone:''} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div>
   <div class="metrics" style="grid-template-columns:repeat(3,1fr)">
@@ -960,9 +966,11 @@ function bookingDetail(code){
       ${b.accessories.map(l=>line(l,"accessories")).join("")}
     </div>
     <div class="card"><div class="card-h"><h3>Payments</h3><div style="display:flex;gap:8px">${t.outstanding>0?`<button class="btn btn-ghost btn-sm" onclick="sendReminderWA('${code}')">💬 Reminder</button>`:''}<button class="btn btn-ghost btn-sm" onclick="addPayment('${code}')">＋ Add payment</button></div></div>
-      <div style="padding:6px 0">${b.payments.length?b.payments.map(p=>`<div class="list-row" style="cursor:default">
+      <div style="padding:6px 0">${b.payments.length?b.payments.map((p,pi)=>`<div class="list-row" style="cursor:default">
         <div class="grow"><div class="t">${money(p.amount)} <span class="badge b-mut">${p.type}</span></div>
-          <div class="sub">${p.method} · ${fmtDate(p.date)}${p.ref?' · '+p.ref:''}</div></div></div>`).join(""):`<div class="empty">No payments yet.</div>`}</div>
+          <div class="sub">${p.method} · ${fmtDate(p.date)}${p.ref?' · '+p.ref:''}</div></div>
+        <span class="lnk gold" style="cursor:pointer;font-size:12.5px;margin-right:10px" onclick="editPaymentForm('${code}',${pi})">Edit</span>
+        ${ROLE==='admin'?`<span class="cart-x" title="Delete payment" onclick="deletePaymentRow('${code}',${pi})">×</span>`:''}</div>`).join(""):`<div class="empty">No payments yet.</div>`}</div>
       ${isOut?`<div style="padding:14px"><button class="btn btn-primary" style="width:100%" onclick="go('checkout','${code}')">Go to Return →</button></div>`:''}
     </div>
   </div>`;
@@ -987,10 +995,56 @@ function addPayment(code){
     <button class="btn btn-primary" style="width:100%" onclick="doAddPayment('${code}')">Record payment</button>`);
 }
 function payPreview(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const a=+($("#pay-amt").value||0);$("#pay-prev").textContent=`After this: outstanding = ${money(t.outstanding-a)}`;}
-function doAddPayment(code){const b=DATA.bookings.find(x=>x.code===code);const a=+($("#pay-amt").value||0);if(!a)return toast("Enter an amount");
+async function doAddPayment(code){const b=DATA.bookings.find(x=>x.code===code);const a=+($("#pay-amt").value||0);if(!a)return toast("Enter an amount");
   const pay={amount:a,type:$("#pay-type").value,method:$("#pay-method").value,date:$("#pay-date").value,ref:$("#pay-ref").value};
-  b.payments.push(pay);SDB.addPayment(code,pay);
+  b.payments.push(pay);const id=await SDB.addPayment(code,pay);if(id)pay._id=id;
   closeModal();$("#content").innerHTML=bookingDetail(code);toast("Payment recorded");}
+function editPaymentForm(code,pi){
+  const b=DATA.bookings.find(x=>x.code===code);const p=b&&b.payments[pi];if(!p)return;
+  openModal(`<h3>Edit payment</h3>
+    <div class="r2"><div class="field"><label>Amount ₹</label><input type="number" id="pay-amt" value="${p.amount}"></div>
+    <div class="field"><label>Date</label><input type="date" id="pay-date" value="${p.date||TODAY}"></div></div>
+    <div class="r2"><div class="field"><label>Type</label><select id="pay-type">${['advance','intermediate','final'].map(o=>`<option ${p.type===o?'selected':''}>${o}</option>`).join('')}</select></div>
+    <div class="field"><label>Method</label><select id="pay-method">${['Cash','UPI','Bank Transfer','Cheque'].map(o=>`<option ${p.method===o?'selected':''}>${o}</option>`).join('')}</select></div></div>
+    <div class="field"><label>Reference / UTR</label><input id="pay-ref" value="${escAttr(p.ref||'')}"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doEditPayment('${code}',${pi})">Save payment</button>`);
+}
+async function doEditPayment(code,pi){
+  const b=DATA.bookings.find(x=>x.code===code);const p=b&&b.payments[pi];if(!p)return;
+  const a=+($("#pay-amt").value||0);if(!a)return toast("Enter an amount");
+  p.amount=a;p.type=$("#pay-type").value;p.method=$("#pay-method").value;p.date=$("#pay-date").value;p.ref=$("#pay-ref").value;
+  if(p._id)SDB.editPayment(p._id,p);else{const id=await SDB.addPayment(code,p);if(id)p._id=id;}
+  closeModal();$("#content").innerHTML=bookingDetail(code);toast("Payment updated");
+}
+function deletePaymentRow(code,pi){
+  if(ROLE!=='admin')return toast("Only admins can delete payments");
+  const b=DATA.bookings.find(x=>x.code===code);const p=b&&b.payments[pi];if(!p)return;
+  if(!confirm(`Delete payment of ${money(p.amount)}?`))return;
+  if(p._id)SDB.deletePayment(p._id);
+  b.payments.splice(pi,1);
+  $("#content").innerHTML=bookingDetail(code);toast("Payment deleted");
+}
+function editBookingForm(code){
+  const b=DATA.bookings.find(x=>x.code===code);if(!b)return;
+  openModal(`<h3>Edit booking · ${b.code}</h3>
+    <div class="r2"><div class="field"><label>Customer name</label><input id="eb-contact" value="${escAttr(b.contact||'')}"></div>
+      <div class="field"><label>Phone</label><input id="eb-phone" value="${escAttr(b.phone||'')}"></div></div>
+    <div class="r2"><div class="field"><label>Production house</label><input id="eb-prod" value="${escAttr(b.production||'')}"></div>
+      <div class="field"><label>Project / shoot</label><input id="eb-project" value="${escAttr(b.project||'')}"></div></div>
+    <div class="r2"><div class="field"><label>Start date</label><input type="date" id="eb-start" value="${b.start||''}"></div>
+      <div class="field"><label>End date</label><input type="date" id="eb-end" value="${b.end||''}"></div></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveBookingEdit('${code}')">Save changes</button>`);
+}
+function saveBookingEdit(code){
+  const b=DATA.bookings.find(x=>x.code===code);if(!b)return;
+  const start=$("#eb-start").value,end=$("#eb-end").value;
+  if(start&&end&&parseD(end)<parseD(start))return toast("End date can't be before start");
+  b.contact=$("#eb-contact").value.trim();b.phone=$("#eb-phone").value.trim();
+  b.production=$("#eb-prod").value.trim();b.project=$("#eb-project").value.trim();
+  b.start=start||b.start;b.end=end||b.end;
+  SDB.updateBooking(code,{contact:b.contact,phone:b.phone,production:b.production,project:b.project,start:b.start,end:b.end});
+  closeModal();$("#content").innerHTML=bookingDetail(code);toast("Booking updated");
+}
 function addEquip(code){
   const b=DATA.bookings.find(x=>x.code===code);
   const opts=DATA.cameras.concat(DATA.accessories).filter(i=>i.status==="available").map(i=>`<option value="${i.code}">${i.name} — ${money(i.dailyRate)}/day</option>`).join("");
@@ -1276,7 +1330,7 @@ VIEWS.suppliers=()=>{
     <button class="btn btn-primary btn-sm" onclick="addSupplierForm()">＋ Add supplier</button>
   </div>
   <div class="cols">${DATA.suppliers.map(s=>`<div class="card">
-    <div class="card-h"><h3>${s.name}</h3><button class="btn btn-ghost btn-sm" onclick="addSupplierItem('${s.id}')">＋ Add item</button></div>
+    <div class="card-h"><h3>${s.name}</h3><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="editSupplierForm('${s.id}')">✏️ Edit</button><button class="btn btn-ghost btn-sm" onclick="addSupplierItem('${s.id}')">＋ Add item</button></div></div>
     <div style="padding:12px 16px 4px">
       <div class="muted" style="font-size:13px">${s.specialisation}</div>
       <div class="muted" style="font-size:13px;margin:4px 0 2px">📞 ${s.contact} · <span class="lnk gold" style="cursor:pointer" onclick="waSupplierGeneric('${waEsc(s.contact)}')">💬 message</span></div>
@@ -1293,6 +1347,21 @@ function addSupplierForm(){
     <div class="r2"><div class="field"><label>Contact</label><input id="sp-contact" placeholder="Name / phone"></div>
       <div class="field"><label>Specialisation</label><input id="sp-spec" placeholder="e.g. Lighting & grip"></div></div>
     <button class="btn btn-primary" style="width:100%" onclick="saveSupplier()">Add supplier</button>`);
+}
+function editSupplierForm(id){
+  const s=DATA.suppliers.find(x=>x.id===id);if(!s)return;
+  openModal(`<h3>Edit supplier</h3>
+    <div class="field"><label>Name *</label><input id="sp-name" value="${escAttr(s.name||'')}"></div>
+    <div class="r2"><div class="field"><label>Contact</label><input id="sp-contact" value="${escAttr(s.contact||'')}"></div>
+      <div class="field"><label>Specialisation</label><input id="sp-spec" value="${escAttr(s.specialisation||'')}"></div></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveSupplierEdit('${id}')">Save changes</button>`);
+}
+function saveSupplierEdit(id){
+  const s=DATA.suppliers.find(x=>x.id===id);if(!s)return;
+  const name=($("#sp-name").value||"").trim();if(!name)return toast("Enter a supplier name");
+  s.name=name;s.contact=($("#sp-contact").value||"").trim();s.specialisation=($("#sp-spec").value||"").trim();
+  SDB.updateSupplier(id,{name:s.name,contact:s.contact,specialisation:s.specialisation});
+  closeModal();go("suppliers");toast("Supplier updated");
 }
 async function saveSupplier(){
   const name=($("#sp-name").value||"").trim();
@@ -1353,9 +1422,25 @@ function renderFind(){
   el.innerHTML=`<div class="card">${html}</div>`;
 }
 VIEWS.customers=()=>{
-  return `<div class="card"><table><thead><tr><th>Customer</th><th>Company</th><th>Phone</th><th>Bookings</th></tr></thead><tbody>
-  ${DATA.customers.filter(c=>c.id!=="CUS-new").map(c=>{const n=DATA.bookings.filter(b=>b.customer===c.id).length;return `<tr><td><b>${c.name}</b></td><td class="muted">${c.company||'—'}</td><td>${c.phone}</td><td>${n} <span class="muted">rental${n!==1?'s':''}</span></td></tr>`;}).join("")}</tbody></table></div>`;
+  return `<div class="card"><table><thead><tr><th>Customer</th><th>Company</th><th>Phone</th><th>Bookings</th><th></th></tr></thead><tbody>
+  ${DATA.customers.filter(c=>c.id!=="CUS-new").map(c=>{const n=DATA.bookings.filter(b=>b.customer===c.id).length;return `<tr><td><b>${c.name}</b></td><td class="muted">${c.company||'—'}</td><td>${c.phone||'—'}</td><td>${n} <span class="muted">rental${n!==1?'s':''}</span></td>
+    <td><span class="lnk gold" style="cursor:pointer" onclick="editCustomerForm('${c.id}')">Edit</span></td></tr>`;}).join("")||`<tr><td colspan="5" class="empty">No customers yet.</td></tr>`}</tbody></table></div>`;
 };
+function editCustomerForm(id){
+  const c=DATA.customers.find(x=>x.id===id);if(!c)return;
+  openModal(`<h3>Edit customer</h3>
+    <div class="field"><label>Name *</label><input id="cu-name" value="${escAttr(c.name||'')}"></div>
+    <div class="r2"><div class="field"><label>Company</label><input id="cu-company" value="${escAttr(c.company||'')}"></div>
+      <div class="field"><label>Phone</label><input id="cu-phone" value="${escAttr(c.phone||'')}"></div></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveCustomerEdit('${id}')">Save changes</button>`);
+}
+function saveCustomerEdit(id){
+  const c=DATA.customers.find(x=>x.id===id);if(!c)return;
+  const name=($("#cu-name").value||"").trim();if(!name)return toast("Enter a name");
+  c.name=name;c.company=($("#cu-company").value||"").trim();c.phone=($("#cu-phone").value||"").trim();
+  SDB.updateCustomer(id,{name:c.name,company:c.company,phone:c.phone});
+  closeModal();go("customers");toast("Customer updated");
+}
 const STUDIO={ name:'Sri Cine Hub Pvt Ltd', tagline:'Cinema Equipment Rental · Chennai',
   addr:'104 Brindavan Main Road, Valasaravakkam, Chennai 600087 (opp Reliance Digital)',
   phone:'+91 95000 72167', web:'www.sricinehub.com', sign:'Sridhar / Vijayashanthi' };
@@ -1561,7 +1646,7 @@ function assetExpensePanel(){
     <td style="color:var(--mut);padding:8px 6px 8px 0;vertical-align:top;font-size:12px">${i+1}</td>
     <td style="padding:8px 8px;vertical-align:top;font-size:13px;line-height:1.35">${(x.n||'').replace(/</g,'&lt;')}</td>
     <td style="text-align:right;white-space:nowrap;padding:8px 0;vertical-align:top;font-size:13px">${x.usd?`<div class="muted" style="font-size:11px">$${x.usd.toLocaleString('en-US')}</div>`:''}${fmt(x.inr)}</td>
-    ${isAdmin?`<td style="padding:8px 0 8px 8px;vertical-align:top"><span class="cart-x" title="Delete" onclick="delAssetExpense('${cam.code}','${x.id}')">×</span></td>`:''}</tr>`).join('')||`<tr><td colspan="4" class="empty" style="padding:16px">No expenses yet. Use ＋ Add.</td></tr>`;
+    ${isAdmin?`<td style="padding:8px 0 8px 8px;vertical-align:top;white-space:nowrap"><span class="lnk gold" style="cursor:pointer;font-size:11px;margin-right:6px" onclick="editExpenseForm('${cam.code}','${x.id}')">edit</span><span class="cart-x" title="Delete" onclick="delAssetExpense('${cam.code}','${x.id}')">×</span></td>`:''}</tr>`).join('')||`<tr><td colspan="4" class="empty" style="padding:16px">No expenses yet. Use ＋ Add.</td></tr>`;
   const invested=(cam.investors||[]).reduce((a,i)=>a+(i.invested||0),0);
   const gap=total-invested;
   return `<div class="card" style="position:sticky;top:80px">
@@ -1598,6 +1683,28 @@ async function saveAssetExpense(camCode){
   const id=await SDB.addExpense(camCode,{description:desc,amount_usd,amount_inr,sort:cam.expenses.length*10});
   if(id)obj.id=id;
   closeModal();go('investor');toast("Expense added");
+}
+function editExpenseForm(camCode,id){
+  if(ROLE!=='admin')return toast("Only admins can edit expenses");
+  const cam=DATA.cameras.find(c=>c.code===camCode);const x=cam&&(cam.expenses||[]).find(e=>e.id===id);if(!x)return;
+  const isUsd=x.usd!=null;
+  openModal(`<h3>Edit expense</h3>
+    <div class="field"><label>Description *</label><input id="ex-desc" value="${escAttr(x.n||'')}"></div>
+    <div class="r2"><div class="field"><label>Amount *</label><input id="ex-amt" type="number" value="${isUsd?x.usd:x.inr}"></div>
+      <div class="field"><label>Currency</label><select id="ex-cur" onchange="exCurToggle()"><option value="INR" ${isUsd?'':'selected'}>₹ INR</option><option value="USD" ${isUsd?'selected':''}>$ USD</option></select></div></div>
+    <div class="field" id="ex-rate-wrap" style="display:${isUsd?'':'none'}"><label>USD → INR rate</label><input id="ex-rate" type="number" value="${isUsd&&x.usd?Math.round(x.inr/x.usd):96}"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveExpenseEdit('${camCode}','${id}')">Save changes</button>`);
+}
+function saveExpenseEdit(camCode,id){
+  if(ROLE!=='admin')return toast("Only admins can edit expenses");
+  const cam=DATA.cameras.find(c=>c.code===camCode);const x=cam&&(cam.expenses||[]).find(e=>e.id===id);if(!x)return;
+  const desc=($("#ex-desc").value||"").trim(),amt=+($("#ex-amt").value||0);
+  if(!desc)return toast("Enter a description");if(!amt||amt<=0)return toast("Enter an amount");
+  const usd=$("#ex-cur").value==='USD',rate=+($("#ex-rate").value||96)||96;
+  x.n=desc;x.usd=usd?amt:null;x.inr=usd?Math.round(amt*rate):amt;
+  cam.cost=cam.expenses.reduce((a,e)=>a+(e.inr||0),0);
+  SDB.editExpense(id,{description:desc,amount_usd:x.usd,amount_inr:x.inr});
+  closeModal();go('investor');toast("Expense updated");
 }
 function delAssetExpense(camCode,id){
   if(ROLE!=='admin')return toast("Only admins can delete");
