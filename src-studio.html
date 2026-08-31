@@ -21,7 +21,7 @@
     --hover-shadow:0 10px 34px rgba(0,0,0,.55);
     --card-shadow:none;
     --img-bright:.84;
-    --kit-bg:linear-gradient(180deg,rgba(8,8,8,.4),var(--bg2));
+    --cart-bg:linear-gradient(180deg,rgba(8,8,8,.4),var(--bg2));
     --modal-veil:rgba(0,0,0,.75);
     --chip-bg:var(--gold-soft);
   }
@@ -41,7 +41,7 @@
     --hover-shadow:0 10px 28px rgba(169,130,43,.14);
     --card-shadow:0 1px 2px rgba(28,26,23,.05);
     --img-bright:1;
-    --kit-bg:var(--card);
+    --cart-bg:var(--card);
     --modal-veil:rgba(28,26,23,.45);
     --chip-bg:var(--gold-soft);
   }
@@ -62,8 +62,11 @@
   nav.top a:hover{color:var(--text)}
   .toggle{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:none;color:var(--text);padding:8px 12px;border-radius:999px;cursor:pointer;font-size:13px;font-weight:600}
   .toggle:hover{border-color:var(--gold)}
-  .cta{background:var(--btn-primary-bg);color:var(--btn-primary-text);padding:10px 18px;border-radius:var(--radius);font-size:14px;font-weight:600}
+  .staff-link{white-space:nowrap;color:var(--mut);font-size:13px;font-weight:600;padding:8px 2px}
+  .staff-link:hover{color:var(--gold)}
+  .cta{display:inline-flex;align-items:center;gap:7px;background:var(--btn-primary-bg);color:var(--btn-primary-text);padding:10px 16px;border:0;border-radius:var(--radius);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
   .cta:hover{background:var(--gold);color:#000}
+  .cart-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:rgba(0,0,0,.16);font-size:12px;font-weight:800}
   /* hero */
   .hero{position:relative;text-align:center;padding:112px 26px 96px;overflow:hidden}
   .hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(var(--img-bright));z-index:-2}
@@ -157,12 +160,12 @@
   .cline b{display:block;font-size:15px}.cline span{color:var(--mut);font-size:13.5px}
   .map{border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);min-height:280px;background:var(--thumb-grad) center/cover;position:relative}
   .map:after{content:"📍 Chennai";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:15px;letter-spacing:.1em}
-  /* kit bar */
-  .kitbar{position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(140%);transition:.28s}
-  .kitbar.show{transform:none}
-  .kitbar-in{max-width:1040px;margin:16px auto;padding:14px 20px;display:flex;align-items:center;gap:16px;background:var(--kit-bg);border:1px solid var(--gold-dim);border-radius:16px;backdrop-filter:blur(14px);box-shadow:0 14px 44px rgba(0,0,0,.35)}
-  .kitbar b{font-family:var(--font-display);font-size:19px;color:var(--gold)}
-  .kit-names{color:var(--mut);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* cart bar */
+  .cartbar{position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(140%);transition:.28s}
+  .cartbar.show{transform:none}
+  .cartbar-in{max-width:1040px;margin:16px auto;padding:14px 20px;display:flex;align-items:center;gap:16px;background:var(--cart-bg);border:1px solid var(--gold-dim);border-radius:16px;backdrop-filter:blur(14px);box-shadow:0 14px 44px rgba(0,0,0,.35)}
+  .cartbar b{font-family:var(--font-display);font-size:19px;color:var(--gold)}
+  .cart-names{color:var(--mut);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* footer */
   footer{border-top:1px solid var(--line);padding:52px 26px 34px}
   .foot-grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:30px}
@@ -175,23 +178,33 @@
   /* modal */
   .ov{position:fixed;inset:0;background:var(--modal-veil);backdrop-filter:blur(3px);z-index:60;display:none;align-items:center;justify-content:center;padding:20px}
   .ov.show{display:flex}
-  .modal{background:var(--bg2);border:1px solid var(--gold-dim);border-radius:16px;max-width:470px;width:100%;padding:30px;max-height:92vh;overflow:auto}
+  .modal{position:relative;background:var(--bg2);border:1px solid var(--gold-dim);border-radius:16px;max-width:560px;width:100%;padding:30px;max-height:92vh;overflow:auto}
   .modal h3{font-family:var(--font-display);font-size:25px;margin-bottom:6px}
   .modal p.mut{color:var(--mut);font-size:14px;margin-bottom:20px}
-  .kit-summary{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:20px;background:var(--bg)}
+  .modal-close{position:absolute;top:15px;right:15px;width:34px;height:34px;border:1px solid var(--line);border-radius:50%;background:var(--card);color:var(--text);font-size:20px;line-height:1;cursor:pointer}
+  .modal-close:hover{border-color:var(--gold);color:var(--gold)}
+  .cart-summary{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:20px;background:var(--bg)}
   .ks-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:10px;font-weight:700}
   .ks-chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip-bg);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:12.5px;margin:0 6px 6px 0}
   .ks-chip x{cursor:pointer;color:var(--mut);font-style:normal;font-weight:700}
   .ks-chip x:hover{color:var(--gold)}
-  .ks-empty{color:var(--mut);font-size:13.5px}
+  .cart-line{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .cart-line:last-child{border-bottom:0}
+  .cart-line .grow{flex:1;min-width:0}.cart-line b{display:block;font-size:14px}.cart-line small{color:var(--mut)}
+  .cart-remove{border:0;background:transparent;color:var(--mut);font-size:20px;cursor:pointer;padding:3px 7px;border-radius:7px}
+  .cart-remove:hover{color:#e0705a;background:rgba(224,112,90,.1)}
+  .empty-cart{text-align:center;padding:28px 12px 10px}.empty-cart .icon{font-size:46px;margin-bottom:10px}.empty-cart h3{margin-bottom:8px}.empty-cart p{color:var(--mut);font-size:14px;max-width:34ch;margin:0 auto 22px}
+  .checkout-actions{display:flex;gap:10px;margin-top:18px}.checkout-actions .btn{flex:1;padding:12px 16px}
+  .review-block{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;background:var(--bg)}
+  .review-block b{display:block;margin-bottom:5px}.review-block p{font-size:13.5px;color:var(--mut);white-space:pre-wrap}
   .fld{margin-bottom:15px}
   .fld label{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:6px;font-weight:600}
-  .fld input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:12px;color:var(--text);font-size:14px;font-family:inherit}
-  .fld input:focus{outline:none;border-color:var(--gold)}
+  .fld input,.fld textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:12px;color:var(--text);font-size:14px;font-family:inherit}
+  .fld textarea{resize:vertical;min-height:82px}.fld input:focus,.fld textarea:focus{outline:none;border-color:var(--gold)}
   .row2{display:flex;gap:12px}.row2 .fld{flex:1}
   .step{color:var(--gold);font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px;font-weight:700}
-  @media(max-width:820px){.contact-grid{grid-template-columns:1fr}.foot-grid{grid-template-columns:1fr 1fr}}
-  @media(max-width:600px){nav.top{display:none}.foot-grid{grid-template-columns:1fr}}
+  @media(max-width:920px){nav.top{display:none}.contact-grid{grid-template-columns:1fr}.foot-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:600px){.bar{padding:10px 14px;gap:9px}.logo{margin-right:auto}.logo .txt{display:none}.toggle{padding:8px}.toggle #themeLabel{display:none}.staff-link{font-size:0}.staff-link:before{content:'Staff';font-size:12px}.cta{padding:9px 12px}.cart-word{display:none}.cartbar-in{margin:10px;padding:12px;gap:9px}.cart-names{display:none}.cartbar .btn-ghost{display:none}.modal{padding:26px 20px}.row2{display:block}.checkout-actions{flex-direction:column-reverse}.foot-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body data-theme="dark">
@@ -202,7 +215,8 @@
       <a href="#equipment">Equipment</a><a href="#packages">Packages</a><a href="#how">How it works</a><a href="#contact">Contact</a>
     </nav>
     <button class="toggle" id="themeBtn" onclick="toggleTheme()"><span id="themeIcon">☀</span><span id="themeLabel">Light</span></button>
-    <a class="cta" href="#" onclick="openQuote();return false">Request a Quote</a>
+    <a class="staff-link" href="console.html" aria-label="Staff login to studio console">Staff Login</a>
+    <button class="cta" type="button" onclick="openCart()" aria-label="Open cart"><span aria-hidden="true">🛒</span><span class="cart-word">Cart</span><span class="cart-badge" id="headerCartCount">0</span></button>
   </div>
 </header>
 
@@ -210,7 +224,7 @@
   <div class="hero-bg" id="heroBg"></div>
   <div class="kicker">Chennai · Cinema Equipment Rental</div>
   <h1 class="disp">Gear that earns its place <em>on set.</em></h1>
-  <p class="sub">ARRI, RED, Sony and Canon systems — lenses, lighting, grip, transport and genset. Build your kit, send one request, and we'll confirm availability and a quote for your shoot dates.</p>
+  <p class="sub">ARRI, RED, Sony and Canon systems — lenses, lighting, grip, transport and genset. Add equipment to your cart, check out once, and we'll confirm availability and a quote for your shoot dates.</p>
   <div class="hero-actions">
     <button class="btn btn-primary" onclick="document.querySelector('#equipment').scrollIntoView({behavior:'smooth'})">Browse Equipment</button>
     <button class="btn btn-ghost" onclick="waStudio()">💬 WhatsApp us</button>
@@ -232,13 +246,13 @@
   <div class="search"><span class="ic">🔍</span><input id="search" placeholder="Search gear…" oninput="filterCatalog(this.value)"></div>
   <div class="chips" id="chips"></div>
 </div></div>
-<main class="wrap"><div id="sections"></div><div class="noresult" id="noresult">No gear matches that search. Try another term, or <a href="#" onclick="openQuote();return false" style="color:var(--gold)">ask us directly →</a></div></main>
+<main class="wrap"><div id="sections"></div><div class="noresult" id="noresult">No gear matches that search. Try another term, or <a href="#" onclick="openGeneralEnquiry();return false" style="color:var(--gold)">ask us directly →</a></div></main>
 
 <!-- PACKAGES -->
 <div class="pkg-band"><section id="packages" class="wrap" style="padding-top:0;padding-bottom:0">
   <div class="lead"><div class="eyebrow">Ready-made bundles</div>
     <h2 class="disp">Pick a package, we tailor it</h2>
-    <p>Common production setups, pre-assembled. Add one to your kit — we'll adjust exact bodies, glass and quantities to your shoot.</p>
+    <p>Common production setups, pre-assembled. Add one to your cart — we'll adjust exact bodies, glass and quantities to your shoot.</p>
   </div>
   <div class="pkg-grid" id="pkgGrid"></div>
 </section></div>
@@ -247,12 +261,12 @@
 <section id="how" class="wrap" style="padding:64px 26px">
   <div class="lead"><div class="eyebrow">How it works</div>
     <h2 class="disp">From browse to booked in four steps</h2>
-    <p>No account, no pricing puzzle. You build the kit, we handle availability and the quote.</p>
+    <p>No customer account and no pricing puzzle. Build your cart, check out once, and we handle availability and the quote.</p>
   </div>
   <div class="steps">
     <div class="step-c"><div class="step-n">1</div><h4>Browse the inventory</h4><p>35+ options across cameras, lenses, lighting, grip, transport and genset.</p></div>
-    <div class="step-c"><div class="step-n">2</div><h4>Build your kit</h4><p>Tap “Add to kit” on anything you need. Mix individual gear and ready-made packages.</p></div>
-    <div class="step-c"><div class="step-n">3</div><h4>Send one request</h4><p>Name, phone and shoot dates — about 30 seconds. No login required.</p></div>
+    <div class="step-c"><div class="step-n">2</div><h4>Add to cart</h4><p>Tap “Add to cart” on anything you need. Mix individual gear and ready-made packages.</p></div>
+    <div class="step-c"><div class="step-n">3</div><h4>Quote checkout</h4><p>Review your cart, add contact details and shoot dates, then send one request. No login required.</p></div>
     <div class="step-c"><div class="step-n">4</div><h4>We confirm &amp; quote</h4><p>We check availability for your dates and reply with pricing on WhatsApp within 24 hours.</p></div>
   </div>
 </section>
@@ -273,7 +287,7 @@
 <div class="contact-band"><section id="contact" class="wrap" style="padding-top:0;padding-bottom:0">
   <div class="lead"><div class="eyebrow">Get in touch</div>
     <h2 class="disp">Planning a shoot? Let's talk gear.</h2>
-    <p>Send a kit request any time, or reach us directly — we usually reply within the hour during working days.</p>
+    <p>Send a quote request any time, or reach us directly — we usually reply within the hour during working days.</p>
   </div>
   <div class="contact-grid">
     <div class="contact-card">
@@ -281,32 +295,23 @@
       <div class="cline"><span class="ci">✉️</span><div><b>Email</b><span>bookings@srcstudio.example</span></div></div>
       <div class="cline"><span class="ci">📍</span><div><b>Studio floor</b><span>Chennai, Tamil Nadu — pickup & returns by appointment</span></div></div>
       <div class="cline"><span class="ci">🕘</span><div><b>Hours</b><span>Mon–Sat · 9:00 AM – 8:00 PM</span></div></div>
-      <button class="btn btn-primary" style="width:100%;margin-top:18px" onclick="openQuote()">Start a kit request →</button>
+      <button class="btn btn-primary" style="width:100%;margin-top:18px" onclick="openGeneralEnquiry()">Request unlisted equipment →</button>
     </div>
     <div class="map"></div>
   </div>
 </section></div>
 
-<div class="kitbar" id="kitbar"><div class="kitbar-in">
-  <b><span id="kitcount">0</span> in kit</b>
-  <div class="kit-names" id="kitnames"></div>
-  <button class="btn btn-ghost" style="padding:10px 16px" onclick="clearKit()">Clear</button>
-  <button class="btn btn-primary" style="padding:10px 18px" onclick="openQuote()">Request Quote →</button>
+<div class="cartbar" id="cartbar"><div class="cartbar-in">
+  <b><span id="cartcount">0</span> in cart</b>
+  <div class="cart-names" id="cartnames"></div>
+  <button class="btn btn-ghost" style="padding:10px 16px" onclick="clearCart()">Clear</button>
+  <button class="btn btn-primary" style="padding:10px 18px" onclick="openCart()">Checkout →</button>
 </div></div>
 
-<!-- MODAL -->
-<div class="ov" id="ov"><div class="modal" id="quoteModal">
-  <div class="step">Step 4 of 4 · almost done</div>
-  <h3 class="disp">Request your quote</h3>
-  <p class="mut">No account needed. We'll confirm availability for your dates and send pricing on WhatsApp.</p>
-  <div class="kit-summary" id="kitSummary"></div>
-  <div class="fld"><label>Your name *</label><input id="q-name" placeholder="e.g. Arjun / DOP"></div>
-  <div class="row2"><div class="fld"><label>Phone / WhatsApp *</label><input id="q-phone" placeholder="+91"></div>
-  <div class="fld"><label>Production (optional)</label><input id="q-prod" placeholder="Company / project"></div></div>
-  <div class="row2"><div class="fld"><label>Shoot start</label><input id="q-start" type="date" onchange="this.blur()"></div>
-  <div class="fld"><label>Shoot end</label><input id="q-end" type="date" onchange="this.blur()"></div></div>
-  <div id="q-msg" style="display:none;font-size:13px;margin-bottom:10px"></div>
-  <button class="btn btn-primary" id="q-send" style="width:100%;margin-top:6px" onclick="submitRequest()">Send request →</button>
+<!-- CART / QUOTE CHECKOUT -->
+<div class="ov" id="cartOv" aria-hidden="true"><div class="modal" id="checkoutModal" role="dialog" aria-modal="true" aria-label="Quote checkout">
+  <button class="modal-close" type="button" onclick="closeCheckout()" aria-label="Close">×</button>
+  <div id="checkoutContent"></div>
 </div></div>
 
 <footer>
@@ -320,7 +325,7 @@
     <div class="foot-col"><h5>Company</h5>
       <a href="#packages">Packages</a><a href="#how">How it works</a><a href="#why">Why SRC</a><a href="#contact">Contact</a></div>
     <div class="foot-col"><h5>Get a quote</h5>
-      <a href="#" onclick="openQuote();return false">Request a Quote</a><a href="#contact">WhatsApp us</a><a href="#contact">Visit the floor</a></div>
+      <a href="#" onclick="openCart();return false">Open Cart</a><a href="#" onclick="openGeneralEnquiry();return false">Request unlisted equipment</a><a href="#contact">WhatsApp us</a></div>
   </div>
   <div class="foot-bot">
     <span>© 2026 SRC Studio · Chennai</span>
@@ -356,7 +361,7 @@ const PACKAGES=[
   {n:'Feature Production Package',img:IMG.Cameras[0],inc:'<b>ARRI camera</b> · Ultra Primes · full lighting · Tempo Traveller · 45KV genset',t:'High-end ARRI build with transport and power on tap.',flag:'Popular'}
 ];
 
-const kit=new Set();
+const cart=new Set();
 function render(){
   const chips=document.getElementById('chips'), secs=document.getElementById('sections');
   SRC_CATALOG.forEach((c,i)=>{
@@ -376,7 +381,7 @@ function render(){
           ${it.flag?`<span class="flag">${it.flag}</span>`:''}
         </div>
         <div class="card-b"><h3>${it.n}</h3><p>${it.d}</p>
-        <div class="add"><small>Availability on request</small><button class="add-btn">＋ Add to kit</button></div></div>`;
+        <div class="add"><small>Availability on request</small><button class="add-btn">＋ Add to cart</button></div></div>`;
       card.querySelector('.add-btn').onclick=e=>{e.stopPropagation();toggle(key,card,e.target);};
       g.appendChild(card);
     });
@@ -390,36 +395,42 @@ function render(){
     el.innerHTML=`<div class="thumb"><img src="${us(p.img,600)}" loading="lazy" alt="${p.n}" onerror="this.onerror=null;this.src='${fb(p.n)}'">${p.flag?`<span class="flag">${p.flag}</span>`:''}</div>
       <div class="pkg-b"><h3>${p.n}</h3><p style="color:var(--mut);font-size:13.5px">${p.t}</p>
       <div class="inc">Includes: ${p.inc}</div>
-      <button class="btn btn-primary add-btn2" style="width:100%">＋ Add package to kit</button></div>`;
+      <button class="btn btn-primary add-btn2" style="width:100%">＋ Add package to cart</button></div>`;
     el.querySelector('.add-btn2').onclick=e=>{e.stopPropagation();toggle(key,el,e.target,'package');};
     pg.appendChild(el);
   });
 }
 function toggle(key,node,btn,kind){
-  const inLabel = kind==='package' ? '✓ Package in kit' : '✓ In kit';
-  const outLabel = kind==='package' ? '＋ Add package to kit' : '＋ Add to kit';
-  if(kit.has(key)){kit.delete(key);node.classList.remove('in');btn.textContent=outLabel;}
-  else{kit.add(key);node.classList.add('in');btn.textContent=inLabel;}
+  const inLabel = kind==='package' ? '✓ Package in cart' : '✓ In cart';
+  const outLabel = kind==='package' ? '＋ Add package to cart' : '＋ Add to cart';
+  if(cart.has(key)){cart.delete(key);node.classList.remove('in');btn.textContent=outLabel;}
+  else{cart.add(key);node.classList.add('in');btn.textContent=inLabel;}
   updateBar();
 }
 function updateBar(){
-  document.getElementById('kitcount').textContent=kit.size;
-  document.getElementById('kitnames').textContent=[...kit].map(k=>k.split('|')[1]).join('   ·   ');
-  document.getElementById('kitbar').classList.toggle('show',kit.size>0);
+  document.getElementById('cartcount').textContent=cart.size;
+  document.getElementById('headerCartCount').textContent=cart.size;
+  document.getElementById('cartnames').textContent=[...cart].map(k=>k.split('|')[1]).join('   ·   ');
+  document.getElementById('cartbar').classList.toggle('show',cart.size>0);
 }
-function clearKit(){
-  kit.clear();
-  document.querySelectorAll('.card.in,.pkg.in').forEach(c=>{c.classList.remove('in');const b=c.querySelector('.add-btn,.add-btn2');if(b)b.textContent=b.classList.contains('add-btn2')?'＋ Add package to kit':'＋ Add to kit';});
+function clearCart(){
+  cart.clear();
+  document.querySelectorAll('.card.in,.pkg.in').forEach(c=>{c.classList.remove('in');const b=c.querySelector('.add-btn,.add-btn2');if(b)b.textContent=b.classList.contains('add-btn2')?'＋ Add package to cart':'＋ Add to cart';});
   updateBar();
+  if(document.getElementById('cartOv').classList.contains('show')&&CHECKOUT.step===1)renderCheckout();
 }
-function removeFromKit(key){
-  kit.delete(key);
+function removeFromCart(key){
+  cart.delete(key);
   document.querySelectorAll('.card.in,.pkg.in').forEach(c=>{
     const b=c.querySelector('.add-btn,.add-btn2');
     const name=c.querySelector('h3').textContent;
-    if(key.split('|')[1]===name){c.classList.remove('in');b.textContent=b.classList.contains('add-btn2')?'＋ Add package to kit':'＋ Add to kit';}
+    if(key.split('|')[1]===name){c.classList.remove('in');b.textContent=b.classList.contains('add-btn2')?'＋ Add package to cart':'＋ Add to cart';}
   });
-  updateBar();fillKitSummary();
+  updateBar();
+  if(document.getElementById('cartOv').classList.contains('show')){
+    if(!cart.size&&CHECKOUT.mode==='cart')CHECKOUT.step=1;
+    renderCheckout();
+  }
 }
 /* search */
 function filterCatalog(q){
@@ -437,58 +448,115 @@ function filterCatalog(q){
   });
   document.getElementById('noresult').style.display=any?'none':'block';
 }
-/* modal + kit summary */
-function fillKitSummary(){
-  const el=document.getElementById('kitSummary');
-  if(!kit.size){el.innerHTML='<div class="ks-empty">Your kit is empty — that\'s fine. Tell us your dates below and what you\'re after, or add gear first.</div>';return;}
-  el.innerHTML='<div class="ks-title">Your kit — '+kit.size+' item'+(kit.size>1?'s':'')+'</div>'+
-    [...kit].map(k=>`<span class="ks-chip">${k.split('|')[1]}<x onclick="removeFromKit('${k.replace(/'/g,"\\'")}')">×</x></span>`).join('');
+/* cart + quote checkout */
+const CHECKOUT={mode:'cart',step:1,error:'',details:{name:'',phone:'',production:'',start:'',end:'',notes:''}};
+let LAST_REQUEST=null;
+const escHtml=value=>String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const cartItems=()=>[...cart].map(key=>{const parts=key.split('|');return {key,category:parts[0],name:parts.slice(1).join('|')};});
+function openCheckoutOverlay(){
+  const ov=document.getElementById('cartOv');
+  ov.classList.add('show');ov.setAttribute('aria-hidden','false');
+  document.body.style.overflow='hidden';
+}
+function openCart(){CHECKOUT.mode='cart';CHECKOUT.step=1;CHECKOUT.error='';renderCheckout();openCheckoutOverlay();}
+function openGeneralEnquiry(){CHECKOUT.mode='general';CHECKOUT.step=2;CHECKOUT.error='';renderCheckout();openCheckoutOverlay();}
+function closeCheckout(){
+  const ov=document.getElementById('cartOv');
+  ov.classList.remove('show');ov.setAttribute('aria-hidden','true');document.body.style.overflow='';
+}
+function browseEquipment(){closeCheckout();document.getElementById('equipment').scrollIntoView({behavior:'smooth'});}
+function cartRows(){
+  return cartItems().map(item=>`<div class="cart-line"><div class="grow"><b>${escHtml(item.name)}</b><small>${escHtml(item.category)}</small></div><button class="cart-remove" type="button" onclick="removeFromCart(decodeURIComponent('${encodeURIComponent(item.key)}'))" aria-label="Remove ${escHtml(item.name)} from cart">×</button></div>`).join('');
+}
+function renderCheckout(){
+  const el=document.getElementById('checkoutContent');
+  if(CHECKOUT.mode==='cart'&&CHECKOUT.step===1){
+    if(!cart.size){
+      el.innerHTML=`<div class="empty-cart"><div class="icon" aria-hidden="true">🛒</div><h3 class="disp">Your cart is empty</h3><p>Add equipment before starting quote checkout, or tell us about equipment that is not listed.</p><button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="browseEquipment()">Browse Equipment</button><button class="btn btn-ghost" style="width:100%" onclick="openGeneralEnquiry()">Request unlisted equipment</button></div>`;
+      return;
+    }
+    el.innerHTML=`<div class="step">Quote checkout · Step 1 of 3</div><h3 class="disp">Review your cart</h3><p class="mut">Confirm the equipment you want us to check for your shoot.</p><div class="cart-summary"><div class="ks-title">${cart.size} item${cart.size>1?'s':''}</div>${cartRows()}</div><div class="checkout-actions"><button class="btn btn-ghost" onclick="clearCart()">Clear cart</button><button class="btn btn-primary" onclick="checkoutNext()">Continue →</button></div>`;
+    return;
+  }
+  if(CHECKOUT.step===2){renderDetailsStep(el);return;}
+  renderReviewStep(el);
+}
+function renderDetailsStep(el){
+  const d=CHECKOUT.details,isGeneral=CHECKOUT.mode==='general';
+  el.innerHTML=`<div class="step">${isGeneral?'Equipment enquiry':'Quote checkout · Step 2 of 3'}</div><h3 class="disp">${isGeneral?'Request unlisted equipment':'Shoot and contact details'}</h3><p class="mut">${isGeneral?'Tell us what you need and we will check our supplier network.':'No customer login needed. We will reply with availability and pricing on WhatsApp.'}</p><div class="fld"><label>Your name *</label><input id="q-name" value="${escHtml(d.name)}" placeholder="e.g. Arjun / DOP" autocomplete="name"></div><div class="row2"><div class="fld"><label>Phone / WhatsApp *</label><input id="q-phone" value="${escHtml(d.phone)}" placeholder="+91" inputmode="tel" autocomplete="tel"></div><div class="fld"><label>Production (optional)</label><input id="q-prod" value="${escHtml(d.production)}" placeholder="Company / project"></div></div><div class="row2"><div class="fld"><label>Shoot start</label><input id="q-start" value="${escHtml(d.start)}" type="date" onchange="this.blur()"></div><div class="fld"><label>Shoot end</label><input id="q-end" value="${escHtml(d.end)}" type="date" onchange="this.blur()"></div></div><div class="fld"><label>${isGeneral?'Equipment needed *':'Notes (optional)'}</label><textarea id="q-notes" placeholder="${isGeneral?'List the equipment, quantities, or service you need':'Quantities, delivery location, or other requirements'}">${escHtml(d.notes)}</textarea></div><div id="q-msg" style="${CHECKOUT.error?'':'display:none;'}color:#e0705a;font-size:13px;margin-bottom:10px">${escHtml(CHECKOUT.error)}</div><div class="checkout-actions"><button class="btn btn-ghost" onclick="checkoutBack()">${isGeneral?'Back to cart':'← Back'}</button><button class="btn btn-primary" onclick="checkoutNext()">Review request →</button></div>`;
+}
+function captureDetails(){
+  const value=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
+  CHECKOUT.details={name:value('q-name'),phone:value('q-phone'),production:value('q-prod'),start:value('q-start'),end:value('q-end'),notes:value('q-notes')};
+}
+function validateDetails(){
+  const d=CHECKOUT.details;
+  if(!d.name||!d.phone)return 'Please enter your name and phone.';
+  if(d.start&&d.end&&d.end<d.start)return 'Shoot end date cannot be before the start date.';
+  if(CHECKOUT.mode==='general'&&!d.notes)return 'Please tell us what equipment you need.';
+  return '';
+}
+function checkoutNext(){
+  CHECKOUT.error='';
+  if(CHECKOUT.step===1){if(!cart.size){renderCheckout();return;}CHECKOUT.step=2;renderCheckout();return;}
+  if(CHECKOUT.step===2){captureDetails();CHECKOUT.error=validateDetails();if(CHECKOUT.error){renderCheckout();return;}CHECKOUT.step=3;renderCheckout();}
+}
+function checkoutBack(){
+  CHECKOUT.error='';
+  if(CHECKOUT.step===3){CHECKOUT.step=2;renderCheckout();return;}
+  CHECKOUT.mode='cart';CHECKOUT.step=1;renderCheckout();
+}
+function renderReviewStep(el){
+  const d=CHECKOUT.details,isGeneral=CHECKOUT.mode==='general';
+  const requestSummary=isGeneral?`<div class="review-block"><b>Equipment needed</b><p>${escHtml(d.notes)}</p></div>`:`<div class="cart-summary"><div class="ks-title">Cart · ${cart.size} item${cart.size>1?'s':''}</div>${cartRows()}</div>`;
+  const dates=d.start||d.end?`${d.start||'Start date not provided'} → ${d.end||'End date not provided'}`:'Dates not provided';
+  el.innerHTML=`<div class="step">${isGeneral?'Equipment enquiry · Review':'Quote checkout · Step 3 of 3'}</div><h3 class="disp">Review your request</h3><p class="mut">Submitting this request does not confirm a booking. Our team will check availability and send pricing.</p>${requestSummary}<div class="review-block"><b>Contact</b><p>${escHtml(d.name)} · ${escHtml(d.phone)}${d.production?'\n'+escHtml(d.production):''}</p></div><div class="review-block"><b>Shoot dates</b><p>${escHtml(dates)}</p></div>${!isGeneral&&d.notes?`<div class="review-block"><b>Notes</b><p>${escHtml(d.notes)}</p></div>`:''}<div id="q-msg" style="${CHECKOUT.error?'':'display:none;'}color:#e0705a;font-size:13px;margin-bottom:10px">${escHtml(CHECKOUT.error)}</div><div class="checkout-actions"><button class="btn btn-ghost" onclick="checkoutBack()">← Edit details</button><button class="btn btn-primary" id="q-send" onclick="submitRequest()">Submit quote request →</button></div>`;
 }
 function waStudio(){
-  const items=[...kit].map(k=>k.split('|')[1]);
-  const msg=`Hi Sri Cine Hub, I'd like to enquire about renting:\n${items.length?items.map(i=>'• '+i).join('\n'):'(equipment for a shoot)'}\n\nShoot dates: ___\nName: ___`;
+  const request=LAST_REQUEST||{items:cartItems().map(item=>item.name),details:CHECKOUT.details};
+  const d=request.details||{};
+  const body=request.items&&request.items.length?request.items.map(i=>'• '+i).join('\n'):(d.notes||'(equipment for a shoot)');
+  const msg=`Hi Sri Cine Hub, I'd like to enquire about renting:\n${body}\n\nShoot dates: ${d.start||'___'} to ${d.end||'___'}\nName: ${d.name||'___'}`;
   window.open('https://wa.me/910000000000?text='+encodeURIComponent(msg),'_blank');
 }
 let _sb=null;
 function getSB(){const c=window.SUPABASE_CONFIG;if(!c||!c.url||!window.supabase)return null;if(!_sb)_sb=window.supabase.createClient(c.url,c.anonKey,{db:{schema:c.schema||'srchub'}});return _sb;}
 async function submitRequest(){
-  const name=document.getElementById('q-name').value.trim();
-  const phone=document.getElementById('q-phone').value.trim();
-  const msg=document.getElementById('q-msg');
-  const show=(t,ok)=>{msg.style.display='block';msg.style.color=ok?'var(--gold)':'#e0705a';msg.textContent=t;};
-  if(!name||!phone){show('Please enter your name and phone.',false);return;}
-  const kitArr=[...kit].map(k=>{const p=k.split('|');return {category:p[0],name:p[1]};});
-  const prod=document.getElementById('q-prod').value.trim();
-  const start=document.getElementById('q-start').value||null;
-  const end=document.getElementById('q-end').value||null;
+  if(CHECKOUT.mode==='cart'&&!cart.size){CHECKOUT.step=1;CHECKOUT.error='Your cart is empty.';renderCheckout();return;}
+  CHECKOUT.error=validateDetails();if(CHECKOUT.error){CHECKOUT.step=2;renderCheckout();return;}
+  const d=CHECKOUT.details;
+  const kitArr=CHECKOUT.mode==='cart'?cartItems().map(item=>({category:item.category,name:item.name})):[];
   const code='REQ-WEB-'+Date.now().toString().slice(-8);
   const sb=getSB();
-  if(!sb){alert('Demo (offline): would create request '+code+' with '+kitArr.length+' items.');closeQuote();return;}
+  const request={items:kitArr.map(item=>item.name),details:{...d}};
+  if(!sb){quoteSuccess(code,request);return;}
   const btn=document.getElementById('q-send');btn.disabled=true;btn.textContent='Sending…';
   const {error}=await sb.from('quote_requests').insert({
-    request_code:code,name,phone,company:prod||null,start_at:start,end_at:end,
-    description:kitArr.length?kitArr.map(k=>k.name).join(', '):'General enquiry',
+    request_code:code,name:d.name,phone:d.phone,company:d.production||null,start_at:d.start||null,end_at:d.end||null,
+    description:kitArr.length?[kitArr.map(k=>k.name).join(', '),d.notes].filter(Boolean).join(' — '):d.notes,
     kit:kitArr,source:'public_site'
   });
-  btn.disabled=false;btn.textContent='Send request →';
-  if(error){show("Sorry, something went wrong — please WhatsApp us instead.",false);console.error(error);return;}
-  quoteSuccess(code);
+  btn.disabled=false;btn.textContent='Submit quote request →';
+  if(error){CHECKOUT.error="Sorry, something went wrong — please WhatsApp us instead.";const msg=document.getElementById('q-msg');if(msg){msg.style.display='block';msg.textContent=CHECKOUT.error;}console.error(error);return;}
+  quoteSuccess(code,request);
 }
-function quoteSuccess(code){
-  document.getElementById('quoteModal').innerHTML=`<div style="text-align:center;padding:14px 0">
+function quoteSuccess(code,request){
+  LAST_REQUEST=request;
+  document.getElementById('checkoutContent').innerHTML=`<div style="text-align:center;padding:14px 0">
     <div style="font-size:46px;margin-bottom:8px;color:var(--gold)">✓</div>
     <h3 class="disp" style="margin-bottom:8px">Request sent!</h3>
     <p class="mut" style="margin-bottom:6px">We'll confirm availability for your dates and reply with pricing on WhatsApp.</p>
     <p style="margin-bottom:20px">Your reference: <b style="color:var(--gold)">${code}</b></p>
     <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="waStudio()">💬 Also message us on WhatsApp</button>
-    <button class="btn btn-ghost" style="width:100%" onclick="closeQuote();location.reload()">Done</button>
+    <button class="btn btn-ghost" style="width:100%" onclick="closeCheckout();location.reload()">Done</button>
   </div>`;
-  clearKit();
+  clearCart();
 }
-function openQuote(){fillKitSummary();document.getElementById('ov').classList.add('show');}
-function closeQuote(){document.getElementById('ov').classList.remove('show');}
-document.getElementById('ov').addEventListener('click',e=>{if(e.target.id==='ov')closeQuote();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeQuote();});
+let CHECKOUT_BACKDROP_DOWN=false;
+document.getElementById('cartOv').addEventListener('pointerdown',e=>{CHECKOUT_BACKDROP_DOWN=e.target.id==='cartOv';});
+document.getElementById('cartOv').addEventListener('pointercancel',()=>{CHECKOUT_BACKDROP_DOWN=false;});
+document.getElementById('cartOv').addEventListener('click',e=>{const close=CHECKOUT_BACKDROP_DOWN&&e.target.id==='cartOv';CHECKOUT_BACKDROP_DOWN=false;if(close)closeCheckout();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCheckout();});
 /* theme */
 function applyTheme(t){
   document.body.dataset.theme=t;
