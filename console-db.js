@@ -95,6 +95,11 @@ window.SDB = (function () {
 
       // cameras / accessories (+ per-unit investors + per-unit expenses)
       const invById = {}; INV.forEach(i => invById[i.id] = i);
+      // Inventory status is derived from active booking lines as well as the stored unit status.
+      // This repairs stale "available" values left by older checkout flows and keeps reloads accurate.
+      const activeBookingIds = new Set(books.data.filter(b => ["reserved", "confirmed", "preparing", "checked_out", "overdue"].includes(b.status)).map(b => b.id));
+      const bookedUnitIds = new Set(lines.data.filter(l => l.unit_id && !l.returned_at && activeBookingIds.has(l.booking_id)).map(l => l.unit_id));
+      const effectiveStatus = u => bookedUnitIds.has(u.id) ? "booked" : u.status;
       const investorsForUnit = uid => AINV.filter(a => a.unit_id === uid)
         .map(a => ({ name: invById[a.investor_id]?.name, loc: invById[a.investor_id]?.location || "", invested: Number(a.invested_amount_inr) }));
       const expensesForUnit = uid => aexp.data.filter(e => e.unit_id === uid)
@@ -103,13 +108,13 @@ window.SDB = (function () {
 
       const cameras = U.filter(u => u.kind === "camera").map(u => ({
         code: u.code, name: u.name, manufacturer: u.manufacturer, model: u.model, serial: u.serial_number,
-        meterHours: Number(u.meter_hours || 0), location: u.location, status: u.status, optionName: optionNameById[u.option_id] || null,
+        meterHours: Number(u.meter_hours || 0), location: u.location, status: effectiveStatus(u), optionName: optionNameById[u.option_id] || null,
         dailyRate: Number(u.default_daily_rate), cost: u.purchase_cost != null ? Number(u.purchase_cost) : (expensesForUnit(u.id).reduce((a, e) => a + (e.inr || 0), 0) || undefined),
         investors: investorsForUnit(u.id).length ? investorsForUnit(u.id) : undefined,
         expenses: expensesForUnit(u.id)
       }));
       const accessories = U.filter(u => u.kind === "accessory").map(u => ({
-        code: u.code, name: u.name, category: u.category, serial: u.serial_number, status: u.status, dailyRate: Number(u.default_daily_rate), optionName: optionNameById[u.option_id] || null
+        code: u.code, name: u.name, category: u.category, serial: u.serial_number, status: effectiveStatus(u), dailyRate: Number(u.default_daily_rate), optionName: optionNameById[u.option_id] || null
       }));
 
       // bookings (+ lines split by kind, + payments)
@@ -224,6 +229,10 @@ window.SDB = (function () {
     if (rows.length) {
       const { data: ins, error } = await sb.from("booking_lines").insert(rows).select("id"); if (error) throw error;
       (ins || []).forEach((r, i) => { const code = src[i] && src[i].code; if (code) ids.lineKey[bk.id + "|" + code] = r.id; });
+      for (const l of src) if (ids.unitByCode[l.code]) {
+        const { error: ue } = await sb.from("equipment_units").update({ status: "booked" }).eq("id", ids.unitByCode[l.code]);
+        if (ue) throw ue;
+      }
     }
     return b.code;
   });
@@ -278,6 +287,10 @@ window.SDB = (function () {
     if (!lineId) throw new Error("Booking line not found");
     const { error } = await sb.from("booking_lines").update({ returned_at: date, condition_in: cond })
       .eq("id", lineId); if (error) throw error;
+    if (ids.unitByCode[line.code]) {
+      const { error: ue } = await sb.from("equipment_units").update({ status: "available" }).eq("id", ids.unitByCode[line.code]);
+      if (ue) throw ue;
+    }
     return true;
   });
 
@@ -334,6 +347,11 @@ window.SDB = (function () {
       const patch = newStatus === "checked_out" ? { condition_out: l.conditionOut } : { condition_in: l.conditionIn };
       if (cam) { if (newStatus === "checked_out") patch.checkout_hours = l.checkoutHours; else patch.return_hours = l.returnHours; }
       await sb.from("booking_lines").update(patch).eq("id", lid);
+      if (ids.unitByCode[l.code]) {
+        const unitStatus = newStatus === "returned" ? "available" : "booked";
+        const { error: ue } = await sb.from("equipment_units").update({ status: unitStatus }).eq("id", ids.unitByCode[l.code]);
+        if (ue) throw ue;
+      }
       if (cam && newStatus === "returned" && l.returnHours != null && ids.unitByCode[l.code])
         await sb.from("equipment_units").update({ meter_hours: l.returnHours }).eq("id", ids.unitByCode[l.code]);
     };

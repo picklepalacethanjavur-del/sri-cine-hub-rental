@@ -1253,6 +1253,7 @@ function confirmOps(code,newStatus,print){
     if(cond){ if(newStatus==="checked_out")l.conditionOut=cond.value; else l.conditionIn=cond.value; }
   });
   handle(b.cameras,'cam',true); handle(b.accessories,'acc',false);
+  [...b.cameras,...b.accessories].forEach(l=>{const unit=DATA.cameras.concat(DATA.accessories).find(u=>u.code===l.code);if(unit)unit.status=newStatus==="returned"?"available":"booked";});
   // Optional payment captured on the ops screen.
   const amtEl=$("#co-amt"); const amt=amtEl?+(amtEl.value||0):0;
   if(amt>0){ const pay={amount:amt,type:newStatus==="returned"?'final':'advance',method:($("#co-method")||{}).value||'Cash',date:TODAY,ref:($("#co-ref")||{}).value||''}; b.payments.push(pay); SDB.addPayment(code,pay); }

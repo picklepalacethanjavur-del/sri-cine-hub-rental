@@ -62,12 +62,24 @@ async function testDataLayer() {
   assert.deepStrictEqual(plain(mutations[5]), { op: "delete", table: "booking_lines", column: "id", value: "line-3" });
   await db.deleteRFQ("rfq-1");
   assert.deepStrictEqual(plain(mutations[6]), { op: "delete", table: "supplier_rfqs", column: "id", value: "rfq-1" });
+
+  own._lineId = "line-1";
+  own.conditionOut = "good";
+  own.checkoutHours = 125;
+  await db.confirmOps({ code: "BK-1", cameras: [own], accessories: [] }, "checked_out");
+  assert.deepStrictEqual(plain(mutations[9]), { op: "update", table: "equipment_units", row: { status: "booked" }, column: "id", value: "unit-1" });
+
+  own.conditionIn = "good";
+  own.returnHours = 130;
+  await db.confirmOps({ code: "BK-1", cameras: [own], accessories: [] }, "returned");
+  assert.deepStrictEqual(plain(mutations[12]), { op: "update", table: "equipment_units", row: { status: "available" }, column: "id", value: "unit-1" });
 }
 
 async function testBookingUi() {
   const html = fs.readFileSync("console.html", "utf8");
   assert(html.includes("returnEarly('${code}','${type}',${index})"), "Return early should target each booking line by index");
   assert(!html.includes("l.code.indexOf('(')<0"), "Hire-in lines must not be excluded from early return");
+  assert(html.includes('unit.status=newStatus==="returned"?"available":"booked"'), "checkout and return must update the local inventory status");
   const start = html.indexOf("function editBookingItemForm");
   const end = html.indexOf("/* ---- Checkout / Return ---- */", start);
   assert(start > 0 && end > start, "booking enhancement function block was not found");
