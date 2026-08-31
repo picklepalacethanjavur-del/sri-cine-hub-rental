@@ -57,6 +57,8 @@ async function testDataLayer() {
   assert.deepStrictEqual(plain(mutations[3]), { op: "update", table: "booking_lines", row: { daily_rate_inr: 2200 }, column: "id", value: "line-3" });
   await db.deleteBookingLine("BK-1", manual);
   assert.deepStrictEqual(plain(mutations[4]), { op: "delete", table: "booking_lines", column: "id", value: "line-3" });
+  await db.deleteRFQ("rfq-1");
+  assert.deepStrictEqual(plain(mutations[5]), { op: "delete", table: "supplier_rfqs", column: "id", value: "rfq-1" });
 }
 
 async function testBookingUi() {

@@ -383,6 +383,11 @@ window.SDB = (function () {
     if (items && items.length) await sb.from("supplier_rfq_items").insert(items.map(it => ({ rfq_id: rfqId, item: it.item, qty: it.qty || 1, quoted_rate_inr: it.quotedRate != null ? it.quotedRate : null })));
   });
   const setRFQItemRate = guard(async (itemId, quoted) => { const { error } = await sb.from("supplier_rfq_items").update({ quoted_rate_inr: quoted }).eq("id", itemId); if (error) throw error; });
+  const deleteRFQ = guard(async (rfqId) => {
+    const { error } = await sb.from("supplier_rfqs").delete().eq("id", rfqId);
+    if (error) throw error;
+    return true;
+  });
   // assign a real serial unit to an option-level booking line (at checkout)
   const assignUnit = guard(async (lineId, unitCode) => {
     const unitId = ids.unitByCode[unitCode]; if (!lineId || !unitId) return;
@@ -476,5 +481,5 @@ window.SDB = (function () {
     }
     console.log("SDB.debug →", out); return out;
   }
-  return { on: ON, bootstrap, debug, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, editPayment, deletePayment, updateBooking, updateSupplier, updateCustomer, updateRequestDetails, editExpense, returnEarly, addBookingLine, updateBookingLine, deleteBookingLine, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, addExpense, deleteExpense, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
+  return { on: ON, bootstrap, debug, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, editPayment, deletePayment, updateBooking, updateSupplier, updateCustomer, updateRequestDetails, editExpense, returnEarly, addBookingLine, updateBookingLine, deleteBookingLine, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, addExpense, deleteExpense, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate, deleteRFQ };
 })();

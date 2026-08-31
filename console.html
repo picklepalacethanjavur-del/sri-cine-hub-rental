@@ -1490,21 +1490,31 @@ function renderFind(){
   if(!q){el.innerHTML="";return;}
   const own=[...DATA.cameras.map(c=>({...c,kind:"camera"})),...DATA.accessories.map(a=>({...a,kind:"accessory"}))]
     .filter(i=>(i.name+" "+(i.manufacturer||"")+" "+(i.category||"")).toLowerCase().includes(q));
-  const sup=[];DATA.suppliers.forEach(s=>s.catalog.forEach(c=>{if(c.item.toLowerCase().includes(q))sup.push({supplier:s.name,contact:s.contact,item:c.item,rate:c.rate});}));
+  const sup=[];DATA.suppliers.forEach(s=>s.catalog.forEach(c=>{if(c.item.toLowerCase().includes(q))sup.push({supplierId:s.id,supplier:s.name,contact:s.contact,item:c.item,rate:c.rate});}));
   sup.sort((a,b)=>a.item.localeCompare(b.item)||a.rate-b.rate);
   const cheapest={},count={};sup.forEach(r=>{const k=r.item.toLowerCase();count[k]=(count[k]||0)+1;if(cheapest[k]==null||r.rate<cheapest[k])cheapest[k]=r.rate;});
-  if(!own.length&&!sup.length){el.innerHTML=`<div class="empty" style="padding:16px">No match in your inventory or supplier catalogues — this is a candidate for a hire-in RFQ.</div>`;return;}
+  if(!own.length&&!sup.length){el.innerHTML=`<div class="empty" style="padding:16px">No match in your inventory or supplier catalogues.<div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="startManualRFQFromFind()">Create manual RFQ →</button></div></div>`;return;}
   let html="";
   if(own.length)html+=`<div class="muted" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin:4px 0 8px">In your studio · ${own.length} unit${own.length>1?'s':''}</div>`+
-    own.map(i=>`<div class="list-row" style="cursor:default"><div class="grow"><div class="t">${i.name} <span class="muted" style="font-weight:400">· ${i.code}</span></div>
-      <div class="sub">${i.kind==="camera"?i.manufacturer:i.category} · ${i.location||"—"} · ${money(i.dailyRate)}/day</div></div>${statusBadge(i.status)}</div>`).join("");
+    own.map(i=>{const tab=i.kind==='camera'?'cameras':(['Transport','Genset'].includes(i.category)?'Transport & Genset':(i.category||'Accessories'));
+      return `<div class="list-row" style="cursor:default"><div class="grow"><div class="t">${i.name} <span class="muted" style="font-weight:400">· ${i.code}</span></div>
+      <div class="sub">${i.kind==="camera"?i.manufacturer:i.category} · ${i.location||"—"} · ${money(i.dailyRate)}/day</div></div>${statusBadge(i.status)}<button class="btn btn-ghost btn-sm" onclick="viewFoundInventory('${waEsc(tab)}','${waEsc(i.name)}')">View inventory →</button></div>`;}).join("");
   if(sup.length)html+=`<div class="muted" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin:14px 0 8px">Available via suppliers · compare on price</div>`+
     sup.map(r=>{const best=count[r.item.toLowerCase()]>1&&r.rate===cheapest[r.item.toLowerCase()];
       return `<div class="list-row" style="cursor:default"><div class="grow"><div class="t">${r.item} ${best?'<span class="badge b-ok">best price</span>':''}</div><div class="sub">${r.supplier} · 📞 ${r.contact}</div></div>
       <div class="amt gold" style="margin-right:12px">${money(r.rate)}/day</div>
-      <button class="btn btn-ghost btn-sm" style="margin-right:8px" onclick="waRFQ('${waEsc(r.contact)}','${waEsc(r.item)}',${r.rate})">💬 Enquire</button>
-      <span class="badge b-info">hire-in</span></div>`;}).join("");
+      <button class="btn btn-ghost btn-sm" onclick="waRFQ('${waEsc(r.contact)}','${waEsc(r.item)}',${r.rate})">💬 Enquire</button>
+      <button class="btn btn-primary btn-sm" onclick="startRFQFromFind('${r.supplierId}','${waEsc(r.item)}')">Create RFQ →</button></div>`;}).join("");
   el.innerHTML=`<div class="card">${html}</div>`;
+}
+function viewFoundInventory(tab,item){ INV.tab=tab;INV.status='all';INV.q=item;go('inventory'); }
+function startRFQFromFind(supplierId,item){
+  const supplier=(DATA.suppliers||[]).find(s=>s.id===supplierId);if(!supplier)return toast('Supplier not found');
+  openRFQBuilder(null,{supplierId,lines:[{item,qty:1}]});
+}
+function startManualRFQFromFind(){
+  if(!(DATA.suppliers||[]).length)return toast('Add a supplier before creating an RFQ');
+  const item=FIND.q.trim();openRFQBuilder(null,{lines:item?[{item,qty:1}]:[]});
 }
 VIEWS.customers=()=>{
   return `<div class="card"><table><thead><tr><th>Customer</th><th>Company</th><th>Phone</th><th>Bookings</th><th></th></tr></thead><tbody>
@@ -1551,12 +1561,20 @@ VIEWS.hirein=()=>{
         <button class="btn btn-ghost btn-sm" onclick="editRFQ('${q.id}')">✏️ Edit</button>
         <button class="btn btn-ghost btn-sm" onclick="openRFQ('${q.id}')">📄 RFQ letter</button>
         <button class="btn btn-ghost btn-sm" onclick="rfqWA('${q.id}')">💬 Send</button>
+        <button class="btn btn-ghost btn-sm btn-danger" onclick="deleteRFQ('${q.id}')">🗑 Delete</button>
         <select onchange="rfqStatus('${q.id}',this.value)" style="${inpS};padding:7px">${['draft','sent','responded','accepted','declined'].map(s=>`<option value="${s}" ${s===q.status?'selected':''}>${s}</option>`).join('')}</select>
       </div>
     </div></div>`).join('') : `<div class="card"><div class="empty">No hire-in RFQs yet. They're created automatically when you convert a quote with hire-in lines — or add one manually with ＋ New RFQ.</div></div>`}`;
 };
 function rfqSetRate(itemId,val){ (DATA.rfqs||[]).forEach(q=>q.items.forEach(it=>{ if(it.id===itemId) it.quotedRate=+val||0; })); SDB.setRFQItemRate(itemId,+val||0); }
 function rfqStatus(id,status){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(q)q.status=status; SDB.updateRFQStatus(id,status); go('hirein'); }
+async function deleteRFQ(id){
+  const q=(DATA.rfqs||[]).find(x=>x.id===id);if(!q)return;
+  if(!confirm(`Delete ${q.code} for ${q.supplierName}?\nThis permanently removes the RFQ and its items.`))return;
+  const deleted=await SDB.deleteRFQ(q._uuid||q.id);
+  if(SDB.on&&deleted===undefined)return;
+  DATA.rfqs=DATA.rfqs.filter(x=>x.id!==id);go('hirein');toast(q.code+' deleted');
+}
 function rfqWA(id){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(!q) return;
   const items=q.items.map(it=>`• ${it.qty>1?it.qty+'× ':''}${it.item}${it.requestedRate?' (~₹'+it.requestedRate.toLocaleString('en-IN')+'/day)':''}`).join('\n');
   const _p=q.pickup||q.start,_r=q.ret||q.end; const dates=_p?`\nPickup ${fmtDate(_p)} – Return ${fmtDate(_r)}`:'';
@@ -1564,11 +1582,12 @@ function rfqWA(id){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(!q) return;
   waSend(q.supplierContact,msg); if(q.status==='draft') rfqStatus(id,'sent');
 }
 let RFB=null;
-function openRFQBuilder(existing){
+function openRFQBuilder(existing,seed){
+  seed=seed||{};
   RFB={ editId: existing?existing.id:null, editUuid: existing?(existing._uuid||existing.id):null,
-    supplierId: existing?existing.supplierId:((DATA.suppliers[0]||{}).id||''),
+    supplierId: existing?existing.supplierId:(seed.supplierId||((DATA.suppliers[0]||{}).id||'')),
     bookingCode: existing?existing.bookingCode||'':'', pickup: existing?existing.pickup||'':'', ret: existing?existing.ret||'':'',
-    notes: existing?existing.notes||'':'', q:'', lines: existing?(existing.items||[]).map(it=>({item:it.item,qty:it.qty||1})):[] };
+    notes: existing?existing.notes||'':'', q:'', lines: existing?(existing.items||[]).map(it=>({item:it.item,qty:it.qty||1})):(seed.lines||[]).map(it=>({item:it.item,qty:it.qty||1})) };
   CUR='hirein'; buildNav(); $("#pageTitle").textContent=existing?'Edit RFQ':'New RFQ'; renderRFB(); window.scrollTo(0,0);
 }
 function editRFQ(id){ const q=(DATA.rfqs||[]).find(x=>x.id===id); if(q) openRFQBuilder(q); }
@@ -1653,6 +1672,7 @@ function rfqLetter(id){
     <button class="btn btn-ghost" onclick="go('hirein')">← Hire-In</button>
     <button class="btn btn-ghost" onclick="editRFQ('${q.id}')">✏️ Edit items</button>
     <button class="btn btn-ghost" onclick="rfqWA('${q.id}')">💬 Send to supplier</button>
+    <button class="btn btn-ghost btn-danger" onclick="deleteRFQ('${q.id}')">🗑 Delete</button>
     <button class="btn btn-primary" onclick="printAs('${fname}')">🖨 Print / Save as PDF</button></div>
   <div class="receipt" id="receipt">
     <div class="rc-head">
