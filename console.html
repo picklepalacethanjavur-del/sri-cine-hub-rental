@@ -340,6 +340,10 @@ const badge=s=>`<span class="badge ${STATUS[s]?.c||'b-mut'}">${s.replace("_"," "
 
 function lineDays(b,l){const s=l.start||b.start;const e=l.returnedAt||l.end||b.end;return daysBetween(s,e);}
 function bookingTotals(b){
+  if(b._charges!=null){
+    const charges=Number(b._charges||0),paid=Number(b._paid||0);
+    return {charges,paid,outstanding:charges-paid,deposit:b.deposit||0};
+  }
   let charges=0;
   [...b.cameras,...b.accessories].forEach(l=>{charges+=l.rate*lineDays(b,l)*(l.qty||1);});
   charges += (b.otherCharges||0) - (b.discount||0);
@@ -932,7 +936,7 @@ VIEWS.bookings=()=>{
       ${badge(b.status)}</div>`;}).join(""):`<div class="empty">None.</div>`}</div>`;
   return sec("Active",groups.Active)+sec("Out",groups.Out)+sec("Completed",groups.Completed);
 };
-function openBooking(code){go("bookings");setTimeout(()=>{$("#content").innerHTML=bookingDetail(code);},0);}
+function openBooking(code){if(!canSee("bookings"))return toast("Booking details aren't available for this role");go("bookings");setTimeout(()=>{$("#content").innerHTML=bookingDetail(code);},0);}
 function bookingDetail(code){
   const b=DATA.bookings.find(x=>x.code===code);if(!b)return VIEWS.bookings();
   const t=bookingTotals(b);
@@ -2027,7 +2031,7 @@ async function boot(){
   if(!prof || !prof.is_active){ await SDB.signOut(); app.style.display='none'; showLogin('No active staff profile for this account. Ask an admin.'); return; }
   ROLE=prof.role; MYNAME=prof.full_name||user.email;
   const ov=document.getElementById('loginOverlay'); if(ov) ov.remove();
-  const status=await SDB.bootstrap();
+  const status=await SDB.bootstrap(ROLE);
   if(status==='auth'){ await SDB.signOut(); app.style.display='none'; showLogin('Your session expired — please sign in again.'); return; }
   app.style.display=''; buildNav(); renderUserChip(); go('dashboard');
 }

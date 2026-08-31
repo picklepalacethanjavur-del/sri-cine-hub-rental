@@ -38,5 +38,8 @@ if (!html.includes('if(ROLE&&!canSee(v)){')) {
 if (!html.includes('style.display=canSee("dashboard")?"":"none"')) {
   throw new Error("Operations search must be hidden for portal-only roles");
 }
+if (!html.includes('if(!canSee("bookings"))return toast')) {
+  throw new Error("Investor must not bypass the router through booking details");
+}
 
 console.log("role access: all tests passed");

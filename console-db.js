@@ -33,8 +33,27 @@ window.SDB = (function () {
   const authErr = e => !!e && (e.code === "PGRST301" || String(e.status) === "401" ||
     /\bjwt\b|token|not authenticated|auth session|session (has )?(expired|missing)|invalid (claim|signature)|401/i.test(e.message || ""));
 
-  async function bootstrap() {
+  async function bootstrapInvestor() {
+    const { data, error } = await sb.rpc("get_investor_portal_data");
+    if (error) {
+      if (authErr(error)) return "auth";
+      fail(error, "load investor portal");
+      return false;
+    }
+    const d = data || {};
+    window.DATA = {
+      cameras: d.cameras || [], accessories: [], customers: [], bookings: d.bookings || [],
+      requests: [], suppliers: [], payouts: d.payouts || [], settlements: d.settlements || [],
+      config: d.config || { maintenancePct: 0.10, managerPct: 0.10 },
+      optionRates: {}, optionCats: {}, rfqs: []
+    };
+    console.info("SDB live — loaded investor-scoped portal data from Supabase.");
+    return true;
+  }
+
+  async function bootstrap(role) {
     if (!ON) { console.info("SDB offline — using seed data (console-data.js)."); return false; }
+    if (role === "investor") return bootstrapInvestor();
     try {
       const [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows, aexp, quos, qitems] =
         await Promise.all([
