@@ -47,22 +47,27 @@ async function testDataLayer() {
   assert.strictEqual(mutations[1].row.supplier_id, "supplier-1");
   assert.strictEqual(mutations[1].row.cost_inr, 1800);
 
+  await db.returnEarly("BK-1", supplier, "2026-09-02", "good");
+  assert.deepStrictEqual(plain(mutations[2]), { op: "update", table: "booking_lines", row: { returned_at: "2026-09-02", condition_in: "good" }, column: "id", value: "line-2" });
+
   const manual = { code: "(manual)", name: "Car service", rate: 1600, qty: 1, start: "2026-09-01", end: "2026-09-02", lineKind: "custom" };
   manual._lineId = await db.addBookingLine("BK-1", manual, false);
-  assert.strictEqual(mutations[2].row.unit_id, null);
-  assert.strictEqual(mutations[2].row.line_kind, "custom");
-  assert.strictEqual(mutations[2].row.label, "Car service");
+  assert.strictEqual(mutations[3].row.unit_id, null);
+  assert.strictEqual(mutations[3].row.line_kind, "custom");
+  assert.strictEqual(mutations[3].row.label, "Car service");
 
   await db.updateBookingLine("BK-1", manual, { rate: 2200 });
-  assert.deepStrictEqual(plain(mutations[3]), { op: "update", table: "booking_lines", row: { daily_rate_inr: 2200 }, column: "id", value: "line-3" });
+  assert.deepStrictEqual(plain(mutations[4]), { op: "update", table: "booking_lines", row: { daily_rate_inr: 2200 }, column: "id", value: "line-3" });
   await db.deleteBookingLine("BK-1", manual);
-  assert.deepStrictEqual(plain(mutations[4]), { op: "delete", table: "booking_lines", column: "id", value: "line-3" });
+  assert.deepStrictEqual(plain(mutations[5]), { op: "delete", table: "booking_lines", column: "id", value: "line-3" });
   await db.deleteRFQ("rfq-1");
-  assert.deepStrictEqual(plain(mutations[5]), { op: "delete", table: "supplier_rfqs", column: "id", value: "rfq-1" });
+  assert.deepStrictEqual(plain(mutations[6]), { op: "delete", table: "supplier_rfqs", column: "id", value: "rfq-1" });
 }
 
 async function testBookingUi() {
   const html = fs.readFileSync("console.html", "utf8");
+  assert(html.includes("returnEarly('${code}','${type}',${index})"), "Return early should target each booking line by index");
+  assert(!html.includes("l.code.indexOf('(')<0"), "Hire-in lines must not be excluded from early return");
   const start = html.indexOf("function editBookingItemForm");
   const end = html.indexOf("/* ---- Checkout / Return ---- */", start);
   assert(start > 0 && end > start, "booking enhancement function block was not found");

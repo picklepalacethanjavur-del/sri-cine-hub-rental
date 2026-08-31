@@ -272,9 +272,13 @@ window.SDB = (function () {
     const { error } = await sb.from("asset_expenses").update(row).eq("id", id); if (error) throw error;
   });
 
-  const returnEarly = guard(async (code, unitCode, date, cond) => {
+  const returnEarly = guard(async (code, line, date, cond) => {
+    const bid = ids.bookingByCode[code];
+    const lineId = line._lineId || ids.lineKey[bid + "|" + line.code];
+    if (!lineId) throw new Error("Booking line not found");
     const { error } = await sb.from("booking_lines").update({ returned_at: date, condition_in: cond })
-      .eq("id", ids.lineKey[ids.bookingByCode[code] + "|" + unitCode]); if (error) throw error;
+      .eq("id", lineId); if (error) throw error;
+    return true;
   });
 
   const addBookingLine = guard(async (code, line, isCam) => {

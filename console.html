@@ -955,7 +955,7 @@ function bookingDetail(code){
       <div class="sub">${fmtDate(l.start||b.start)}–${fmtDate(l.returnedAt||l.end||b.end)} · ${money(l.rate)}/day × ${days}${qty>1?' × '+qty:''} = <span class="amt">${money(l.rate*days*qty)}</span></div>${meter}</div>
     <button class="btn btn-ghost btn-sm" onclick="editBookingItemForm('${code}','${type}',${index})">Edit price</button>
     <button class="btn btn-ghost btn-sm btn-danger" onclick="deleteBookingItem('${code}','${type}',${index})">Delete</button>
-    ${!ret&&isOut&&l.code&&l.code.indexOf('(')<0?`<button class="btn btn-ghost btn-sm" onclick="returnEarly('${code}','${type}','${l.code}')">Return early</button>`:''}</div>`;};
+    ${!ret&&isOut?`<button class="btn btn-ghost btn-sm" onclick="returnEarly('${code}','${type}',${index})">Return early</button>`:''}</div>`;};
   return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('bookings')">← All bookings</div>
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><h1 class="disp" style="font-size:26px">${b.contact||b.project}</h1>${badge(b.status)}
     ${isReady?`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go('checkout','${code}')">Check out →</button>`:isOut?`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go('checkout','${code}')">Return →</button>`:''}
@@ -983,14 +983,19 @@ function bookingDetail(code){
     </div>
   </div>`;
 }
-function returnEarly(code,type,lcode){
-  const b=DATA.bookings.find(x=>x.code===code);const l=b[type].find(x=>x.code===lcode);
+function returnEarly(code,type,index){
+  const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
   openModal(`<h3>Return early — ${l.name}</h3><p class="mut">Billing stops on the return date. Other items continue.</p>
     <div class="field"><label>Return date</label><input type="date" id="re-date" value="${TODAY}"></div>
     <div class="field"><label>Condition in</label><select id="re-cond"><option>good</option><option>fair</option><option>damaged</option><option>missing</option></select></div>
-    <button class="btn btn-primary" style="width:100%" onclick="doReturnEarly('${code}','${type}','${lcode}')">Confirm return</button>`);
+    <button class="btn btn-primary" style="width:100%" onclick="doReturnEarly('${code}','${type}',${index})">Confirm return</button>`);
 }
-function doReturnEarly(code,type,lcode){const b=DATA.bookings.find(x=>x.code===code);const l=b[type].find(x=>x.code===lcode);l.returnedAt=$("#re-date").value;l.conditionIn=$("#re-cond").value;SDB.returnEarly(code,lcode,l.returnedAt,l.conditionIn);closeModal();$("#content").innerHTML=bookingDetail(code);toast(l.name+" returned");}
+async function doReturnEarly(code,type,index){
+  const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
+  const returnedAt=$("#re-date").value;const conditionIn=$("#re-cond").value;
+  const saved=await SDB.returnEarly(code,l,returnedAt,conditionIn);if(SDB.on&&saved!==true)return;
+  l.returnedAt=returnedAt;l.conditionIn=conditionIn;closeModal();$("#content").innerHTML=bookingDetail(code);toast(l.name+" returned");
+}
 function addPayment(code){
   const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);
   openModal(`<h3>Add payment</h3><p class="mut">Outstanding before: ${money(t.outstanding)}</p>
