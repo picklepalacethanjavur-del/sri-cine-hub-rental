@@ -368,7 +368,7 @@ const NAV=[
   {v:"users",i:"👥",t:"Users"}
 ];
 let ROLE="manager", CUR="dashboard";
-const ALLOWED={admin:"*",manager:["dashboard","quickrent","requests","bookings","checkout","calendar","inventory","hirein","suppliers","customers","receipts","investor"],investor:["investor"]};
+const ALLOWED={admin:"*",manager:["dashboard","quickrent","requests","bookings","checkout","calendar","inventory","hirein","suppliers","customers","receipts"],investor:["investor"]};
 function canSee(v){const a=ALLOWED[ROLE];return a==="*"||a.includes(v);}
 function buildNav(){
   const el=$("#nav");el.innerHTML="";
@@ -380,6 +380,8 @@ function buildNav(){
   });
   // hide empty group headers
   [...el.children].forEach((c,i)=>{if(c.className==="grp"){const nx=el.children[i+1];if(!nx||nx.className==="grp")c.style.display="none";}});
+  // Investors have a portal-only experience; operations search must not be shown.
+  const search=$("#globalSearch");if(search&&search.closest(".tsearch"))search.closest(".tsearch").style.display=canSee("dashboard")?"":"none";
 }
 function setRole(r){ROLE=r;$("#avatar").textContent=r[0].toUpperCase();if(!canSee(CUR))CUR=(ALLOWED[r]==="*"?"dashboard":ALLOWED[r][0]);buildNav();go(CUR);}
 function go(v,param){if(ROLE&&!canSee(v)){v=(ALLOWED[ROLE]==="*"?"dashboard":(ALLOWED[ROLE][0]||"dashboard"));param=undefined;}CUR=v;buildNav();const V=VIEWS[v];$("#pageTitle").textContent=(NAV.find(n=>n.v===v)||{}).t||"";$("#content").innerHTML=V?V(param):"<div class='empty'>Coming soon.</div>";if(V&&V.after)V.after(param);window.scrollTo(0,0);}
