@@ -936,7 +936,7 @@ function bookingDetail(code){
   const t=bookingTotals(b);
   const isOut=["checked_out","overdue"].includes(b.status);
   const isReady=["reserved","confirmed","preparing"].includes(b.status);
-  const line=(l,type)=>{const days=lineDays(b,l);const ret=!!l.returnedAt;
+  const line=(l,type,index)=>{const days=lineDays(b,l);const ret=!!l.returnedAt;
     let meter="";
     if(type==="cameras"&&(l.checkoutHours!=null||l.returnHours!=null)){
       const used=(l.checkoutHours!=null&&l.returnHours!=null)?` (${l.returnHours-l.checkoutHours}h used)`:"";
@@ -947,6 +947,8 @@ function bookingDetail(code){
     return `<div class="list-row" style="cursor:default;opacity:${ret?.55:1}">
     <div class="grow"><div class="t">${l.name} <span class="muted" style="font-weight:400">· ${l.code}</span>${kb} ${ret?'<span class="badge b-ok">✓ returned</span>':''}</div>
       <div class="sub">${fmtDate(l.start||b.start)}–${fmtDate(l.returnedAt||l.end||b.end)} · ${money(l.rate)}/day × ${days}${qty>1?' × '+qty:''} = <span class="amt">${money(l.rate*days*qty)}</span></div>${meter}</div>
+    <button class="btn btn-ghost btn-sm" onclick="editBookingItemForm('${code}','${type}',${index})">Edit price</button>
+    <button class="btn btn-ghost btn-sm btn-danger" onclick="deleteBookingItem('${code}','${type}',${index})">Delete</button>
     ${!ret&&isOut&&l.code&&l.code.indexOf('(')<0?`<button class="btn btn-ghost btn-sm" onclick="returnEarly('${code}','${type}','${l.code}')">Return early</button>`:''}</div>`;};
   return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('bookings')">← All bookings</div>
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><h1 class="disp" style="font-size:26px">${b.contact||b.project}</h1>${badge(b.status)}
@@ -962,8 +964,8 @@ function bookingDetail(code){
   </div>
   <div class="cols">
     <div class="card"><div class="card-h"><h3>Equipment</h3><button class="btn btn-ghost btn-sm" onclick="addEquip('${code}')">＋ Add equipment</button></div>
-      ${b.cameras.map(l=>line(l,"cameras")).join("")}
-      ${b.accessories.map(l=>line(l,"accessories")).join("")}
+      ${b.cameras.map((l,i)=>line(l,"cameras",i)).join("")}
+      ${b.accessories.map((l,i)=>line(l,"accessories",i)).join("")}
     </div>
     <div class="card"><div class="card-h"><h3>Payments</h3><div style="display:flex;gap:8px">${t.outstanding>0?`<button class="btn btn-ghost btn-sm" onclick="sendReminderWA('${code}')">💬 Reminder</button>`:''}<button class="btn btn-ghost btn-sm" onclick="addPayment('${code}')">＋ Add payment</button></div></div>
       <div style="padding:6px 0">${b.payments.length?b.payments.map((p,pi)=>`<div class="list-row" style="cursor:default">
@@ -1045,18 +1047,101 @@ function saveBookingEdit(code){
   SDB.updateBooking(code,{contact:b.contact,phone:b.phone,production:b.production,project:b.project,start:b.start,end:b.end});
   closeModal();$("#content").innerHTML=bookingDetail(code);toast("Booking updated");
 }
-function addEquip(code){
-  const b=DATA.bookings.find(x=>x.code===code);
-  const opts=DATA.cameras.concat(DATA.accessories).filter(i=>i.status==="available").map(i=>`<option value="${i.code}">${i.name} — ${money(i.dailyRate)}/day</option>`).join("");
-  openModal(`<h3>Add equipment</h3><p class="mut">Adds mid-booking with its own date range.</p>
-    <div class="field"><label>Item</label><select id="ae-item">${opts}</select></div>
-    <div class="r2"><div class="field"><label>From</label><input type="date" id="ae-from" value="${TODAY}"></div>
-    <div class="field"><label>To</label><input type="date" id="ae-to" value="${b.end}"></div></div>
-    <button class="btn btn-primary" style="width:100%" onclick="doAddEquip('${code}')">Add to booking</button>`);
+function editBookingItemForm(code,type,index){
+  const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
+  const days=lineDays(b,l),qty=l.qty||1;
+  openModal(`<h3>Edit item price</h3><p class="mut">${escAttr(l.name)} · ${fmtDate(l.start||b.start)}–${fmtDate(l.end||b.end)}</p>
+    <div class="field"><label>Customer price per day ₹</label><input type="number" min="0" id="ebi-rate" value="${l.rate}" oninput="editBookingItemPreview('${code}','${type}',${index})"></div>
+    <div class="preview" id="ebi-preview">${money(l.rate)} × ${days} day${days===1?'':'s'}${qty>1?' × '+qty:''} = ${money(l.rate*days*qty)}</div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveBookingItemPrice('${code}','${type}',${index})">Save price</button>`);
 }
-function doAddEquip(code){const b=DATA.bookings.find(x=>x.code===code);const it=DATA.cameras.concat(DATA.accessories).find(i=>i.code===$("#ae-item").value);
-  const isCam=DATA.cameras.some(c=>c.code===it.code);const l={code:it.code,name:it.name,rate:it.dailyRate,start:$("#ae-from").value,end:$("#ae-to").value};
-  (isCam?b.cameras:b.accessories).push(l);SDB.addEquip(code,l,isCam);closeModal();$("#content").innerHTML=bookingDetail(code);toast(it.name+" added");}
+function editBookingItemPreview(code,type,index){
+  const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
+  const rate=Number($("#ebi-rate").value||0),days=lineDays(b,l),qty=l.qty||1;
+  $("#ebi-preview").textContent=`${money(rate)} × ${days} day${days===1?'':'s'}${qty>1?' × '+qty:''} = ${money(rate*days*qty)}`;
+}
+async function saveBookingItemPrice(code,type,index){
+  const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
+  const rate=Number($("#ebi-rate").value);
+  if(!Number.isFinite(rate)||rate<0)return toast("Enter a valid price");
+  const saved=await SDB.updateBookingLine(code,l,{rate});
+  if(SDB.on&&saved===undefined)return;
+  l.rate=rate;closeModal();$("#content").innerHTML=bookingDetail(code);toast(l.name+" price updated");
+}
+async function deleteBookingItem(code,type,index){
+  const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
+  if(!confirm(`Delete ${l.name} from booking ${code}?\nThis will also remove it from the invoice total.`))return;
+  const deleted=await SDB.deleteBookingLine(code,l);
+  if(SDB.on&&deleted===undefined)return;
+  b[type].splice(index,1);$("#content").innerHTML=bookingDetail(code);toast(l.name+" deleted");
+}
+
+let ADD_BOOKING_ITEM=null;
+function addEquip(code){
+  const b=DATA.bookings.find(x=>x.code===code);if(!b)return;
+  const inRange=TODAY>=b.start&&TODAY<=b.end;
+  ADD_BOOKING_ITEM={code,mode:'own',supplierId:(DATA.suppliers[0]||{}).id||'',catalogIndex:0,from:inRange?TODAY:b.start,to:b.end,qty:1};
+  renderAddBookingItem();
+}
+function setAddBookingMode(mode){ADD_BOOKING_ITEM.mode=mode;ADD_BOOKING_ITEM.catalogIndex=0;renderAddBookingItem();}
+function setAddBookingSupplier(id){ADD_BOOKING_ITEM.supplierId=id;ADD_BOOKING_ITEM.catalogIndex=0;renderAddBookingItem();}
+function syncAddBookingRate(){
+  if(!ADD_BOOKING_ITEM)return;
+  let rate=0;
+  if(ADD_BOOKING_ITEM.mode==='own'){
+    const it=DATA.cameras.concat(DATA.accessories).find(x=>x.code===$("#ae-item").value);rate=it?it.dailyRate:0;
+  }else if(ADD_BOOKING_ITEM.mode==='supplier'){
+    ADD_BOOKING_ITEM.catalogIndex=Number($("#ae-item").value||0);
+    const s=(DATA.suppliers||[]).find(x=>x.id===ADD_BOOKING_ITEM.supplierId),it=s&&(s.catalog||[])[ADD_BOOKING_ITEM.catalogIndex];rate=it?it.rate:0;
+    const cost=$("#ae-cost");if(cost)cost.textContent=it?`Supplier rate: ${money(it.rate)}/day`:'No catalogue item selected';
+  }
+  if($("#ae-rate"))$("#ae-rate").value=rate;
+}
+function renderAddBookingItem(){
+  const st=ADD_BOOKING_ITEM,b=st&&DATA.bookings.find(x=>x.code===st.code);if(!st||!b)return;
+  const own=DATA.cameras.concat(DATA.accessories).filter(i=>i.status==="available");
+  const supplier=(DATA.suppliers||[]).find(s=>s.id===st.supplierId)||(DATA.suppliers||[])[0]||null;
+  if(supplier)st.supplierId=supplier.id;
+  const cat=supplier&&(supplier.catalog||[])[st.catalogIndex];
+  const ownOpts=own.map(i=>`<option value="${escAttr(i.code)}">${escAttr(i.name)} — ${money(i.dailyRate)}/day</option>`).join("");
+  const supplierOpts=(DATA.suppliers||[]).map(s=>`<option value="${escAttr(s.id)}" ${s.id===st.supplierId?'selected':''}>${escAttr(s.name)}</option>`).join('');
+  const catOpts=supplier?(supplier.catalog||[]).map((i,n)=>`<option value="${n}" ${n===st.catalogIndex?'selected':''}>${escAttr(i.item)} — ${money(i.rate)}/day</option>`).join(''):'';
+  const source=st.mode==='own'
+    ? (own.length?`<div class="field"><label>Available inventory</label><select id="ae-item" onchange="syncAddBookingRate()">${ownOpts}</select></div>`:'<div class="empty" style="padding:18px">No owned equipment is currently available.</div>')
+    : st.mode==='supplier'
+      ? (supplier?`<div class="r2"><div class="field"><label>Supplier</label><select onchange="setAddBookingSupplier(this.value)">${supplierOpts}</select></div><div class="field"><label>Supplier equipment</label><select id="ae-item" onchange="syncAddBookingRate()">${catOpts}</select></div></div><div class="muted" id="ae-cost" style="font-size:12px;margin:-5px 0 13px">${cat?'Supplier rate: '+money(cat.rate)+'/day':'This supplier has no catalogue items.'}</div>`:'<div class="empty" style="padding:18px">Add a supplier and catalogue item first.</div>')
+      : `<div class="field"><label>Item / service name</label><input id="ae-name" placeholder="e.g. Car service"></div>`;
+  const defaultRate=st.mode==='own'?(own[0]&&own[0].dailyRate)||0:st.mode==='supplier'?(cat&&cat.rate)||0:'';
+  openModal(`<h3>Add booking item</h3><p class="mut">Choose owned gear, hire from a supplier, or enter a one-off item.</p>
+    <div class="tabs"><div class="tab ${st.mode==='own'?'active':''}" onclick="setAddBookingMode('own')">My inventory</div><div class="tab ${st.mode==='supplier'?'active':''}" onclick="setAddBookingMode('supplier')">Supplier equipment</div><div class="tab ${st.mode==='manual'?'active':''}" onclick="setAddBookingMode('manual')">Manual item</div></div>
+    ${source}
+    <div class="r2"><div class="field"><label>Customer price per day ₹</label><input type="number" min="0" id="ae-rate" value="${defaultRate}"></div><div class="field"><label>Quantity</label><input type="number" min="1" step="1" id="ae-qty" value="${st.qty}"></div></div>
+    <div class="r2"><div class="field"><label>From</label><input type="date" id="ae-from" value="${st.from}"></div><div class="field"><label>To</label><input type="date" id="ae-to" value="${st.to}"></div></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doAddEquip('${st.code}')">Add to booking</button>`);
+}
+async function doAddEquip(code){
+  const b=DATA.bookings.find(x=>x.code===code),st=ADD_BOOKING_ITEM;if(!b||!st)return;
+  const rate=Number($("#ae-rate").value),qty=Number($("#ae-qty").value),start=$("#ae-from").value,end=$("#ae-to").value;
+  if(!Number.isFinite(rate)||rate<0)return toast("Enter a valid customer price");
+  if(!Number.isInteger(qty)||qty<1)return toast("Quantity must be at least 1");
+  if(!start||!end||parseD(end)<parseD(start))return toast("Check the item date range");
+  let l,isCam=false;
+  if(st.mode==='own'){
+    const it=DATA.cameras.concat(DATA.accessories).find(i=>i.code===$("#ae-item").value);if(!it)return toast("Select available equipment");
+    isCam=DATA.cameras.some(c=>c.code===it.code);l={code:it.code,name:it.name,rate,qty,start,end,lineKind:'own',optionName:it.optionName||null};
+  }else if(st.mode==='supplier'){
+    const supplier=(DATA.suppliers||[]).find(s=>s.id===st.supplierId),it=supplier&&(supplier.catalog||[])[Number($("#ae-item").value||0)];
+    if(!supplier||!it)return toast("Select supplier equipment");
+    l={code:'(hire-in)',name:it.item,rate,qty,start,end,lineKind:'hirein',supplierId:supplier.id,cost:it.rate};
+  }else{
+    const name=$("#ae-name").value.trim();if(!name)return toast("Enter the item or service name");
+    l={code:'(manual)',name,rate,qty,start,end,lineKind:'custom'};
+  }
+  const lineId=await SDB.addBookingLine(code,l,isCam);
+  if(SDB.on&&lineId===undefined)return;
+  if(lineId)l._lineId=lineId;
+  (isCam?b.cameras:b.accessories).push(l);closeModal();$("#content").innerHTML=bookingDetail(code);toast(l.name+" added");
+}
 
 /* ---- Checkout / Return ---- */
 VIEWS.checkout=param=>{

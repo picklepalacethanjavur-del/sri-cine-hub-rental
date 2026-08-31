@@ -98,7 +98,7 @@ window.SDB = (function () {
       const linesByBooking = {}; lines.data.forEach(l => (linesByBooking[l.booking_id] ||= []).push(l));
       const mapLine = l => {
         const u = unitById[l.unit_id] || {};
-        const code = u.code || (l.line_kind === "hirein" ? "(hire-in)" : "(assign at checkout)");
+        const code = u.code || (l.line_kind === "hirein" ? "(hire-in)" : l.line_kind === "custom" ? "(manual)" : "(assign at checkout)");
         ids.lineKey[l.booking_id + "|" + code] = l.id;
         const o = { code, name: u.name || l.label || "—", rate: Number(l.daily_rate_inr),
           qty: l.quantity || 1, lineKind: l.line_kind || "own", supplierId: l.supplier_id || null,
@@ -258,13 +258,49 @@ window.SDB = (function () {
       .eq("id", ids.lineKey[ids.bookingByCode[code] + "|" + unitCode]); if (error) throw error;
   });
 
-  const addEquip = guard(async (code, line, isCam) => {
+  const addBookingLine = guard(async (code, line, isCam) => {
     const bid = ids.bookingByCode[code];
     const { data, error } = await sb.from("booking_lines").insert({
-      booking_id: bid, unit_id: ids.unitByCode[line.code], kind: isCam ? "camera" : "accessory",
-      daily_rate_inr: line.rate, item_start_at: line.start, item_end_at: line.end, added_mid_booking: true
+      booking_id: bid,
+      unit_id: line.lineKind === "own" || !line.lineKind ? (ids.unitByCode[line.code] || null) : null,
+      kind: isCam ? "camera" : "accessory",
+      label: line.name || null,
+      catalog_option_id: line.optionName ? (ids.optionByName[line.optionName] || null) : null,
+      line_kind: line.lineKind || "own",
+      supplier_id: line.supplierId || null,
+      cost_inr: line.cost != null ? line.cost : null,
+      daily_rate_inr: line.rate,
+      quantity: line.qty || 1,
+      item_start_at: line.start || null,
+      item_end_at: line.end || null,
+      added_mid_booking: true
     }).select("id").single();
-    if (error) throw error; ids.lineKey[bid + "|" + line.code] = data.id;
+    if (error) throw error;
+    ids.lineKey[bid + "|" + line.code] = data.id;
+    return data.id;
+  });
+
+  const updateBookingLine = guard(async (code, line, patch) => {
+    const bid = ids.bookingByCode[code];
+    const lineId = line._lineId || ids.lineKey[bid + "|" + line.code];
+    if (!lineId) throw new Error("Booking item could not be identified. Refresh and try again.");
+    const row = {};
+    if (patch.rate != null) row.daily_rate_inr = patch.rate;
+    if (patch.qty != null) row.quantity = patch.qty;
+    if (!Object.keys(row).length) return true;
+    const { error } = await sb.from("booking_lines").update(row).eq("id", lineId);
+    if (error) throw error;
+    return true;
+  });
+
+  const deleteBookingLine = guard(async (code, line) => {
+    const bid = ids.bookingByCode[code];
+    const lineId = line._lineId || ids.lineKey[bid + "|" + line.code];
+    if (!lineId) throw new Error("Booking item could not be identified. Refresh and try again.");
+    const { error } = await sb.from("booking_lines").delete().eq("id", lineId);
+    if (error) throw error;
+    delete ids.lineKey[bid + "|" + line.code];
+    return true;
   });
 
   const confirmOps = guard(async (b, newStatus) => {
@@ -440,5 +476,5 @@ window.SDB = (function () {
     }
     console.log("SDB.debug →", out); return out;
   }
-  return { on: ON, bootstrap, debug, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, editPayment, deletePayment, updateBooking, updateSupplier, updateCustomer, updateRequestDetails, editExpense, returnEarly, addEquip, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, addExpense, deleteExpense, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
+  return { on: ON, bootstrap, debug, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, editPayment, deletePayment, updateBooking, updateSupplier, updateCustomer, updateRequestDetails, editExpense, returnEarly, addBookingLine, updateBookingLine, deleteBookingLine, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, addExpense, deleteExpense, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate };
 })();
