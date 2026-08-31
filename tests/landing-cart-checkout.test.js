@@ -15,6 +15,11 @@ class ClassList {
 
 (async () => {
   const html = fs.readFileSync("src-studio.html", "utf8");
+  const catalog = fs.readFileSync("catalog-data.js", "utf8");
+
+  assert(catalog.includes("window.SRI_CATALOG"), "public catalog should use Sri branding");
+  assert(!catalog.includes("SRC_CATALOG"), "legacy SRC branding must not return");
+  assert(html.includes("SRI_CATALOG.forEach"), "landing page should load the Sri catalog");
 
   assert(html.includes('href="console.html"'), "landing page must link to the protected staff console");
   assert(html.includes(">Staff Login</a>"), "staff entry point must be clearly labelled");

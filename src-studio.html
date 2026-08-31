@@ -364,7 +364,7 @@ const PACKAGES=[
 const cart=new Set();
 function render(){
   const chips=document.getElementById('chips'), secs=document.getElementById('sections');
-  SRC_CATALOG.forEach((c,i)=>{
+  SRI_CATALOG.forEach((c,i)=>{
     const chip=document.createElement('div');chip.className='chip'+(i===0?' active':'');
     chip.innerHTML=`${c.category}<span class="n">${c.items.length}</span>`;
     chip.onclick=()=>{document.getElementById('search').value='';filterCatalog('');document.getElementById('sec-'+i).scrollIntoView({behavior:'smooth'});[...chips.children].forEach(x=>x.classList.remove('active'));chip.classList.add('active');};

@@ -1,5 +1,5 @@
 // Auto-generated from inventory-clean.md — public option cards (no prices shown).
-window.SRC_CATALOG = [
+window.SRI_CATALOG = [
   {
     category: "Cameras",
     items: [
