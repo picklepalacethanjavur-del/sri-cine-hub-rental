@@ -1309,7 +1309,7 @@ VIEWS.calendar=()=>{
   const dayList=[...Array(DAYS)].map((_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i);return d;});
   const offset=ds=>Math.round((parseD(ds)-start)/86400000);
   const todayOff=offset(TODAY);
-  const barCls=s=>s==="overdue"?"bar-bad":s==="reserved"?"bar-res":s==="checked_out"?"bar-out":"bar-conf";
+  const barCls=b=>isBookingOverdue(b)?"bar-bad":b.status==="reserved"?"bar-res":["checked_out","overdue"].includes(b.status)?"bar-out":"bar-conf";
   const header=dayList.map(d=>{const we=d.getDay()===0||d.getDay()===6;return `<div class="cal-day ${we?'we':''}" style="width:${CELL}px">${d.getDate()}<span>${d.toLocaleDateString("en-IN",{month:"short"})}</span></div>`;}).join("");
   const rows=DATA.cameras.map(cam=>{
     const bars=DATA.bookings.filter(b=>b.status!=="returned"&&b.cameras.some(c=>c.code===cam.code)).map(b=>{
@@ -1317,7 +1317,7 @@ VIEWS.calendar=()=>{
       if(e<0||s>DAYS-1)return "";
       s=Math.max(0,s);e=Math.min(DAYS-1,e);
       const left=s*CELL, width=(e-s+1)*CELL-5;
-      return `<div class="cal-bar ${barCls(b.status)}" style="left:${left}px;width:${width}px" onclick="openBooking('${b.code}')">${b.contact.split(" ")[0]} · ${b.project}</div>`;
+      return `<div class="cal-bar ${barCls(b)}" style="left:${left}px;width:${width}px" onclick="openBooking('${b.code}')">${b.contact.split(" ")[0]} · ${b.project}</div>`;
     }).join("");
     return `<div class="cal-row"><div class="cal-label"><b>${cam.name}</b><div class="muted" style="font-size:11px">${cam.code}</div></div>
       <div class="cal-track" style="width:${DAYS*CELL}px">${bars||''}</div></div>`;
