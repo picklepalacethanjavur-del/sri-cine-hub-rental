@@ -80,6 +80,8 @@ async function testBookingUi() {
   assert(html.includes("returnEarly('${code}','${type}',${index})"), "Return early should target each booking line by index");
   assert(!html.includes("l.code.indexOf('(')<0"), "Hire-in lines must not be excluded from early return");
   assert(html.includes('unit.status=newStatus==="returned"?"available":"booked"'), "checkout and return must update the local inventory status");
+  assert(html.includes("const bal=Math.max(0,t.dueToday)"), "payment reminders must use the balance due as of today");
+  assert(html.includes("Total booking charges") && html.includes("Total outstanding"), "booking details should name both total balances clearly");
   const start = html.indexOf("function editBookingItemForm");
   const end = html.indexOf("/* ---- Checkout / Return ---- */", start);
   assert(start > 0 && end > start, "booking enhancement function block was not found");
@@ -148,6 +150,15 @@ async function testBookingUi() {
   assert.strictEqual(booking.accessories[0].supplierId, "SUP-2");
   assert.strictEqual(booking.accessories[0].cost, 1600);
   assert.strictEqual(context.bookingTotals(booking).charges, 7500);
+  assert.strictEqual(context.bookingTotals(booking).dueToday, 0, "nothing is due before the booking starts");
+
+  context.TODAY="2026-09-02";
+  assert.strictEqual(context.bookingTotals(booking).accruedCharges, 5000, "supplier equipment should accrue through today inclusively");
+  assert.strictEqual(context.bookingTotals(booking).dueToday, 5000);
+  booking.payments.push({amount:1000});
+  assert.strictEqual(context.bookingTotals(booking).dueToday, 4000, "payments should reduce today's due balance first");
+  assert.strictEqual(context.bookingTotals(booking).outstanding, 6500, "total outstanding should still cover the full booking");
+  booking.payments.length=0;
 
   context.addEquip("BK-1");
   context.setAddBookingMode("manual");

@@ -325,8 +325,8 @@ function quoteLetter(){
 function sendReceiptWA(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const bal=Math.max(0,t.outstanding);
   const msg=`Hi ${b.contact}, here is your invoice INV-${b.code.slice(3)} from Sri Cine Hub for "${b.project}" (${fmtDate(b.start)}–${fmtDate(b.end)}).\n\nTotal: ${money(t.charges)}\nPaid: ${money(t.paid)}\n${bal>0?"Balance due: "+money(bal):"Status: PAID IN FULL ✅"}\n\nThank you for renting with us!`;
   waSend(b.phone,msg);}
-function sendReminderWA(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const bal=Math.max(0,t.outstanding);
-  const msg=`Hi ${b.contact}, a gentle reminder from Sri Cine Hub regarding "${b.project}".\n\nOutstanding balance: ${money(bal)} (of ${money(t.charges)} total).\nKindly clear it at your convenience. Thank you!`;
+function sendReminderWA(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const bal=Math.max(0,t.dueToday);
+  const msg=`Hi ${b.contact}, a gentle reminder from Sri Cine Hub regarding "${b.project}" (${b.code}).\n\nAmount due as of ${fmtDate(TODAY)}: ${money(bal)}.\nKindly clear it at your convenience. Thank you!`;
   waSend(b.phone,msg);}
 function waRFQ(contact,item,rate){const rl=rate?`\nWe have it noted at ₹${Number(rate).toLocaleString("en-IN")}/day — please confirm your rate.`:"";
   const msg=`Hi, this is Sri Cine Hub. Do you have "${item}" available for an upcoming shoot?${rl}\nPlease confirm availability and dates. Thank you.`;waSend(contact,msg);}
@@ -339,16 +339,25 @@ const STATUS={
 const badge=s=>`<span class="badge ${STATUS[s]?.c||'b-mut'}">${s.replace("_"," ")}</span>`;
 
 function lineDays(b,l){const s=l.start||b.start;const e=l.returnedAt||l.end||b.end;return daysBetween(s,e);}
+function accruedLineDays(b,l,asOf){
+  const start=l.start||b.start,end=l.returnedAt||l.end||b.end;
+  if(!start||!end||asOf<start)return 0;
+  const accruedEnd=asOf<end?asOf:end;return accruedEnd<start?0:daysBetween(start,accruedEnd);
+}
 function bookingTotals(b){
   if(b._charges!=null){
     const charges=Number(b._charges||0),paid=Number(b._paid||0);
-    return {charges,paid,outstanding:charges-paid,deposit:b.deposit||0};
+    const outstanding=charges-paid;return {charges,paid,outstanding,dueToday:Math.max(0,outstanding),accruedCharges:charges,deposit:b.deposit||0};
   }
-  let charges=0;
-  [...b.cameras,...b.accessories].forEach(l=>{charges+=l.rate*lineDays(b,l)*(l.qty||1);});
+  let equipmentCharges=0,accruedEquipment=0;
+  [...b.cameras,...b.accessories].forEach(l=>{const daily=l.rate*(l.qty||1);equipmentCharges+=daily*lineDays(b,l);accruedEquipment+=daily*accruedLineDays(b,l,TODAY);});
+  let charges=equipmentCharges;
   charges += (b.otherCharges||0) - (b.discount||0);
   const paid=b.payments.reduce((a,p)=>a+p.amount,0);
-  return {charges,paid,outstanding:charges-paid,deposit:b.deposit||0};
+  const bookingStarted=TODAY>=b.start;
+  const accruedDiscount=equipmentCharges>0?(b.discount||0)*(accruedEquipment/equipmentCharges):(bookingStarted?(b.discount||0):0);
+  const accruedCharges=Math.max(0,accruedEquipment+(bookingStarted?(b.otherCharges||0):0)-accruedDiscount);
+  return {charges,paid,outstanding:charges-paid,dueToday:Math.max(0,accruedCharges-paid),accruedCharges,deposit:b.deposit||0};
 }
 
 /* ============ nav / router ============ */
@@ -966,17 +975,18 @@ function bookingDetail(code){
     <button class="btn btn-ghost btn-sm" onclick="openReceipt('${code}')">🧾 Invoice</button>
     ${ROLE==='admin'?`<button class="btn btn-ghost btn-sm btn-danger" onclick="deleteBooking('${code}')">🗑 Delete</button>`:''}</div>
   <div class="muted" style="margin-bottom:20px">${b.code}${b.production&&b.production!==b.contact?' · '+b.production:''}${b.project&&b.project!==b.contact&&b.project!=='Walk-in booking'?' · '+b.project:''}${b.phone?' · '+b.phone:''} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div>
-  <div class="metrics" style="grid-template-columns:repeat(3,1fr)">
-    <div class="metric"><div class="l">Total charges</div><div class="v">${money(t.charges)}</div></div>
-    <div class="metric"><div class="l">Paid</div><div class="v">${money(t.paid)}</div></div>
-    <div class="metric"><div class="l">Outstanding</div><div class="v ${t.outstanding>0?'gold':''}">${money(t.outstanding)}</div></div>
+      <div class="metrics">
+    <div class="metric"><div class="l">Total booking charges</div><div class="v">${money(t.charges)}</div></div>
+    <div class="metric"><div class="l">Amount paid</div><div class="v">${money(t.paid)}</div></div>
+    <div class="metric"><div class="l">Due as of ${fmtDate(TODAY)}</div><div class="v ${t.dueToday>0?'gold':''}">${money(t.dueToday)}</div></div>
+    <div class="metric"><div class="l">Total outstanding</div><div class="v ${t.outstanding>0?'gold':''}">${money(Math.max(0,t.outstanding))}</div></div>
   </div>
   <div class="cols">
     <div class="card"><div class="card-h"><h3>Equipment</h3><button class="btn btn-ghost btn-sm" onclick="addEquip('${code}')">＋ Add equipment</button></div>
       ${b.cameras.map((l,i)=>line(l,"cameras",i)).join("")}
       ${b.accessories.map((l,i)=>line(l,"accessories",i)).join("")}
     </div>
-    <div class="card"><div class="card-h"><h3>Payments</h3><div style="display:flex;gap:8px">${t.outstanding>0?`<button class="btn btn-ghost btn-sm" onclick="sendReminderWA('${code}')">💬 Reminder</button>`:''}<button class="btn btn-ghost btn-sm" onclick="addPayment('${code}')">＋ Add payment</button></div></div>
+    <div class="card"><div class="card-h"><h3>Payments</h3><div style="display:flex;gap:8px">${t.dueToday>0?`<button class="btn btn-ghost btn-sm" onclick="sendReminderWA('${code}')">💬 Reminder</button>`:''}<button class="btn btn-ghost btn-sm" onclick="addPayment('${code}')">＋ Add payment</button></div></div>
       <div style="padding:6px 0">${b.payments.length?b.payments.map((p,pi)=>`<div class="list-row" style="cursor:default">
         <div class="grow"><div class="t">${money(p.amount)} <span class="badge b-mut">${p.type}</span></div>
           <div class="sub">${p.method} · ${fmtDate(p.date)}${p.ref?' · '+p.ref:''}</div></div>
@@ -1001,16 +1011,16 @@ async function doReturnEarly(code,type,index){
 }
 function addPayment(code){
   const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);
-  openModal(`<h3>Add payment</h3><p class="mut">Outstanding before: ${money(t.outstanding)}</p>
+  openModal(`<h3>Add payment</h3><p class="mut">Total outstanding before: ${money(Math.max(0,t.outstanding))} · Due as of today: ${money(t.dueToday)}</p>
     <div class="r2"><div class="field"><label>Amount ₹</label><input type="number" id="pay-amt" oninput="payPreview('${code}')"></div>
     <div class="field"><label>Date</label><input type="date" id="pay-date" value="${TODAY}"></div></div>
     <div class="r2"><div class="field"><label>Type</label><select id="pay-type"><option>advance</option><option>intermediate</option><option>final</option></select></div>
     <div class="field"><label>Method</label><select id="pay-method"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Cheque</option></select></div></div>
     <div class="field"><label>Reference / UTR</label><input id="pay-ref"></div>
-    <div class="preview" id="pay-prev">After this: outstanding = ${money(t.outstanding)}</div>
+    <div class="preview" id="pay-prev">After this: total outstanding = ${money(Math.max(0,t.outstanding))} · due as of today = ${money(t.dueToday)}</div>
     <button class="btn btn-primary" style="width:100%" onclick="doAddPayment('${code}')">Record payment</button>`);
 }
-function payPreview(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const a=+($("#pay-amt").value||0);$("#pay-prev").textContent=`After this: outstanding = ${money(t.outstanding-a)}`;}
+function payPreview(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const a=+($("#pay-amt").value||0);$("#pay-prev").textContent=`After this: total outstanding = ${money(Math.max(0,t.outstanding-a))} · due as of today = ${money(Math.max(0,t.dueToday-a))}`;}
 async function doAddPayment(code){const b=DATA.bookings.find(x=>x.code===code);const a=+($("#pay-amt").value||0);if(!a)return toast("Enter an amount");
   const pay={amount:a,type:$("#pay-type").value,method:$("#pay-method").value,date:$("#pay-date").value,ref:$("#pay-ref").value};
   b.payments.push(pay);const id=await SDB.addPayment(code,pay);if(id)pay._id=id;
