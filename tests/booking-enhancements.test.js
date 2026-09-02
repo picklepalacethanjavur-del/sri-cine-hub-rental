@@ -94,7 +94,10 @@ async function testBookingUi() {
       bookings: [booking],
       cameras: [{ code: "CAM-1", name: "Owned camera", status: "available", dailyRate: 1000 }],
       accessories: [],
-      suppliers: [{ id: "SUP-1", name: "Lens Bank", catalog: [{ item: "Supplier lens", rate: 1800 }] }]
+      suppliers: [
+        { id: "SUP-1", name: "Lens Bank", specialisation: "Cinema lenses", catalog: [{ item: "Supplier lens", rate: 1800 }] },
+        { id: "SUP-2", name: "Camera House", specialisation: "Camera and lenses", catalog: [{ item: "Supplier lens", rate: 1600 }] }
+      ]
     },
     TODAY: "2026-08-31",
     SDB: {
@@ -125,17 +128,25 @@ async function testBookingUi() {
 
   context.addEquip("BK-1");
   context.setAddBookingMode("supplier");
-  assert(context.modalHtml.includes("Supplier equipment"));
-  assert(context.modalHtml.includes("Supplier lens"));
-  elements["#ae-item"] = { value: "0" };
+  assert(context.modalHtml.includes("Search supplier equipment"));
+  assert(context.modalHtml.includes("search all supplier catalogues"));
+  elements["#ae-supplier-results"] = { innerHTML: "" };
+  elements["#ae-supplier-selected"] = { innerHTML: "" };
+  elements["#ae-rate"] = { value: "" };
+  context.searchBookingSupplierEquipment("lens");
+  assert(elements["#ae-supplier-results"].innerHTML.includes("Lens Bank"));
+  assert(elements["#ae-supplier-results"].innerHTML.includes("Camera House"));
+  context.pickBookingSupplierOffer("SUP-2", 0);
+  assert(elements["#ae-supplier-selected"].innerHTML.includes("Camera House"));
+  assert.strictEqual(elements["#ae-rate"].value, 1600);
   elements["#ae-rate"] = { value: "2500" };
   elements["#ae-qty"] = { value: "1" };
   elements["#ae-from"] = { value: "2026-09-01" };
   elements["#ae-to"] = { value: "2026-09-03" };
   await context.doAddEquip("BK-1");
   assert.strictEqual(booking.accessories[0].lineKind, "hirein");
-  assert.strictEqual(booking.accessories[0].supplierId, "SUP-1");
-  assert.strictEqual(booking.accessories[0].cost, 1800);
+  assert.strictEqual(booking.accessories[0].supplierId, "SUP-2");
+  assert.strictEqual(booking.accessories[0].cost, 1600);
   assert.strictEqual(context.bookingTotals(booking).charges, 7500);
 
   context.addEquip("BK-1");

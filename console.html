@@ -1094,18 +1094,47 @@ let ADD_BOOKING_ITEM=null;
 function addEquip(code){
   const b=DATA.bookings.find(x=>x.code===code);if(!b)return;
   const inRange=TODAY>=b.start&&TODAY<=b.end;
-  ADD_BOOKING_ITEM={code,mode:'own',supplierId:(DATA.suppliers[0]||{}).id||'',catalogIndex:0,from:inRange?TODAY:b.start,to:b.end,qty:1};
+  ADD_BOOKING_ITEM={code,mode:'own',supplierId:'',catalogIndex:-1,supplierQuery:'',from:inRange?TODAY:b.start,to:b.end,qty:1};
   renderAddBookingItem();
 }
-function setAddBookingMode(mode){ADD_BOOKING_ITEM.mode=mode;ADD_BOOKING_ITEM.catalogIndex=0;renderAddBookingItem();}
-function setAddBookingSupplier(id){ADD_BOOKING_ITEM.supplierId=id;ADD_BOOKING_ITEM.catalogIndex=0;renderAddBookingItem();}
+function setAddBookingMode(mode){ADD_BOOKING_ITEM.mode=mode;ADD_BOOKING_ITEM.supplierId='';ADD_BOOKING_ITEM.catalogIndex=-1;ADD_BOOKING_ITEM.supplierQuery='';renderAddBookingItem();}
+function bookingSupplierOffers(query){
+  const q=(query||'').trim().toLowerCase();if(!q)return [];
+  const offers=[];(DATA.suppliers||[]).forEach(s=>(s.catalog||[]).forEach((it,catalogIndex)=>{
+    if(((it.item||'')+' '+(s.name||'')+' '+(s.specialisation||'')).toLowerCase().includes(q))offers.push({supplier:s,item:it,catalogIndex});
+  }));
+  return offers.sort((a,b)=>(a.item.item||'').localeCompare(b.item.item||'')||(a.item.rate||0)-(b.item.rate||0)||(a.supplier.name||'').localeCompare(b.supplier.name||''));
+}
+function searchBookingSupplierEquipment(query){
+  if(!ADD_BOOKING_ITEM)return;
+  ADD_BOOKING_ITEM.supplierQuery=query;ADD_BOOKING_ITEM.supplierId='';ADD_BOOKING_ITEM.catalogIndex=-1;
+  renderBookingSupplierOffers();
+}
+function pickBookingSupplierOffer(supplierId,catalogIndex){
+  if(!ADD_BOOKING_ITEM)return;
+  ADD_BOOKING_ITEM.supplierId=supplierId;ADD_BOOKING_ITEM.catalogIndex=Number(catalogIndex);
+  const supplier=(DATA.suppliers||[]).find(s=>s.id===supplierId),it=supplier&&(supplier.catalog||[])[ADD_BOOKING_ITEM.catalogIndex];
+  if(!supplier||!it)return;
+  const rate=$("#ae-rate");if(rate)rate.value=it.rate||0;
+  renderBookingSupplierOffers();
+}
+function renderBookingSupplierOffers(){
+  const st=ADD_BOOKING_ITEM,results=$("#ae-supplier-results"),chosen=$("#ae-supplier-selected");if(!st||!results)return;
+  const offers=bookingSupplierOffers(st.supplierQuery);
+  if(!st.supplierQuery.trim())results.innerHTML='<div class="empty" style="padding:18px">Search by equipment name to see every supplier that carries it.</div>';
+  else if(!offers.length)results.innerHTML='<div class="empty" style="padding:18px">No supplier catalogue matches. Try a shorter name or use Manual item.</div>';
+  else results.innerHTML=offers.map(o=>{const selected=o.supplier.id===st.supplierId&&o.catalogIndex===st.catalogIndex;return `<div class="list-row" style="cursor:pointer;${selected?'border-color:var(--gold);background:var(--gold-dim)':''}" onclick="pickBookingSupplierOffer('${o.supplier.id}',${o.catalogIndex})"><div class="grow"><div class="t">${escAttr(o.item.item)}</div><div class="sub">${escAttr(o.supplier.name)}${o.supplier.specialisation?' · '+escAttr(o.supplier.specialisation):''}</div></div><div style="text-align:right"><div class="amt">${money(o.item.rate)}/day</div><span class="badge ${selected?'b-ok':'b-mut'}">${selected?'✓ Selected':'Select'}</span></div></div>`;}).join('');
+  if(chosen){
+    const supplier=(DATA.suppliers||[]).find(s=>s.id===st.supplierId),it=supplier&&(supplier.catalog||[])[st.catalogIndex];
+    chosen.innerHTML=it?`<b>Selected:</b> ${escAttr(it.item)} from ${escAttr(supplier.name)} · supplier cost ${money(it.rate)}/day`:'Select one supplier offer below.';
+  }
+}
 function syncAddBookingRate(){
   if(!ADD_BOOKING_ITEM)return;
   let rate=0;
   if(ADD_BOOKING_ITEM.mode==='own'){
     const it=DATA.cameras.concat(DATA.accessories).find(x=>x.code===$("#ae-item").value);rate=it?it.dailyRate:0;
   }else if(ADD_BOOKING_ITEM.mode==='supplier'){
-    ADD_BOOKING_ITEM.catalogIndex=Number($("#ae-item").value||0);
     const s=(DATA.suppliers||[]).find(x=>x.id===ADD_BOOKING_ITEM.supplierId),it=s&&(s.catalog||[])[ADD_BOOKING_ITEM.catalogIndex];rate=it?it.rate:0;
     const cost=$("#ae-cost");if(cost)cost.textContent=it?`Supplier rate: ${money(it.rate)}/day`:'No catalogue item selected';
   }
@@ -1114,24 +1143,22 @@ function syncAddBookingRate(){
 function renderAddBookingItem(){
   const st=ADD_BOOKING_ITEM,b=st&&DATA.bookings.find(x=>x.code===st.code);if(!st||!b)return;
   const own=DATA.cameras.concat(DATA.accessories).filter(i=>i.status==="available");
-  const supplier=(DATA.suppliers||[]).find(s=>s.id===st.supplierId)||(DATA.suppliers||[])[0]||null;
-  if(supplier)st.supplierId=supplier.id;
+  const supplier=(DATA.suppliers||[]).find(s=>s.id===st.supplierId)||null;
   const cat=supplier&&(supplier.catalog||[])[st.catalogIndex];
   const ownOpts=own.map(i=>`<option value="${escAttr(i.code)}">${escAttr(i.name)} — ${money(i.dailyRate)}/day</option>`).join("");
-  const supplierOpts=(DATA.suppliers||[]).map(s=>`<option value="${escAttr(s.id)}" ${s.id===st.supplierId?'selected':''}>${escAttr(s.name)}</option>`).join('');
-  const catOpts=supplier?(supplier.catalog||[]).map((i,n)=>`<option value="${n}" ${n===st.catalogIndex?'selected':''}>${escAttr(i.item)} — ${money(i.rate)}/day</option>`).join(''):'';
   const source=st.mode==='own'
     ? (own.length?`<div class="field"><label>Available inventory</label><select id="ae-item" onchange="syncAddBookingRate()">${ownOpts}</select></div>`:'<div class="empty" style="padding:18px">No owned equipment is currently available.</div>')
     : st.mode==='supplier'
-      ? (supplier?`<div class="r2"><div class="field"><label>Supplier</label><select onchange="setAddBookingSupplier(this.value)">${supplierOpts}</select></div><div class="field"><label>Supplier equipment</label><select id="ae-item" onchange="syncAddBookingRate()">${catOpts}</select></div></div><div class="muted" id="ae-cost" style="font-size:12px;margin:-5px 0 13px">${cat?'Supplier rate: '+money(cat.rate)+'/day':'This supplier has no catalogue items.'}</div>`:'<div class="empty" style="padding:18px">Add a supplier and catalogue item first.</div>')
+      ? ((DATA.suppliers||[]).length?`<div class="field"><label>Search supplier equipment</label><input id="ae-supplier-search" value="${escAttr(st.supplierQuery)}" placeholder="e.g. Ultra Prime, SkyPanel, generator" oninput="searchBookingSupplierEquipment(this.value)"></div><div id="ae-supplier-selected" class="preview" style="margin-bottom:10px">Select one supplier offer below.</div><div id="ae-supplier-results" style="max-height:245px;overflow:auto"></div>`:'<div class="empty" style="padding:18px">Add a supplier and catalogue item first.</div>')
       : `<div class="field"><label>Item / service name</label><input id="ae-name" placeholder="e.g. Car service"></div>`;
   const defaultRate=st.mode==='own'?(own[0]&&own[0].dailyRate)||0:st.mode==='supplier'?(cat&&cat.rate)||0:'';
-  openModal(`<h3>Add booking item</h3><p class="mut">Choose owned gear, hire from a supplier, or enter a one-off item.</p>
+  openModal(`<h3>Add booking item</h3><p class="mut">Choose owned gear, search all supplier catalogues, or enter a one-off item.</p>
     <div class="tabs"><div class="tab ${st.mode==='own'?'active':''}" onclick="setAddBookingMode('own')">My inventory</div><div class="tab ${st.mode==='supplier'?'active':''}" onclick="setAddBookingMode('supplier')">Supplier equipment</div><div class="tab ${st.mode==='manual'?'active':''}" onclick="setAddBookingMode('manual')">Manual item</div></div>
     ${source}
     <div class="r2"><div class="field"><label>Customer price per day ₹</label><input type="number" min="0" id="ae-rate" value="${defaultRate}"></div><div class="field"><label>Quantity</label><input type="number" min="1" step="1" id="ae-qty" value="${st.qty}"></div></div>
     <div class="r2"><div class="field"><label>From</label><input type="date" id="ae-from" value="${st.from}"></div><div class="field"><label>To</label><input type="date" id="ae-to" value="${st.to}"></div></div>
     <button class="btn btn-primary" style="width:100%" onclick="doAddEquip('${st.code}')">Add to booking</button>`);
+  if(st.mode==='supplier')renderBookingSupplierOffers();
 }
 async function doAddEquip(code){
   const b=DATA.bookings.find(x=>x.code===code),st=ADD_BOOKING_ITEM;if(!b||!st)return;
@@ -1144,8 +1171,8 @@ async function doAddEquip(code){
     const it=DATA.cameras.concat(DATA.accessories).find(i=>i.code===$("#ae-item").value);if(!it)return toast("Select available equipment");
     isCam=DATA.cameras.some(c=>c.code===it.code);l={code:it.code,name:it.name,rate,qty,start,end,lineKind:'own',optionName:it.optionName||null};
   }else if(st.mode==='supplier'){
-    const supplier=(DATA.suppliers||[]).find(s=>s.id===st.supplierId),it=supplier&&(supplier.catalog||[])[Number($("#ae-item").value||0)];
-    if(!supplier||!it)return toast("Select supplier equipment");
+    const supplier=(DATA.suppliers||[]).find(s=>s.id===st.supplierId),it=supplier&&(supplier.catalog||[])[st.catalogIndex];
+    if(!supplier||!it)return toast("Search equipment and select a supplier offer");
     l={code:'(hire-in)',name:it.item,rate,qty,start,end,lineKind:'hirein',supplierId:supplier.id,cost:it.rate};
   }else{
     const name=$("#ae-name").value.trim();if(!name)return toast("Enter the item or service name");
