@@ -143,7 +143,8 @@ window.SDB = (function () {
         const c = custs.data.find(x => x.id === b.customer_id) || {};
         return {
           code: b.code, customer: b.customer_id, production: b.production_name, project: b.project_name,
-          contact: b.contact_name, phone: b.contact_phone, status: b.status,
+          contact: b.contact_name, phone: b.contact_phone,
+          status: b.status === "checked_out" && b.end_at < (window.TODAY || "9999-12-31") && ls.some(l => !l.returned_at) ? "overdue" : b.status,
           start: b.start_at, end: b.end_at, pickup: b.pickup_location, operator: b.operator_name || "",
           otherCharges: Number(b.other_charges_inr || 0), discount: Number(b.discount_inr || 0), deposit: Number(b.deposit_inr || 0),
           cameras: ls.filter(l => l.kind === "camera").map(mapLine),

@@ -410,10 +410,13 @@ function searchView(q){
 const VIEWS={};
 
 /* ---- Dashboard ---- */
+function bookingHasUnreturnedItems(b){return [...(b.cameras||[]),...(b.accessories||[])].some(l=>!l.returnedAt);}
+function isBookingOverdue(b){return ["checked_out","overdue"].includes(b.status)&&b.end<TODAY&&bookingHasUnreturnedItems(b);}
 VIEWS.dashboard=()=>{
   const outUnits=new Set();
-  DATA.bookings.filter(b=>["checked_out","overdue"].includes(b.status)).forEach(b=>b.cameras.forEach(c=>outUnits.add(c.code)));
-  const overdue=DATA.bookings.filter(b=>b.status==="overdue");
+  DATA.bookings.filter(b=>["checked_out","overdue"].includes(b.status)).forEach(b=>b.cameras.filter(c=>!c.returnedAt).forEach(c=>outUnits.add(c.code)));
+  const overdue=DATA.bookings.filter(isBookingOverdue);
+  const overdueItems=overdue.reduce((n,b)=>n+[...(b.cameras||[]),...(b.accessories||[])].filter(l=>!l.returnedAt).length,0);
   const pending=(DATA.requests||[]).filter(r=>r.status==="new");
   const coDue=DATA.bookings.filter(b=>b.start===TODAY&&["reserved","confirmed","preparing"].includes(b.status));
   const rtDue=DATA.bookings.filter(b=>b.end===TODAY&&["checked_out","overdue"].includes(b.status));
@@ -422,7 +425,7 @@ VIEWS.dashboard=()=>{
   return `
   <div class="metrics">
     ${m("Cameras out",outUnits.size,"physically on set",true)}
-    ${m("Overdue",overdue.length,overdue.length?"needs a call":"all clear")}
+    ${m("Overdue",overdue.length,overdue.length?overdueItems+" unreturned item"+(overdueItems===1?"":"s")+" · needs a call":"all clear")}
     ${m("Pending requests",pending.length,"awaiting a quote")}
     ${m("Checkouts due today",coDue.length,"handover pending")}
     ${m("Returns due today",rtDue.length,"expected back")}
