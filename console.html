@@ -247,7 +247,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=20260828v"></script>
 <script src="console-data.js?v=20260903-directory1"></script>
-<script src="console-db.js?v=20260903-directory1"></script>
+<script src="console-db.js?v=20260903-bookingname1"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -261,6 +261,26 @@ function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");cl
 /* ---- WhatsApp (Phase 1: click-to-chat, staff taps send) ---- */
 const waEsc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'");
 const escAttr=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+/* Capitalize only the first character; leave the remaining user-entered casing untouched. */
+function capFirst(value){
+  const text=String(value==null?"":value).trim();
+  return text.replace(/^([a-z])/,letter=>letter.toUpperCase());
+}
+function cleanBookingProject(value){
+  const project=capFirst(value);
+  return project.toLowerCase()==="walk-in booking"?"":project;
+}
+function bookingDisplayTitle(b){
+  return cleanBookingProject(b&&b.project)||capFirst(b&&b.contact)||capFirst(b&&b.production)||(b&&b.code)||"Booking";
+}
+function normalizeConsoleNames(){
+  (DATA.customers||[]).forEach(x=>{x.name=capFirst(x.name);x.company=capFirst(x.company);});
+  (DATA.bookings||[]).forEach(x=>{x.contact=capFirst(x.contact);x.production=capFirst(x.production);x.project=cleanBookingProject(x.project);});
+  (DATA.requests||[]).forEach(x=>{x.name=capFirst(x.name);x.company=capFirst(x.company);x.project=cleanBookingProject(x.project);});
+  (DATA.suppliers||[]).forEach(x=>{x.name=capFirst(x.name);});
+  (DATA.technicians||[]).forEach(x=>{x.name=capFirst(x.name);});
+  (DATA.crewMembers||[]).forEach(x=>{x.name=capFirst(x.name);});
+}
 /* Set a meaningful PDF filename (browsers use document.title) then print, restoring the title after. */
 function printAs(title){
   const prev=document.title;
@@ -287,6 +307,7 @@ async function sendQuoteWA(){
   const rr=(DATA.requests||[]).find(x=>x._uuid===u); if(rr)rr.status='quoted'; SDB.setRequestStatus(u,'quoted'); waSend(QCTX.phone,msg);}
 /* Printable customer quotation — same letterhead as the invoice/RFQ. */
 function printQuote(){
+  QCTX.name=capFirst(QCTX.name);QCTX.company=capFirst(QCTX.company);QCTX.project=cleanBookingProject(QCTX.project);
   if(!QCTX.name) return toast("Enter a customer name first");
   if(!QB.some(l=>l.type==='item'&&l.include&&l.name)) return toast("Add at least one item to quote");
   CUR='requests'; buildNav(); $("#pageTitle").textContent='Quotation';
@@ -331,10 +352,10 @@ function quoteLetter(){
   </div>`;
 }
 function sendReceiptWA(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const bal=Math.max(0,t.outstanding);
-  const msg=`Hi ${b.contact}, here is your invoice INV-${b.code.slice(3)} from Sri Cine Hub for "${b.project}" (${fmtDate(b.start)}–${fmtDate(b.end)}).\n\nTotal: ${money(t.charges)}\nPaid: ${money(t.paid)}\n${bal>0?"Balance due: "+money(bal):"Status: PAID IN FULL ✅"}\n\nThank you for renting with us!`;
+  const msg=`Hi ${b.contact}, here is your invoice INV-${b.code.slice(3)} from Sri Cine Hub for "${bookingDisplayTitle(b)}" (${fmtDate(b.start)}–${fmtDate(b.end)}).\n\nTotal: ${money(t.charges)}\nPaid: ${money(t.paid)}\n${bal>0?"Balance due: "+money(bal):"Status: PAID IN FULL ✅"}\n\nThank you for renting with us!`;
   waSend(b.phone,msg);}
 function sendReminderWA(code){const b=DATA.bookings.find(x=>x.code===code);const t=bookingTotals(b);const bal=Math.max(0,t.dueToday);
-  const msg=`Hi ${b.contact}, a gentle reminder from Sri Cine Hub regarding "${b.project}" (${b.code}).\n\nAmount due as of ${fmtDate(TODAY)}: ${money(bal)}.\nKindly clear it at your convenience. Thank you!`;
+  const msg=`Hi ${b.contact}, a gentle reminder from Sri Cine Hub regarding "${bookingDisplayTitle(b)}" (${b.code}).\n\nAmount due as of ${fmtDate(TODAY)}: ${money(bal)}.\nKindly clear it at your convenience. Thank you!`;
   waSend(b.phone,msg);}
 function waRFQ(contact,item,rate){const rl=rate?`\nWe have it noted at ₹${Number(rate).toLocaleString("en-IN")}/day — please confirm your rate.`:"";
   const msg=`Hi, this is Sri Cine Hub. Do you have "${item}" available for an upcoming shoot?${rl}\nPlease confirm availability and dates. Thank you.`;waSend(contact,msg);}
@@ -419,7 +440,7 @@ function searchView(q){
   const tech=(DATA.technicians||[]).filter(x=>hit(x.name)||hit(x.phone)||hit(x.notes)||hit(directoryNames(DATA.technicianExpertiseAreas,x.expertiseAreaIds).join(" "))||hit(directoryNames(DATA.technicianSubcategories,x.subcategoryIds).join(" ")));
   const crew=(DATA.crewMembers||[]).filter(x=>hit(x.name)||hit(x.phone)||hit(x.notes)||hit(directoryNames(DATA.crewRoles,x.roleIds).join(" ")));
   const sec=(title,rows)=>rows.length?`<div class="sec-title">${title} <span class="pill">${rows.length}</span></div><div class="card">${rows.join("")}</div>`:"";
-  const bkRows=bk.map(b=>`<div class="list-row" onclick="openBooking('${b.code}')"><div class="grow"><div class="t">${b.project} <span class="muted" style="font-weight:400">· ${b.code}</span></div><div class="sub">${b.production} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div></div><span class="badge b-ok">Open →</span></div>`);
+  const bkRows=bk.map(b=>`<div class="list-row" onclick="openBooking('${b.code}')"><div class="grow"><div class="t">${bookingDisplayTitle(b)} <span class="muted" style="font-weight:400">· ${b.code}</span></div><div class="sub">${capFirst(b.production)||b.code} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div></div><span class="badge b-ok">Open →</span></div>`);
   const gearRows=gear.map(g=>`<div class="list-row" onclick="go('inventory')"><div class="grow"><div class="t">${g.name} <span class="muted" style="font-weight:400">· ${g.code}</span></div><div class="sub">${g.manufacturer||g.category||g._t} · ${g.status||''}</div></div><span class="badge b-ok">Inventory →</span></div>`);
   const cusRows=cus.map(c=>`<div class="list-row" onclick="go('customers')"><div class="grow"><div class="t">${c.name}</div><div class="sub">${c.company||''}${c.phone?' · '+c.phone:''}</div></div><span class="badge b-ok">Customers →</span></div>`);
   const supRows=sup.map(x=>`<div class="list-row" onclick="go('suppliers')"><div class="grow"><div class="t">${x.name}</div><div class="sub">${x.contact||''}${x.phone?' · '+x.phone:''}</div></div><span class="badge b-ok">Suppliers →</span></div>`);
@@ -463,7 +484,7 @@ VIEWS.dashboard=()=>{
     <div class="card">
       <div class="card-h"><h3>Active bookings</h3><span class="lnk" onclick="go('bookings')">View all →</span></div>
       ${active.map(b=>{const t=bookingTotals(b);return `<div class="list-row" onclick="openBooking('${b.code}')">
-        <div class="grow"><div class="t">${b.project}</div><div class="sub">${b.production} · ${fmtDate(b.start)}–${fmtDate(b.end)} · ${money(t.outstanding)} due</div></div>
+        <div class="grow"><div class="t">${bookingDisplayTitle(b)}</div><div class="sub">${capFirst(b.production)||b.code} · ${fmtDate(b.start)}–${fmtDate(b.end)} · ${money(t.outstanding)} due</div></div>
         ${badge(b.status)}</div>`;}).join("")||`<div class="empty" style="padding:24px">No active bookings. Start one from <span class="lnk" onclick="go('quickrent')">Quick Rent</span>.</div>`}
     </div>
   </div>`;
@@ -557,7 +578,7 @@ function unitClashes(codes,start,end){
 }
 function clearQR(){ if(!QR.cart.length&&!QR.name&&!QR.phone&&!QR.prod&&!QR.project){toast("Nothing to clear");return;} if(confirm("Clear this booking form?")){ QR={cart:[],start:TODAY,end:"",tab:"all",q:"",name:"",phone:"",prod:"",project:""}; go("quickrent"); } }
 async function checkoutQR(){
-  const name=(QR.name||"").trim();
+  const name=capFirst(QR.name);
   if(!name)return toast("Enter a customer name");
   if(!QR.cart.length)return toast("Add at least one item");
   if(!QR.end)return toast("Set a return date");
@@ -566,8 +587,8 @@ async function checkoutQR(){
   const clash=unitClashes(QR.cart.map(c=>c.code),QR.start,QR.end);
   if(clash.length&&!confirm(clash.join("\n")+"\n\nThese are already booked for overlapping dates. Create this booking anyway?"))return;
   const code="BK-2026-"+String(Date.now()).slice(-6);
-  const prod=(QR.prod||"").trim(), phone=(QR.phone||"").trim(), proj=(QR.project||"").trim();
-  const b={code,customer:"CUS-new",production:prod||name,project:proj||"Walk-in booking",
+  const prod=capFirst(QR.prod), phone=(QR.phone||"").trim(), proj=cleanBookingProject(QR.project);
+  const b={code,customer:"CUS-new",production:prod||name,project:proj,
     contact:name,phone,status:"confirmed",start:QR.start,end:QR.end,pickup:"Studio floor",operator:"",
     cameras:QR.cart.filter(c=>c.type==="camera").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1,lineKind:'own'})),
     accessories:QR.cart.filter(c=>c.type==="accessory").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1,lineKind:'own'})),
@@ -700,6 +721,7 @@ function qbPick(src,name,rate,supplierId){
   renderQB(); renderQcatalog();
 }
 async function ensureRequest(){
+  QCTX.name=capFirst(QCTX.name);QCTX.company=capFirst(QCTX.company);QCTX.project=cleanBookingProject(QCTX.project);
   if(QCTX.requestUuid) return QCTX.requestUuid;
   if(!QCTX.name){ toast('Enter a customer name'); return null; }
   const code='REQ-'+Date.now().toString().slice(-8);
@@ -1079,8 +1101,8 @@ function saveBookingEdit(code){
   const b=DATA.bookings.find(x=>x.code===code);if(!b)return;
   const start=$("#eb-start").value,end=$("#eb-end").value;
   if(start&&end&&parseD(end)<parseD(start))return toast("End date can't be before start");
-  b.contact=$("#eb-contact").value.trim();b.phone=$("#eb-phone").value.trim();
-  b.production=$("#eb-prod").value.trim();b.project=$("#eb-project").value.trim();
+  b.contact=capFirst($("#eb-contact").value);b.phone=$("#eb-phone").value.trim();
+  b.production=capFirst($("#eb-prod").value);b.project=cleanBookingProject($("#eb-project").value);
   b.start=start||b.start;b.end=end||b.end;
   SDB.updateBooking(code,{contact:b.contact,phone:b.phone,production:b.production,project:b.project,start:b.start,end:b.end});
   closeModal();$("#content").innerHTML=bookingDetail(code);toast("Booking updated");
@@ -1509,13 +1531,13 @@ function editSupplierForm(id){
 }
 function saveSupplierEdit(id){
   const s=DATA.suppliers.find(x=>x.id===id);if(!s)return;
-  const name=($("#sp-name").value||"").trim();if(!name)return toast("Enter a supplier name");
+  const name=capFirst($("#sp-name").value);if(!name)return toast("Enter a supplier name");
   s.name=name;s.contact=($("#sp-contact").value||"").trim();s.specialisation=($("#sp-spec").value||"").trim();
   SDB.updateSupplier(id,{name:s.name,contact:s.contact,specialisation:s.specialisation});
   closeModal();go("suppliers");toast("Supplier updated");
 }
 async function saveSupplier(){
-  const name=($("#sp-name").value||"").trim();
+  const name=capFirst($("#sp-name").value);
   if(!name)return toast("Enter a supplier name");
   const s={name,contact:($("#sp-contact").value||"").trim(),specialisation:($("#sp-spec").value||"").trim(),catalog:[]};
   const id=await SDB.addSupplier(s);s.id=id||("SUP-"+Date.now());
@@ -1597,8 +1619,8 @@ function editCustomerForm(id){
 }
 function saveCustomerEdit(id){
   const c=DATA.customers.find(x=>x.id===id);if(!c)return;
-  const name=($("#cu-name").value||"").trim();if(!name)return toast("Enter a name");
-  c.name=name;c.company=($("#cu-company").value||"").trim();c.phone=($("#cu-phone").value||"").trim();
+  const name=capFirst($("#cu-name").value);if(!name)return toast("Enter a name");
+  c.name=name;c.company=capFirst($("#cu-company").value);c.phone=($("#cu-phone").value||"").trim();
   SDB.updateCustomer(id,{name:c.name,company:c.company,phone:c.phone});
   closeModal();go("customers");toast("Customer updated");
 }
@@ -1703,7 +1725,7 @@ function toggleTechnicianSubcategory(id,checked){
   renderTechnicianSkills();
 }
 async function saveTechnician(){
-  const name=($("#tech-name").value||"").trim(),phone=($("#tech-phone").value||"").trim(),notes=($("#tech-notes").value||"").trim();
+  const name=capFirst($("#tech-name").value),phone=($("#tech-phone").value||"").trim(),notes=($("#tech-notes").value||"").trim();
   if(!name)return toast("Enter technician name");if(!phone)return toast("Enter phone number");if(!TECH_FORM.areaIds.size)return toast("Select at least one expertise area");
   const duplicate=duplicateDirectoryPhone(phone,"technician",TECH_FORM.id);if(duplicate&&!confirm("This phone number is already used by "+duplicate.name+". Save anyway?"))return;
   const record={name,phone,notes,expertiseAreaIds:[...TECH_FORM.areaIds],subcategoryIds:[...TECH_FORM.subcategoryIds],isActive:true};
@@ -1760,7 +1782,7 @@ function renderCrewRoleOptions(){
 }
 function toggleCrewRole(id,checked){if(checked)CREW_FORM.roleIds.add(id);else CREW_FORM.roleIds.delete(id);renderCrewRoleOptions();}
 async function saveCrewMember(){
-  const name=($("#crew-name").value||"").trim(),phone=($("#crew-phone").value||"").trim(),notes=($("#crew-notes").value||"").trim();
+  const name=capFirst($("#crew-name").value),phone=($("#crew-phone").value||"").trim(),notes=($("#crew-notes").value||"").trim();
   if(!name)return toast("Enter crew member name");if(!phone)return toast("Enter phone number");if(!CREW_FORM.roleIds.size)return toast("Select at least one crew role");
   const duplicate=duplicateDirectoryPhone(phone,"crew",CREW_FORM.id);if(duplicate&&!confirm("This phone number is already used by "+duplicate.name+". Save anyway?"))return;
   const record={name,phone,notes,roleIds:[...CREW_FORM.roleIds],isActive:true};
@@ -2342,7 +2364,7 @@ let SESSION_ENDED=false;
 window.onSessionExpired=async function(){ if(SESSION_ENDED)return; SESSION_ENDED=true; try{await SDB.signOut();}catch(e){} const app=document.querySelector('.app'); if(app)app.style.display='none'; showLogin('Your session expired — please sign in again.'); };
 async function boot(){
   const app=document.querySelector('.app');
-  if(!SDB.on){ ROLE='admin'; MYNAME='Demo'; await SDB.bootstrap(); app.style.display=''; buildNav(); renderUserChip(); go('dashboard'); return; }
+  if(!SDB.on){ ROLE='admin'; MYNAME='Demo'; await SDB.bootstrap(); normalizeConsoleNames(); app.style.display=''; buildNav(); renderUserChip(); go('dashboard'); return; }
   const user=await SDB.currentUser();
   if(!user){ app.style.display='none'; showLogin(); return; }
   const prof=await SDB.myProfile();
@@ -2351,7 +2373,7 @@ async function boot(){
   const ov=document.getElementById('loginOverlay'); if(ov) ov.remove();
   const status=await SDB.bootstrap(ROLE);
   if(status==='auth'){ await SDB.signOut(); app.style.display='none'; showLogin('Your session expired — please sign in again.'); return; }
-  app.style.display=''; buildNav(); renderUserChip(); go('dashboard');
+  normalizeConsoleNames();app.style.display=''; buildNav(); renderUserChip(); go('dashboard');
 }
 document.querySelector('.app').style.display='none';
 boot();

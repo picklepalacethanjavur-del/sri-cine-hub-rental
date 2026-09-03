@@ -242,7 +242,7 @@ window.SDB = (function () {
       if (error) throw error; customer_id = data.id;
     }
     const { data: bk, error: be } = await sb.from("bookings").insert({
-      code: b.code, customer_id, status: b.status, production_name: b.production, project_name: b.project,
+      code: b.code, customer_id, status: b.status, production_name: b.production, project_name: b.project || null,
       contact_name: b.contact, contact_phone: b.phone, start_at: b.start, end_at: b.end, pickup_location: b.pickup
     }).select("id").single();
     if (be) throw be;
