@@ -111,6 +111,14 @@
   .modal h3{font-family:var(--font-display);font-size:21px;margin-bottom:4px}
   .modal .mut{color:var(--mut);font-size:13px;margin-bottom:18px}
   .preview{background:var(--gold-soft);border-radius:9px;padding:11px 13px;font-size:13px;color:var(--gold);margin:6px 0 16px;font-weight:600}
+  .dir-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .dir-tools .tsearch{flex:1;min-width:220px}.dir-tools select{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text)}
+  .dir-tags{display:flex;gap:6px;flex-wrap:wrap}.dir-choice{display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:var(--panel);font-size:13px}
+  .dir-choice:has(input:checked){border-color:var(--gold);background:var(--gold-soft)}.dir-choice input{width:auto;margin:0}
+  .dir-skill-box{border:1px solid var(--line);border-radius:10px;padding:11px;margin:9px 0;background:var(--panel)}
+  .dir-manager-row{border-bottom:1px solid var(--line);padding:12px 0}.dir-manager-row:last-child{border-bottom:0}
+  .dir-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+  @media(max-width:760px){.dir-table thead{display:none}.dir-table,.dir-table tbody,.dir-table tr,.dir-table td{display:block;width:100%}.dir-table tr{padding:12px 14px;border-bottom:1px solid var(--line)}.dir-table td{padding:4px 0;border:0}.dir-actions{justify-content:flex-start;margin-top:7px}}
   /* toast */
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(140%);background:var(--gold);color:#000;padding:12px 20px;border-radius:10px;font-weight:600;font-size:13.5px;z-index:70;transition:.28s;box-shadow:var(--shadow)}
   .toast.show{transform:translateX(-50%)}
@@ -238,8 +246,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=20260828v"></script>
-<script src="console-data.js?v=20260828v"></script>
-<script src="console-db.js?v=20260831-investor1"></script>
+<script src="console-data.js?v=20260903-directory1"></script>
+<script src="console-db.js?v=20260903-directory1"></script>
 <script>
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -374,6 +382,8 @@ const NAV=[
   {v:"hirein",i:"🚚",t:"Hire-In"},
   {v:"suppliers",i:"🏢",t:"Suppliers"},
   {v:"customers",i:"👤",t:"Customers"},
+  {v:"technicians",i:"🛠️",t:"Technicians"},
+  {v:"crew",i:"🎬",t:"Crew Members"},
   {grp:"Finance"},
   {v:"receipts",i:"🧾",t:"Invoices"},
   {v:"investor",i:"📈",t:"Investor Portal"},
@@ -381,7 +391,7 @@ const NAV=[
   {v:"users",i:"👥",t:"Users"}
 ];
 let ROLE="manager", CUR="dashboard";
-const ALLOWED={admin:"*",manager:["dashboard","quickrent","requests","bookings","checkout","calendar","inventory","hirein","suppliers","customers","receipts"],investor:["investor"]};
+const ALLOWED={admin:"*",manager:["dashboard","quickrent","requests","bookings","checkout","calendar","inventory","hirein","suppliers","customers","technicians","crew","receipts"],investor:["investor"]};
 function canSee(v){const a=ALLOWED[ROLE];return a==="*"||a.includes(v);}
 function buildNav(){
   const el=$("#nav");el.innerHTML="";
@@ -398,7 +408,7 @@ function buildNav(){
 }
 function setRole(r){ROLE=r;$("#avatar").textContent=r[0].toUpperCase();if(!canSee(CUR))CUR=(ALLOWED[r]==="*"?"dashboard":ALLOWED[r][0]);buildNav();go(CUR);}
 function go(v,param){if(ROLE&&!canSee(v)){v=(ALLOWED[ROLE]==="*"?"dashboard":(ALLOWED[ROLE][0]||"dashboard"));param=undefined;}CUR=v;buildNav();const V=VIEWS[v];$("#pageTitle").textContent=(NAV.find(n=>n.v===v)||{}).t||"";$("#content").innerHTML=V?V(param):"<div class='empty'>Coming soon.</div>";if(V&&V.after)V.after(param);window.scrollTo(0,0);}
-/* Global search across bookings, gear, customers, suppliers. */
+/* Global search across bookings, gear, customers, suppliers, technicians and crew. */
 function gsearch(raw){const q=(raw||"").trim();if(!q){toast("Type something to search");return;}if(ROLE&&!canSee("dashboard")){toast("Search isn't available for this role");return;}CUR="";buildNav();$("#pageTitle").textContent='Search: "'+q+'"';$("#content").innerHTML=searchView(q);window.scrollTo(0,0);}
 function searchView(q){
   const s=q.toLowerCase(),hit=t=>String(t||"").toLowerCase().includes(s);
@@ -406,12 +416,16 @@ function searchView(q){
   const gear=[...(DATA.cameras||[]).map(c=>({...c,_t:"camera"})),...(DATA.accessories||[]).map(a=>({...a,_t:"accessory"}))].filter(g=>hit(g.name)||hit(g.code)||hit(g.manufacturer)||hit(g.category));
   const cus=(DATA.customers||[]).filter(c=>hit(c.name)||hit(c.company)||hit(c.phone));
   const sup=(DATA.suppliers||[]).filter(x=>hit(x.name)||hit(x.contact)||hit(x.phone));
+  const tech=(DATA.technicians||[]).filter(x=>hit(x.name)||hit(x.phone)||hit(x.notes)||hit(directoryNames(DATA.technicianExpertiseAreas,x.expertiseAreaIds).join(" "))||hit(directoryNames(DATA.technicianSubcategories,x.subcategoryIds).join(" ")));
+  const crew=(DATA.crewMembers||[]).filter(x=>hit(x.name)||hit(x.phone)||hit(x.notes)||hit(directoryNames(DATA.crewRoles,x.roleIds).join(" ")));
   const sec=(title,rows)=>rows.length?`<div class="sec-title">${title} <span class="pill">${rows.length}</span></div><div class="card">${rows.join("")}</div>`:"";
   const bkRows=bk.map(b=>`<div class="list-row" onclick="openBooking('${b.code}')"><div class="grow"><div class="t">${b.project} <span class="muted" style="font-weight:400">· ${b.code}</span></div><div class="sub">${b.production} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div></div><span class="badge b-ok">Open →</span></div>`);
   const gearRows=gear.map(g=>`<div class="list-row" onclick="go('inventory')"><div class="grow"><div class="t">${g.name} <span class="muted" style="font-weight:400">· ${g.code}</span></div><div class="sub">${g.manufacturer||g.category||g._t} · ${g.status||''}</div></div><span class="badge b-ok">Inventory →</span></div>`);
   const cusRows=cus.map(c=>`<div class="list-row" onclick="go('customers')"><div class="grow"><div class="t">${c.name}</div><div class="sub">${c.company||''}${c.phone?' · '+c.phone:''}</div></div><span class="badge b-ok">Customers →</span></div>`);
   const supRows=sup.map(x=>`<div class="list-row" onclick="go('suppliers')"><div class="grow"><div class="t">${x.name}</div><div class="sub">${x.contact||''}${x.phone?' · '+x.phone:''}</div></div><span class="badge b-ok">Suppliers →</span></div>`);
-  const out=sec("Bookings",bkRows)+sec("Gear",gearRows)+sec("Customers",cusRows)+sec("Suppliers",supRows);
+  const techRows=tech.map(x=>`<div class="list-row" onclick="go('technicians')"><div class="grow"><div class="t">${escAttr(x.name)}</div><div class="sub">${escAttr(directoryNames(DATA.technicianExpertiseAreas,x.expertiseAreaIds).join(" · ")||"Technician")}${x.phone?' · '+escAttr(x.phone):''}</div></div><span class="badge b-ok">Technicians →</span></div>`);
+  const crewRows=crew.map(x=>`<div class="list-row" onclick="go('crew')"><div class="grow"><div class="t">${escAttr(x.name)}</div><div class="sub">${escAttr(directoryNames(DATA.crewRoles,x.roleIds).join(" · ")||"Crew member")}${x.phone?' · '+escAttr(x.phone):''}</div></div><span class="badge b-ok">Crew Members →</span></div>`);
+  const out=sec("Bookings",bkRows)+sec("Gear",gearRows)+sec("Customers",cusRows)+sec("Suppliers",supRows)+sec("Technicians",techRows)+sec("Crew Members",crewRows);
   return `<button class="btn btn-ghost" style="margin-bottom:14px" onclick="go('dashboard')">← Dashboard</button>`+(out||`<div class="empty" style="padding:40px">No matches for "${q}".</div>`);
 }
 
@@ -1588,6 +1602,264 @@ function saveCustomerEdit(id){
   SDB.updateCustomer(id,{name:c.name,company:c.company,phone:c.phone});
   closeModal();go("customers");toast("Customer updated");
 }
+
+/* ---- Technicians / Crew Members directory ---- */
+const directorySort=(a,b)=>(a.sortOrder||0)-(b.sortOrder||0)||String(a.name||"").localeCompare(String(b.name||""));
+function directoryNames(rows,ids){
+  const wanted=new Set(ids||[]);
+  return (rows||[]).filter(x=>wanted.has(x.id)).sort(directorySort).map(x=>x.name);
+}
+function directoryBadges(names){
+  return names.length?`<div class="dir-tags">${names.map(n=>`<span class="badge b-info">${escAttr(n)}</span>`).join("")}</div>`:'<span class="muted">—</span>';
+}
+const jsAttr=s=>escAttr(waEsc(s));
+function filterDirectoryChoices(containerId,value){
+  const q=String(value||"").trim().toLowerCase();
+  document.querySelectorAll("#"+containerId+" [data-dir-search]").forEach(el=>{el.style.display=!q||el.dataset.dirSearch.includes(q)?"":"none";});
+}
+function messageDirectoryContact(phone,name){waSend(phone,`Hi ${name}, this is Sri Cine Hub.`);}
+function callDirectoryContact(phone){
+  const number=String(phone||"").replace(/[^0-9+]/g,"");if(!number)return toast("No phone number on file");
+  location.href="tel:"+number;
+}
+function directoryPhoneButtons(phone,name){
+  return phone?`<div class="dir-actions"><button class="btn btn-ghost btn-sm" onclick="callDirectoryContact('${jsAttr(phone)}')">📞 Call</button><button class="btn btn-ghost btn-sm" onclick="messageDirectoryContact('${jsAttr(phone)}','${jsAttr(name)}')">💬 WhatsApp</button></div>`:'<span class="muted">—</span>';
+}
+function duplicateDirectoryPhone(phone,kind,id){
+  const key=String(phone||"").replace(/\D/g,"");if(!key)return null;
+  const sources=[["technician",DATA.technicians||[]],["crew",DATA.crewMembers||[]]];
+  for(const [source,rows] of sources){
+    const match=rows.find(x=>!(source===kind&&x.id===id)&&String(x.phone||"").replace(/\D/g,"")===key);
+    if(match)return match;
+  }
+  return null;
+}
+const nextDirectorySort=rows=>(rows||[]).reduce((n,x)=>Math.max(n,x.sortOrder||0),0)+10;
+const persistedUpdate=result=>!SDB.on||result===true;
+const persistedInsert=result=>!SDB.on||!!result;
+
+let TECH_DIRECTORY={q:"",area:"all",status:"active"},CREW_DIRECTORY={q:"",role:"all",status:"active"};
+VIEWS.technicians=()=>{
+  const areas=(DATA.technicianExpertiseAreas||[]).filter(x=>x.isActive).sort(directorySort);
+  return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:15px;flex-wrap:wrap">
+    <p class="muted" style="margin:0;font-size:13px">Equipment service contacts, searchable by expertise and specialization.</p>
+    <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="openExpertiseManager()">⚙ Manage expertise</button><button class="btn btn-primary btn-sm" onclick="openTechnicianForm()">＋ Add technician</button></div>
+  </div>
+  <div class="card" style="padding:14px">
+    <div class="dir-tools"><div class="tsearch"><span class="ic">🔍</span><input placeholder="Search name, phone, expertise or notes" value="${escAttr(TECH_DIRECTORY.q)}" oninput="TECH_DIRECTORY.q=this.value;renderTechnicians()"></div>
+      <select onchange="TECH_DIRECTORY.area=this.value;renderTechnicians()"><option value="all">All expertise</option>${areas.map(x=>`<option value="${x.id}" ${TECH_DIRECTORY.area===x.id?'selected':''}>${escAttr(x.name)}</option>`).join("")}</select>
+      <select onchange="TECH_DIRECTORY.status=this.value;renderTechnicians()"><option value="active" ${TECH_DIRECTORY.status==='active'?'selected':''}>Active</option><option value="archived" ${TECH_DIRECTORY.status==='archived'?'selected':''}>Archived</option><option value="all" ${TECH_DIRECTORY.status==='all'?'selected':''}>All</option></select>
+    </div><div id="technician-list"></div>
+  </div>`;
+};
+VIEWS.technicians.after=()=>renderTechnicians();
+function renderTechnicians(){
+  const el=$("#technician-list");if(!el)return;
+  const q=TECH_DIRECTORY.q.trim().toLowerCase();
+  const rows=(DATA.technicians||[]).filter(t=>{
+    const areaNames=directoryNames(DATA.technicianExpertiseAreas,t.expertiseAreaIds),subNames=directoryNames(DATA.technicianSubcategories,t.subcategoryIds);
+    const statusOk=TECH_DIRECTORY.status==="all"||(TECH_DIRECTORY.status==="active"?t.isActive:t.isActive===false);
+    return statusOk&&(TECH_DIRECTORY.area==="all"||(t.expertiseAreaIds||[]).includes(TECH_DIRECTORY.area))&&(!q||(t.name+" "+t.phone+" "+t.notes+" "+areaNames.join(" ")+" "+subNames.join(" ")).toLowerCase().includes(q));
+  }).sort((a,b)=>a.name.localeCompare(b.name));
+  if(!rows.length){el.innerHTML='<div class="empty">No technicians found.</div>';return;}
+  el.innerHTML=`<table class="dir-table"><thead><tr><th>Technician</th><th>Expertise & specialization</th><th>Phone</th><th>Notes</th><th></th></tr></thead><tbody>${rows.map(t=>{
+    const skills=[...directoryNames(DATA.technicianExpertiseAreas,t.expertiseAreaIds),...directoryNames(DATA.technicianSubcategories,t.subcategoryIds)];
+    return `<tr><td><b>${escAttr(t.name)}</b> ${t.isActive?'':'<span class="badge b-mut">archived</span>'}</td><td>${directoryBadges(skills)}</td><td><div>${escAttr(t.phone)}</div>${directoryPhoneButtons(t.phone,t.name)}</td><td class="muted">${escAttr(t.notes||'—')}</td><td><div class="dir-actions"><button class="btn btn-ghost btn-sm" onclick="openTechnicianForm('${t.id}')">Edit</button><button class="btn btn-ghost btn-sm" onclick="setTechnicianActive('${t.id}',${!t.isActive})">${t.isActive?'Archive':'Restore'}</button></div></td></tr>`;
+  }).join("")}</tbody></table>`;
+}
+
+let TECH_FORM=null;
+function openTechnicianForm(id){
+  const t=(DATA.technicians||[]).find(x=>x.id===id);
+  TECH_FORM={id:id||null,areaIds:new Set(t?t.expertiseAreaIds||[]:[]),subcategoryIds:new Set(t?t.subcategoryIds||[]:[])};
+  openModal(`<h3>${t?'Edit technician':'Add technician'}</h3><p class="mut">Add one or more expertise areas. New areas and specializations can be created here without leaving the form.</p>
+    <div class="r2"><div class="field"><label>Technician name *</label><input id="tech-name" value="${escAttr(t&&t.name||'')}" placeholder="Full name"></div><div class="field"><label>Phone number *</label><input id="tech-phone" value="${escAttr(t&&t.phone||'')}" placeholder="+91"></div></div>
+    <div class="field"><label>Expertise areas & specializations *</label><div id="tech-skills"></div></div>
+    <div class="field"><label>Notes</label><textarea id="tech-notes" rows="3" placeholder="Availability, location, experience or other details">${escAttr(t&&t.notes||'')}</textarea></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveTechnician()">${t?'Save changes':'Add technician'}</button>`,true);
+  renderTechnicianSkills();
+}
+function renderTechnicianSkills(){
+  const el=$("#tech-skills");if(!el||!TECH_FORM)return;
+  const areas=(DATA.technicianExpertiseAreas||[]).filter(x=>x.isActive||TECH_FORM.areaIds.has(x.id)).sort(directorySort);
+  const choices=areas.map(a=>`<label class="dir-choice" data-dir-search="${escAttr(a.name.toLowerCase())}"><input type="checkbox" ${TECH_FORM.areaIds.has(a.id)?'checked':''} onchange="toggleTechnicianArea('${a.id}',this.checked)">${escAttr(a.name)}${a.isActive?'':' (archived)'}</label>`).join("");
+  const details=areas.filter(a=>TECH_FORM.areaIds.has(a.id)).map(a=>{
+    const subs=(DATA.technicianSubcategories||[]).filter(s=>s.areaId===a.id&&(s.isActive||TECH_FORM.subcategoryIds.has(s.id))).sort(directorySort);
+    return `<div class="dir-skill-box"><b style="font-size:13px">${escAttr(a.name)} specializations</b>
+      <div class="dir-tags" style="margin-top:9px">${subs.map(s=>`<label class="dir-choice"><input type="checkbox" ${TECH_FORM.subcategoryIds.has(s.id)?'checked':''} onchange="toggleTechnicianSubcategory('${s.id}',this.checked)">${escAttr(s.name)}${s.isActive?'':' (archived)'}</label>`).join("")||'<span class="muted" style="font-size:12px">No specializations yet.</span>'}</div>
+      <div style="display:flex;gap:7px;margin-top:9px"><input id="tech-new-sub-${a.id}" placeholder="Add specialization, e.g. ARRI" style="flex:1"><button class="btn btn-ghost btn-sm" onclick="addTechnicianSubcategoryFromUI('${a.id}','form')">＋ Add</button></div>
+    </div>`;
+  }).join("");
+  el.innerHTML=`<input placeholder="Search expertise areas" oninput="filterDirectoryChoices('tech-area-options',this.value)" style="margin-bottom:9px"><div id="tech-area-options" class="dir-tags">${choices||'<span class="muted">Add the first expertise area below.</span>'}</div>
+    <div style="display:flex;gap:7px;margin-top:10px"><input id="tech-new-area" placeholder="Add new expertise area" style="flex:1"><button class="btn btn-ghost btn-sm" onclick="addExpertiseAreaFromUI('form')">＋ Add area</button></div>${details}`;
+}
+function toggleTechnicianArea(id,checked){
+  if(checked)TECH_FORM.areaIds.add(id);else{TECH_FORM.areaIds.delete(id);(DATA.technicianSubcategories||[]).filter(s=>s.areaId===id).forEach(s=>TECH_FORM.subcategoryIds.delete(s.id));}
+  renderTechnicianSkills();
+}
+function toggleTechnicianSubcategory(id,checked){
+  const sub=(DATA.technicianSubcategories||[]).find(x=>x.id===id);if(!sub)return;
+  if(checked){TECH_FORM.subcategoryIds.add(id);TECH_FORM.areaIds.add(sub.areaId);}else TECH_FORM.subcategoryIds.delete(id);
+  renderTechnicianSkills();
+}
+async function saveTechnician(){
+  const name=($("#tech-name").value||"").trim(),phone=($("#tech-phone").value||"").trim(),notes=($("#tech-notes").value||"").trim();
+  if(!name)return toast("Enter technician name");if(!phone)return toast("Enter phone number");if(!TECH_FORM.areaIds.size)return toast("Select at least one expertise area");
+  const duplicate=duplicateDirectoryPhone(phone,"technician",TECH_FORM.id);if(duplicate&&!confirm("This phone number is already used by "+duplicate.name+". Save anyway?"))return;
+  const record={name,phone,notes,expertiseAreaIds:[...TECH_FORM.areaIds],subcategoryIds:[...TECH_FORM.subcategoryIds],isActive:true};
+  if(TECH_FORM.id){
+    const result=await SDB.updateTechnician(TECH_FORM.id,record);if(!persistedUpdate(result))return;
+    Object.assign(DATA.technicians.find(x=>x.id===TECH_FORM.id),record);
+  }else{
+    const id=await SDB.addTechnician(record);if(!persistedInsert(id))return;record.id=id||("TECH-"+Date.now());DATA.technicians.push(record);
+  }
+  closeModal();go("technicians");toast(name+" saved");
+}
+async function setTechnicianActive(id,isActive){
+  const t=DATA.technicians.find(x=>x.id===id);if(!t)return;if(!isActive&&!confirm("Archive "+t.name+"?"))return;
+  const result=await SDB.updateTechnician(id,{isActive});if(!persistedUpdate(result))return;t.isActive=isActive;renderTechnicians();toast(t.name+(isActive?" restored":" archived"));
+}
+
+VIEWS.crew=()=>{
+  const roles=(DATA.crewRoles||[]).filter(x=>x.isActive).sort(directorySort);
+  return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:15px;flex-wrap:wrap">
+    <p class="muted" style="margin:0;font-size:13px">Production crew contacts with flexible, multi-select roles.</p>
+    <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="openCrewRoleManager()">⚙ Manage roles</button><button class="btn btn-primary btn-sm" onclick="openCrewForm()">＋ Add crew member</button></div>
+  </div>
+  <div class="card" style="padding:14px"><div class="dir-tools"><div class="tsearch"><span class="ic">🔍</span><input placeholder="Search name, phone, role or notes" value="${escAttr(CREW_DIRECTORY.q)}" oninput="CREW_DIRECTORY.q=this.value;renderCrewMembers()"></div>
+    <select onchange="CREW_DIRECTORY.role=this.value;renderCrewMembers()"><option value="all">All roles</option>${roles.map(x=>`<option value="${x.id}" ${CREW_DIRECTORY.role===x.id?'selected':''}>${escAttr(x.name)}</option>`).join("")}</select>
+    <select onchange="CREW_DIRECTORY.status=this.value;renderCrewMembers()"><option value="active" ${CREW_DIRECTORY.status==='active'?'selected':''}>Active</option><option value="archived" ${CREW_DIRECTORY.status==='archived'?'selected':''}>Archived</option><option value="all" ${CREW_DIRECTORY.status==='all'?'selected':''}>All</option></select>
+  </div><div id="crew-list"></div></div>`;
+};
+VIEWS.crew.after=()=>renderCrewMembers();
+function renderCrewMembers(){
+  const el=$("#crew-list");if(!el)return;const q=CREW_DIRECTORY.q.trim().toLowerCase();
+  const rows=(DATA.crewMembers||[]).filter(c=>{
+    const roleNames=directoryNames(DATA.crewRoles,c.roleIds),statusOk=CREW_DIRECTORY.status==="all"||(CREW_DIRECTORY.status==="active"?c.isActive:c.isActive===false);
+    return statusOk&&(CREW_DIRECTORY.role==="all"||(c.roleIds||[]).includes(CREW_DIRECTORY.role))&&(!q||(c.name+" "+c.phone+" "+c.notes+" "+roleNames.join(" ")).toLowerCase().includes(q));
+  }).sort((a,b)=>a.name.localeCompare(b.name));
+  if(!rows.length){el.innerHTML='<div class="empty">No crew members found.</div>';return;}
+  el.innerHTML=`<table class="dir-table"><thead><tr><th>Crew member</th><th>Roles / expertise</th><th>Phone</th><th>Notes</th><th></th></tr></thead><tbody>${rows.map(c=>`<tr><td><b>${escAttr(c.name)}</b> ${c.isActive?'':'<span class="badge b-mut">archived</span>'}</td><td>${directoryBadges(directoryNames(DATA.crewRoles,c.roleIds))}</td><td><div>${escAttr(c.phone)}</div>${directoryPhoneButtons(c.phone,c.name)}</td><td class="muted">${escAttr(c.notes||'—')}</td><td><div class="dir-actions"><button class="btn btn-ghost btn-sm" onclick="openCrewForm('${c.id}')">Edit</button><button class="btn btn-ghost btn-sm" onclick="setCrewMemberActive('${c.id}',${!c.isActive})">${c.isActive?'Archive':'Restore'}</button></div></td></tr>`).join("")}</tbody></table>`;
+}
+
+let CREW_FORM=null;
+function openCrewForm(id){
+  const c=(DATA.crewMembers||[]).find(x=>x.id===id);CREW_FORM={id:id||null,roleIds:new Set(c?c.roleIds||[]:[])};
+  openModal(`<h3>${c?'Edit crew member':'Add crew member'}</h3><p class="mut">Select one or more roles. A new role can be created directly in this form.</p>
+    <div class="r2"><div class="field"><label>Crew member name *</label><input id="crew-name" value="${escAttr(c&&c.name||'')}" placeholder="Full name"></div><div class="field"><label>Phone number *</label><input id="crew-phone" value="${escAttr(c&&c.phone||'')}" placeholder="+91"></div></div>
+    <div class="field"><label>Roles / expertise *</label><div id="crew-role-options"></div></div>
+    <div class="field"><label>Notes</label><textarea id="crew-notes" rows="3" placeholder="Availability, location, experience or other details">${escAttr(c&&c.notes||'')}</textarea></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveCrewMember()">${c?'Save changes':'Add crew member'}</button>`,true);
+  renderCrewRoleOptions();
+}
+function renderCrewRoleOptions(){
+  const el=$("#crew-role-options");if(!el||!CREW_FORM)return;
+  const roles=(DATA.crewRoles||[]).filter(x=>x.isActive||CREW_FORM.roleIds.has(x.id)).sort(directorySort);
+  el.innerHTML=`<input placeholder="Search crew roles" oninput="filterDirectoryChoices('crew-role-choices',this.value)" style="margin-bottom:9px"><div id="crew-role-choices" class="dir-tags">${roles.map(r=>`<label class="dir-choice" data-dir-search="${escAttr(r.name.toLowerCase())}"><input type="checkbox" ${CREW_FORM.roleIds.has(r.id)?'checked':''} onchange="toggleCrewRole('${r.id}',this.checked)">${escAttr(r.name)}${r.isActive?'':' (archived)'}</label>`).join("")||'<span class="muted">Add the first crew role below.</span>'}</div>
+    <div style="display:flex;gap:7px;margin-top:10px"><input id="crew-new-role" placeholder="Add new crew role" style="flex:1"><button class="btn btn-ghost btn-sm" onclick="addCrewRoleFromUI('form')">＋ Add role</button></div>`;
+}
+function toggleCrewRole(id,checked){if(checked)CREW_FORM.roleIds.add(id);else CREW_FORM.roleIds.delete(id);renderCrewRoleOptions();}
+async function saveCrewMember(){
+  const name=($("#crew-name").value||"").trim(),phone=($("#crew-phone").value||"").trim(),notes=($("#crew-notes").value||"").trim();
+  if(!name)return toast("Enter crew member name");if(!phone)return toast("Enter phone number");if(!CREW_FORM.roleIds.size)return toast("Select at least one crew role");
+  const duplicate=duplicateDirectoryPhone(phone,"crew",CREW_FORM.id);if(duplicate&&!confirm("This phone number is already used by "+duplicate.name+". Save anyway?"))return;
+  const record={name,phone,notes,roleIds:[...CREW_FORM.roleIds],isActive:true};
+  if(CREW_FORM.id){
+    const result=await SDB.updateCrewMember(CREW_FORM.id,record);if(!persistedUpdate(result))return;Object.assign(DATA.crewMembers.find(x=>x.id===CREW_FORM.id),record);
+  }else{
+    const id=await SDB.addCrewMember(record);if(!persistedInsert(id))return;record.id=id||("CREW-"+Date.now());DATA.crewMembers.push(record);
+  }
+  closeModal();go("crew");toast(name+" saved");
+}
+async function setCrewMemberActive(id,isActive){
+  const c=DATA.crewMembers.find(x=>x.id===id);if(!c)return;if(!isActive&&!confirm("Archive "+c.name+"?"))return;
+  const result=await SDB.updateCrewMember(id,{isActive});if(!persistedUpdate(result))return;c.isActive=isActive;renderCrewMembers();toast(c.name+(isActive?" restored":" archived"));
+}
+
+async function addExpertiseAreaFromUI(source){
+  const input=$(source==="form"?"#tech-new-area":"#dm-new-area"),name=(input&&input.value||"").trim();if(!name)return toast("Enter an expertise area");
+  let area=(DATA.technicianExpertiseAreas||[]).find(x=>x.name.toLowerCase()===name.toLowerCase());
+  if(area){
+    if(!area.isActive){const result=await SDB.updateExpertiseArea(area.id,{isActive:true});if(!persistedUpdate(result))return;area.isActive=true;}
+  }else{
+    const sortOrder=nextDirectorySort(DATA.technicianExpertiseAreas),id=await SDB.addExpertiseArea(name,sortOrder);if(!persistedInsert(id))return;
+    area={id:id||("TEA-"+Date.now()),name,sortOrder,isActive:true};DATA.technicianExpertiseAreas.push(area);
+  }
+  if(source==="form"&&TECH_FORM){TECH_FORM.areaIds.add(area.id);renderTechnicianSkills();}else renderExpertiseManager();
+  toast(area.name+" available");
+}
+async function addTechnicianSubcategoryFromUI(areaId,source){
+  const input=$(source==="form"?"#tech-new-sub-"+areaId:"#dm-new-sub-"+areaId),name=(input&&input.value||"").trim();if(!name)return toast("Enter a specialization");
+  let sub=(DATA.technicianSubcategories||[]).find(x=>x.areaId===areaId&&x.name.toLowerCase()===name.toLowerCase());
+  if(sub){
+    if(!sub.isActive){const result=await SDB.updateTechnicianSubcategory(sub.id,{isActive:true});if(!persistedUpdate(result))return;sub.isActive=true;}
+  }else{
+    const peers=(DATA.technicianSubcategories||[]).filter(x=>x.areaId===areaId),sortOrder=nextDirectorySort(peers);
+    const id=await SDB.addTechnicianSubcategory(areaId,name,sortOrder);if(!persistedInsert(id))return;
+    sub={id:id||("TSC-"+Date.now()),areaId,name,sortOrder,isActive:true};DATA.technicianSubcategories.push(sub);
+  }
+  if(source==="form"&&TECH_FORM){TECH_FORM.areaIds.add(areaId);TECH_FORM.subcategoryIds.add(sub.id);renderTechnicianSkills();}else renderExpertiseManager();
+  toast(sub.name+" available");
+}
+async function addCrewRoleFromUI(source){
+  const input=$(source==="form"?"#crew-new-role":"#dm-new-role"),name=(input&&input.value||"").trim();if(!name)return toast("Enter a crew role");
+  let role=(DATA.crewRoles||[]).find(x=>x.name.toLowerCase()===name.toLowerCase());
+  if(role){
+    if(!role.isActive){const result=await SDB.updateCrewRole(role.id,{isActive:true});if(!persistedUpdate(result))return;role.isActive=true;}
+  }else{
+    const sortOrder=nextDirectorySort(DATA.crewRoles),id=await SDB.addCrewRole(name,sortOrder);if(!persistedInsert(id))return;
+    role={id:id||("CR-"+Date.now()),name,sortOrder,isActive:true};DATA.crewRoles.push(role);
+  }
+  if(source==="form"&&CREW_FORM){CREW_FORM.roleIds.add(role.id);renderCrewRoleOptions();}else renderCrewRoleManager();
+  toast(role.name+" available");
+}
+
+function directoryMasterConfig(kind){
+  if(kind==="area")return {rows:DATA.technicianExpertiseAreas,save:SDB.updateExpertiseArea,prefix:"dm-area",refresh:renderExpertiseManager};
+  if(kind==="sub")return {rows:DATA.technicianSubcategories,save:SDB.updateTechnicianSubcategory,prefix:"dm-sub",refresh:renderExpertiseManager};
+  return {rows:DATA.crewRoles,save:SDB.updateCrewRole,prefix:"dm-role",refresh:renderCrewRoleManager};
+}
+async function renameDirectoryValue(kind,id){
+  const cfg=directoryMasterConfig(kind),row=cfg.rows.find(x=>x.id===id),input=$("#"+cfg.prefix+"-"+id),name=(input&&input.value||"").trim();if(!row||!name)return toast("Enter a name");
+  const result=await cfg.save(id,{name});if(!persistedUpdate(result))return;row.name=name;cfg.refresh();toast("Name updated");
+}
+async function toggleDirectoryValue(kind,id){
+  const cfg=directoryMasterConfig(kind),row=cfg.rows.find(x=>x.id===id);if(!row)return;const isActive=!row.isActive;
+  const result=await cfg.save(id,{isActive});if(!persistedUpdate(result))return;row.isActive=isActive;cfg.refresh();toast(row.name+(isActive?" restored":" archived"));
+}
+async function moveDirectoryValue(kind,id,delta){
+  const cfg=directoryMasterConfig(kind),target=cfg.rows.find(x=>x.id===id);if(!target)return;
+  const rows=cfg.rows.filter(x=>kind!=="sub"||x.areaId===target.areaId).sort(directorySort),index=rows.findIndex(x=>x.id===id),other=rows[index+delta];if(!other)return;
+  const a=target.sortOrder||0,b=other.sortOrder||0;
+  const [r1,r2]=await Promise.all([cfg.save(target.id,{sortOrder:b}),cfg.save(other.id,{sortOrder:a})]);if(SDB.on&&(r1!==true||r2!==true))return;
+  target.sortOrder=b;other.sortOrder=a;cfg.refresh();
+}
+function openExpertiseManager(){
+  openModal('<h3>Manage technician expertise</h3><p class="mut">Add, rename, reorder, archive or restore expertise areas and their specializations.</p><div id="expertise-manager"></div>',true);renderExpertiseManager();
+}
+function renderExpertiseManager(){
+  const el=$("#expertise-manager");if(!el)return;
+  const areas=(DATA.technicianExpertiseAreas||[]).slice().sort(directorySort);
+  el.innerHTML=`<div style="display:flex;gap:7px;margin-bottom:14px"><input id="dm-new-area" placeholder="New expertise area" style="flex:1"><button class="btn btn-primary btn-sm" onclick="addExpertiseAreaFromUI('manager')">＋ Add</button></div>
+    ${areas.map(a=>{
+      const subs=(DATA.technicianSubcategories||[]).filter(s=>s.areaId===a.id).sort(directorySort);
+      return `<div class="dir-manager-row"><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><input id="dm-area-${a.id}" value="${escAttr(a.name)}" style="flex:1;min-width:190px"><span class="badge ${a.isActive?'b-ok':'b-mut'}">${a.isActive?'active':'archived'}</span>
+        <button class="btn btn-ghost btn-sm" onclick="moveDirectoryValue('area','${a.id}',-1)">↑</button><button class="btn btn-ghost btn-sm" onclick="moveDirectoryValue('area','${a.id}',1)">↓</button><button class="btn btn-ghost btn-sm" onclick="renameDirectoryValue('area','${a.id}')">Save</button><button class="btn btn-ghost btn-sm" onclick="toggleDirectoryValue('area','${a.id}')">${a.isActive?'Archive':'Restore'}</button></div>
+        <div style="margin:9px 0 0 16px">${subs.map(s=>`<div style="display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap"><input id="dm-sub-${s.id}" value="${escAttr(s.name)}" style="flex:1;min-width:170px"><span class="badge ${s.isActive?'b-info':'b-mut'}">${s.isActive?'active':'archived'}</span><button class="btn btn-ghost btn-sm" onclick="moveDirectoryValue('sub','${s.id}',-1)">↑</button><button class="btn btn-ghost btn-sm" onclick="moveDirectoryValue('sub','${s.id}',1)">↓</button><button class="btn btn-ghost btn-sm" onclick="renameDirectoryValue('sub','${s.id}')">Save</button><button class="btn btn-ghost btn-sm" onclick="toggleDirectoryValue('sub','${s.id}')">${s.isActive?'Archive':'Restore'}</button></div>`).join("")}
+          <div style="display:flex;gap:6px;margin-top:7px"><input id="dm-new-sub-${a.id}" placeholder="New specialization" style="flex:1"><button class="btn btn-ghost btn-sm" onclick="addTechnicianSubcategoryFromUI('${a.id}','manager')">＋ Add</button></div></div>
+      </div>`;
+    }).join("")||'<div class="empty">No expertise areas yet.</div>'}`;
+}
+function openCrewRoleManager(){
+  openModal('<h3>Manage crew roles</h3><p class="mut">Add, rename, reorder, archive or restore the roles available in crew forms.</p><div id="crew-role-manager"></div>',true);renderCrewRoleManager();
+}
+function renderCrewRoleManager(){
+  const el=$("#crew-role-manager");if(!el)return;const roles=(DATA.crewRoles||[]).slice().sort(directorySort);
+  el.innerHTML=`<div style="display:flex;gap:7px;margin-bottom:14px"><input id="dm-new-role" placeholder="New crew role" style="flex:1"><button class="btn btn-primary btn-sm" onclick="addCrewRoleFromUI('manager')">＋ Add</button></div>
+    ${roles.map(r=>`<div class="dir-manager-row" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><input id="dm-role-${r.id}" value="${escAttr(r.name)}" style="flex:1;min-width:190px"><span class="badge ${r.isActive?'b-ok':'b-mut'}">${r.isActive?'active':'archived'}</span>
+      <button class="btn btn-ghost btn-sm" onclick="moveDirectoryValue('role','${r.id}',-1)">↑</button><button class="btn btn-ghost btn-sm" onclick="moveDirectoryValue('role','${r.id}',1)">↓</button><button class="btn btn-ghost btn-sm" onclick="renameDirectoryValue('role','${r.id}')">Save</button><button class="btn btn-ghost btn-sm" onclick="toggleDirectoryValue('role','${r.id}')">${r.isActive?'Archive':'Restore'}</button></div>`).join("")||'<div class="empty">No crew roles yet.</div>'}`;
+}
+
 const STUDIO={ name:'Sri Cine Hub Pvt Ltd', tagline:'Cinema Equipment Rental · Chennai',
   addr:'104 Brindavan Main Road, Valasaravakkam, Chennai 600087 (opp Reliance Digital)',
   phone:'+91 95000 72167', web:'www.sricinehub.com', sign:'Sridhar / Vijayashanthi' };
@@ -2023,7 +2295,7 @@ function userSetRole(id,role){ SDB.setProfile(id,{role}); toast('Role updated');
 function userToggle(id,active){ SDB.setProfile(id,{is_active:active}); go('users'); }
 
 /* ============ modal / theme ============ */
-function openModal(html){$("#modal").innerHTML=html+'<div style="text-align:right;margin-top:6px"><span class="lnk muted" style="cursor:pointer;font-size:12.5px" onclick="closeModal()">Cancel</span></div>';$("#ov").classList.add("show");}
+function openModal(html,wide){$("#modal").style.maxWidth=wide?"760px":"440px";$("#modal").innerHTML=html+'<div style="text-align:right;margin-top:6px"><span class="lnk muted" style="cursor:pointer;font-size:12.5px" onclick="closeModal()">Cancel</span></div>';$("#ov").classList.add("show");}
 function closeModal(){$("#ov").classList.remove("show");}
 let MODAL_BACKDROP_DOWN=false;
 $("#ov").addEventListener("pointerdown",e=>{MODAL_BACKDROP_DOWN=e.target.id==="ov";});

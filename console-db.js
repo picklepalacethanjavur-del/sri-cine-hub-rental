@@ -45,7 +45,8 @@ window.SDB = (function () {
       cameras: d.cameras || [], accessories: [], customers: [], bookings: d.bookings || [],
       requests: [], suppliers: [], payouts: d.payouts || [], settlements: d.settlements || [],
       config: d.config || { maintenancePct: 0.10, managerPct: 0.10 },
-      optionRates: {}, optionCats: {}, rfqs: []
+      optionRates: {}, optionCats: {}, rfqs: [], technicianExpertiseAreas: [],
+      technicianSubcategories: [], technicians: [], crewRoles: [], crewMembers: []
     };
     console.info("SDB live — loaded investor-scoped portal data from Supabase.");
     return true;
@@ -61,7 +62,8 @@ window.SDB = (function () {
     if (!ON) { console.info("SDB offline — using seed data (console-data.js)."); return false; }
     if (role === "investor") return bootstrapInvestor();
     try {
-      const [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows, aexp, quos, qitems] =
+      const [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows, aexp, quos, qitems,
+        techAreaRows, techSubRows, techRows, crewRoleRows, crewRows] =
         await Promise.all([
           sb.from("equipment_units").select("*"),
           sb.from("investors").select("*"),
@@ -81,11 +83,17 @@ window.SDB = (function () {
           sb.from("supplier_rfq_items").select("*"),
           sb.from("asset_expenses").select("*"),
           sb.from("quotations").select("*"),
-          sb.from("quotation_items").select("*")
+          sb.from("quotation_items").select("*"),
+          sb.from("technician_expertise_areas").select("*").order("sort_order").order("name"),
+          sb.from("technician_subcategories").select("*").order("sort_order").order("name"),
+          sb.from("technicians").select("*").order("full_name"),
+          sb.from("crew_roles").select("*").order("sort_order").order("name"),
+          sb.from("crew_members").select("*").order("full_name")
         ]);
       // Resilient load: one failed table must not wipe the whole console.
       // Log any errors, but let the tables that DID load populate normally.
-      const _all = [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows, aexp, quos, qitems];
+      const _all = [units, invs, ainv, custs, sups, scat, reqs, books, lines, pays, setts, shares, rcfg, opts, rfqRows, rfqItemRows, aexp, quos, qitems,
+        techAreaRows, techSubRows, techRows, crewRoleRows, crewRows];
       const _errs = _all.filter(r => r && r.error);
       if (_errs.length) console.warn("SDB: some tables failed to load —", _errs.map(r => r.error.message).join(" | "));
       // Expired / invalid session → tell boot() to show the login page, NOT a scary all-zero console.
@@ -163,6 +171,13 @@ window.SDB = (function () {
       });
 
       const customers = custs.data.map(c => ({ id: c.id, name: c.name, company: c.company_name || "", phone: c.phone || "" }));
+      const technicianExpertiseAreas = techAreaRows.data.map(x => ({ id: x.id, name: x.name, sortOrder: x.sort_order || 0, isActive: x.is_active !== false }));
+      const technicianSubcategories = techSubRows.data.map(x => ({ id: x.id, areaId: x.expertise_area_id, name: x.name, sortOrder: x.sort_order || 0, isActive: x.is_active !== false }));
+      const technicians = techRows.data.map(x => ({ id: x.id, name: x.full_name, phone: x.phone_number || "", notes: x.notes || "",
+        expertiseAreaIds: x.expertise_area_ids || [], subcategoryIds: x.subcategory_ids || [], isActive: x.is_active !== false }));
+      const crewRoles = crewRoleRows.data.map(x => ({ id: x.id, name: x.name, sortOrder: x.sort_order || 0, isActive: x.is_active !== false }));
+      const crewMembers = crewRows.data.map(x => ({ id: x.id, name: x.full_name, phone: x.phone_number || "", notes: x.notes || "",
+        roleIds: x.role_ids || [], isActive: x.is_active !== false }));
       // saved quotations → latest per request, mapped back to editable QB lines (preserves custom rates)
       const quoByReq = {}; quos.data.forEach(q => { if (q.request_id) (quoByReq[q.request_id] ||= []).push(q); });
       const itemsByQuo = {}; qitems.data.forEach(it => { (itemsByQuo[it.quotation_id] ||= []).push(it); });
@@ -208,7 +223,8 @@ window.SDB = (function () {
         start: q.start_at, end: q.end_at, pickup: q.pickup_at, ret: q.return_at,
         items: (rfqItemsByRfq[q.id] || []).map(it => ({ id: it.id, item: it.item, qty: it.qty || 1, requestedRate: it.requested_rate_inr != null ? Number(it.requested_rate_inr) : null, quotedRate: it.quoted_rate_inr != null ? Number(it.quoted_rate_inr) : null }))
       }));
-      window.DATA = { cameras, accessories, customers, bookings, requests, suppliers, payouts, settlements, config, optionRates, optionCats, rfqs };
+      window.DATA = { cameras, accessories, customers, bookings, requests, suppliers, payouts, settlements, config, optionRates, optionCats, rfqs,
+        technicianExpertiseAreas, technicianSubcategories, technicians, crewRoles, crewMembers };
       console.info("SDB live — loaded from Supabase.");
       return true;
     } catch (e) { if (authErr(e)) return "auth"; fail(e, "load"); return false; }
@@ -273,6 +289,72 @@ window.SDB = (function () {
     const MAP = { name: "name", company: "company_name", phone: "phone" };
     const row = {}; Object.keys(patch).forEach(k => { if (MAP[k]) row[MAP[k]] = patch[k]; });
     const { error } = await sb.from("customers").update(row).eq("id", id); if (error) throw error;
+  });
+  const addExpertiseArea = guard(async (name, sortOrder) => {
+    const { data, error } = await sb.from("technician_expertise_areas").insert({ name, sort_order: sortOrder || 0 }).select("id").single();
+    if (error) throw error; return data.id;
+  });
+  const updateExpertiseArea = guard(async (id, patch) => {
+    const row = {};
+    if (patch.name != null) row.name = patch.name;
+    if (patch.isActive != null) row.is_active = patch.isActive;
+    if (patch.sortOrder != null) row.sort_order = patch.sortOrder;
+    const { error } = await sb.from("technician_expertise_areas").update(row).eq("id", id); if (error) throw error; return true;
+  });
+  const addTechnicianSubcategory = guard(async (areaId, name, sortOrder) => {
+    const { data, error } = await sb.from("technician_subcategories").insert({ expertise_area_id: areaId, name, sort_order: sortOrder || 0 }).select("id").single();
+    if (error) throw error; return data.id;
+  });
+  const updateTechnicianSubcategory = guard(async (id, patch) => {
+    const row = {};
+    if (patch.name != null) row.name = patch.name;
+    if (patch.isActive != null) row.is_active = patch.isActive;
+    if (patch.sortOrder != null) row.sort_order = patch.sortOrder;
+    const { error } = await sb.from("technician_subcategories").update(row).eq("id", id); if (error) throw error; return true;
+  });
+  const addTechnician = guard(async technician => {
+    const { data, error } = await sb.from("technicians").insert({
+      full_name: technician.name, phone_number: technician.phone, notes: technician.notes || null,
+      expertise_area_ids: technician.expertiseAreaIds || [], subcategory_ids: technician.subcategoryIds || [], is_active: technician.isActive !== false
+    }).select("id").single();
+    if (error) throw error; return data.id;
+  });
+  const updateTechnician = guard(async (id, patch) => {
+    const row = {};
+    if (patch.name != null) row.full_name = patch.name;
+    if (patch.phone != null) row.phone_number = patch.phone;
+    if (patch.notes != null) row.notes = patch.notes || null;
+    if (patch.expertiseAreaIds != null) row.expertise_area_ids = patch.expertiseAreaIds;
+    if (patch.subcategoryIds != null) row.subcategory_ids = patch.subcategoryIds;
+    if (patch.isActive != null) row.is_active = patch.isActive;
+    const { error } = await sb.from("technicians").update(row).eq("id", id); if (error) throw error; return true;
+  });
+  const addCrewRole = guard(async (name, sortOrder) => {
+    const { data, error } = await sb.from("crew_roles").insert({ name, sort_order: sortOrder || 0 }).select("id").single();
+    if (error) throw error; return data.id;
+  });
+  const updateCrewRole = guard(async (id, patch) => {
+    const row = {};
+    if (patch.name != null) row.name = patch.name;
+    if (patch.isActive != null) row.is_active = patch.isActive;
+    if (patch.sortOrder != null) row.sort_order = patch.sortOrder;
+    const { error } = await sb.from("crew_roles").update(row).eq("id", id); if (error) throw error; return true;
+  });
+  const addCrewMember = guard(async member => {
+    const { data, error } = await sb.from("crew_members").insert({
+      full_name: member.name, phone_number: member.phone, notes: member.notes || null,
+      role_ids: member.roleIds || [], is_active: member.isActive !== false
+    }).select("id").single();
+    if (error) throw error; return data.id;
+  });
+  const updateCrewMember = guard(async (id, patch) => {
+    const row = {};
+    if (patch.name != null) row.full_name = patch.name;
+    if (patch.phone != null) row.phone_number = patch.phone;
+    if (patch.notes != null) row.notes = patch.notes || null;
+    if (patch.roleIds != null) row.role_ids = patch.roleIds;
+    if (patch.isActive != null) row.is_active = patch.isActive;
+    const { error } = await sb.from("crew_members").update(row).eq("id", id); if (error) throw error; return true;
   });
   const updateRequestDetails = guard(async (reqUuid, patch) => {
     const MAP = { name: "name", company: "company", phone: "phone", project: "project", start: "start_at", end: "end_at", desc: "description" };
@@ -529,5 +611,8 @@ window.SDB = (function () {
     }
     console.log("SDB.debug →", out); return out;
   }
-  return { on: ON, bootstrap, debug, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, editPayment, deletePayment, updateBooking, updateSupplier, updateCustomer, updateRequestDetails, editExpense, returnEarly, addBookingLine, updateBookingLine, deleteBookingLine, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, addExpense, deleteExpense, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate, deleteRFQ };
+  return { on: ON, bootstrap, debug, ids, currentUser, signIn, signOut, myProfile, listProfiles, setProfile, addUser, createBooking, addPayment, editPayment, deletePayment, updateBooking, updateSupplier, updateCustomer,
+    addExpertiseArea, updateExpertiseArea, addTechnicianSubcategory, updateTechnicianSubcategory, addTechnician, updateTechnician,
+    addCrewRole, updateCrewRole, addCrewMember, updateCrewMember,
+    updateRequestDetails, editExpense, returnEarly, addBookingLine, updateBookingLine, deleteBookingLine, confirmOps, settleMonth, addSupplierItem, editSupplierRate, addSupplier, addUnit, updateUnit, addExpense, deleteExpense, softDeleteBooking, softDeleteRequest, setRequestStatus, saveQuotation, convertQuote, createRequest, assignUnit, createRFQ, updateRFQ, updateRFQStatus, setRFQItemRate, deleteRFQ };
 })();

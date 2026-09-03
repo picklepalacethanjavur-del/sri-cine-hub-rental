@@ -11,7 +11,7 @@ const canSee = (role, view) => ALLOWED[role] === "*" || ALLOWED[role].includes(v
 
 const operations = [
   "dashboard", "quickrent", "requests", "bookings", "checkout", "calendar",
-  "inventory", "hirein", "suppliers", "customers", "receipts", "users"
+  "inventory", "hirein", "suppliers", "customers", "technicians", "crew", "receipts", "users"
 ];
 
 if (!canSee("admin", "investor") || operations.some(view => !canSee("admin", view))) {
@@ -21,7 +21,7 @@ if (!canSee("admin", "investor") || operations.some(view => !canSee("admin", vie
 if (canSee("manager", "investor")) {
   throw new Error("Manager must not see Investor Portal");
 }
-if (["dashboard", "bookings", "inventory", "receipts"].some(view => !canSee("manager", view))) {
+if (["dashboard", "bookings", "inventory", "technicians", "crew", "receipts"].some(view => !canSee("manager", view))) {
   throw new Error("Manager lost expected operations access");
 }
 

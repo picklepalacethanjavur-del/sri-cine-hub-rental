@@ -31,6 +31,21 @@ window.DATA = {
     { id:"CUS-3", name:"Vikram Nair", company:"Vikram Studios", phone:"+91 90030 77889" },
     { id:"CUS-4", name:"Karthik S", company:"Independent", phone:"+91 87540 33221" }
   ],
+  technicianExpertiseAreas: [
+    {id:"TEA-1",name:"Camera Service",sortOrder:10,isActive:true},{id:"TEA-2",name:"Lens Service",sortOrder:20,isActive:true},
+    {id:"TEA-3",name:"Lighting Service",sortOrder:30,isActive:true},{id:"TEA-4",name:"Sound Equipment",sortOrder:40,isActive:true},
+    {id:"TEA-5",name:"Grip Equipment",sortOrder:50,isActive:true},{id:"TEA-6",name:"Battery / Power",sortOrder:60,isActive:true},
+    {id:"TEA-7",name:"Electronics",sortOrder:70,isActive:true},{id:"TEA-8",name:"Other",sortOrder:999,isActive:true}
+  ],
+  technicianSubcategories: [],
+  technicians: [],
+  crewRoles: [
+    {id:"CR-1",name:"Cinematographer / DOP",sortOrder:10,isActive:true},{id:"CR-2",name:"Camera Operator",sortOrder:20,isActive:true},
+    {id:"CR-3",name:"Focus Puller",sortOrder:30,isActive:true},{id:"CR-4",name:"1st Camera Assistant",sortOrder:40,isActive:true},
+    {id:"CR-5",name:"2nd Camera Assistant",sortOrder:50,isActive:true},{id:"CR-6",name:"3rd Camera Assistant",sortOrder:60,isActive:true},
+    {id:"CR-7",name:"DIT",sortOrder:70,isActive:true},{id:"CR-8",name:"Other",sortOrder:999,isActive:true}
+  ],
+  crewMembers: [],
   bookings: [
     { code:"BK-2026-000103", customer:"CUS-3", production:"Vikram Studios", project:"Feature — Nila", contact:"Vikram Nair", phone:"+91 90030 77889",
       status:"checked_out", start:"2026-08-20", end:"2026-08-31", pickup:"Studio floor", operator:"Suresh",
