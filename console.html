@@ -2168,6 +2168,26 @@ function delAssetExpense(camCode,id){
   go('investor');toast("Expense deleted");
 }
 VIEWS.investor=()=>`<div class="inv-grid"><div style="min-width:0">${investorBody()}</div>${assetExpensePanel()}</div>`;
+let investorRefreshBusy=false,investorRefreshedAt=0;
+async function refreshInvestorPortal(manual=false){
+  if(!SDB.on||!['admin','investor'].includes(ROLE)||CUR!=='investor'||investorRefreshBusy)return;
+  if(!manual&&Date.now()-investorRefreshedAt<15000)return;
+  if(document.querySelector('#ov.show'))return;
+  investorRefreshBusy=true;
+  try{
+    const status=await SDB.bootstrap(ROLE);
+    if(status==='auth'){await window.onSessionExpired();return;}
+    if(status!==true)return;
+    investorRefreshedAt=Date.now();normalizeConsoleNames();
+    if(CUR==='investor')$('#content').innerHTML=VIEWS.investor();
+    if(manual)toast('Investor figures updated from saved bookings');
+  }catch(e){toast('Could not refresh investor figures. Please try again.');}
+  finally{investorRefreshBusy=false;}
+}
+VIEWS.investor.after=()=>refreshInvestorPortal();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ROLE==='investor')refreshInvestorPortal();});
+window.addEventListener('focus',()=>{if(ROLE==='investor')refreshInvestorPortal();});
+setInterval(()=>{if(!document.hidden&&ROLE==='investor')refreshInvestorPortal();},30000);
 function investorBody(){
   const invCams=DATA.cameras.filter(c=>c.investors&&c.investors.length);
   if(!invCams.length)return `<div class="empty" style="padding:48px;text-align:center">
@@ -2206,7 +2226,9 @@ function investorBody(){
   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px">
     <div><div class="eyebrow-inv">${cam.manufacturer} Investment Portfolio</div>
       <h1 class="disp" style="font-size:40px;line-height:1">Booking Performance</h1>
-      <div class="muted" style="margin-top:6px">${periodLbl}</div></div>
+      <div class="muted" style="margin-top:6px">${periodLbl}</div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="refreshInvestorPortal(true)">↻ Refresh figures</button>
+      <div class="muted" style="margin-top:6px;font-size:12px">Billed uses saved booking prices. Received and investor pool use recorded payments.${investorRefreshedAt?' Updated '+new Date(investorRefreshedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''}</div></div>
     <div class="cam-badges">${invCams.map(c=>`<span class="cam-badge ${c.code===cam.code?'active':''}" onclick="INVEST.cam='${c.code}';go('investor')">${c.code} · ${c.manufacturer} ${c.model}</span>`).join("")}</div>
   </div>
 
