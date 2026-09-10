@@ -987,6 +987,9 @@ VIEWS.bookings=()=>{
 function openBooking(code){if(!canSee("bookings"))return toast("Booking details aren't available for this role");go("bookings");setTimeout(()=>{$("#content").innerHTML=bookingDetail(code);},0);}
 function bookingDetail(code){
   const b=DATA.bookings.find(x=>x.code===code);if(!b)return VIEWS.bookings();
+  const itemDates=[...b.cameras,...b.accessories];
+  const displayStart=itemDates.length?itemDates.map(l=>l.start||b.start).sort()[0]:b.start;
+  const displayEnd=itemDates.length?itemDates.map(l=>l.end||b.end).sort().pop():b.end;
   const t=bookingTotals(b);
   const isOut=["checked_out","overdue"].includes(b.status);
   const isReady=["reserved","confirmed","preparing"].includes(b.status);
@@ -1001,7 +1004,7 @@ function bookingDetail(code){
     return `<div class="list-row" style="cursor:default;opacity:${ret?.55:1}">
     <div class="grow"><div class="t">${l.name} <span class="muted" style="font-weight:400">· ${l.code}</span>${kb} ${ret?'<span class="badge b-ok">✓ returned</span>':''}</div>
       <div class="sub">${fmtDate(l.start||b.start)}–${fmtDate(l.returnedAt||l.end||b.end)} · ${money(l.rate)}/day × ${days}${qty>1?' × '+qty:''} = <span class="amt">${money(l.rate*days*qty)}</span></div>${meter}</div>
-    <button class="btn btn-ghost btn-sm" onclick="editBookingItemForm('${code}','${type}',${index})">Edit price</button>
+    <button class="btn btn-ghost btn-sm" onclick="editBookingItemForm('${code}','${type}',${index})">Edit item</button>
     <button class="btn btn-ghost btn-sm btn-danger" onclick="deleteBookingItem('${code}','${type}',${index})">Delete</button>
     ${!ret&&isOut?`<button class="btn btn-ghost btn-sm" onclick="returnEarly('${code}','${type}',${index})">Return early</button>`:''}</div>`;};
   return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('bookings')">← All bookings</div>
@@ -1010,7 +1013,7 @@ function bookingDetail(code){
     <button class="btn btn-ghost btn-sm" ${isReady||isOut?'':'style="margin-left:auto"'} onclick="editBookingForm('${code}')">✏️ Edit</button>
     <button class="btn btn-ghost btn-sm" onclick="openReceipt('${code}')">🧾 Invoice</button>
     ${ROLE==='admin'?`<button class="btn btn-ghost btn-sm btn-danger" onclick="deleteBooking('${code}')">🗑 Delete</button>`:''}</div>
-  <div class="muted" style="margin-bottom:20px">${b.code}${b.production&&b.production!==b.contact?' · '+b.production:''}${b.project&&b.project!==b.contact&&b.project!=='Walk-in booking'?' · '+b.project:''}${b.phone?' · '+b.phone:''} · ${fmtDate(b.start)}–${fmtDate(b.end)}</div>
+  <div class="muted" style="margin-bottom:20px">${b.code}${b.production&&b.production!==b.contact?' · '+b.production:''}${b.project&&b.project!==b.contact&&b.project!=='Walk-in booking'?' · '+b.project:''}${b.phone?' · '+b.phone:''} · ${fmtDate(displayStart)}–${fmtDate(displayEnd)}</div>
       <div class="metrics">
     <div class="metric"><div class="l">Total booking charges</div><div class="v">${money(t.charges)}</div></div>
     <div class="metric"><div class="l">Amount paid</div><div class="v">${money(t.paid)}</div></div>
@@ -1110,23 +1113,31 @@ function saveBookingEdit(code){
 function editBookingItemForm(code,type,index){
   const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
   const days=lineDays(b,l),qty=l.qty||1;
-  openModal(`<h3>Edit item price</h3><p class="mut">${escAttr(l.name)} · ${fmtDate(l.start||b.start)}–${fmtDate(l.end||b.end)}</p>
+  openModal(`<h3>Edit item</h3><p class="mut">${escAttr(l.name)} · ${fmtDate(l.start||b.start)}–${fmtDate(l.end||b.end)}</p>
+    <div class="grid2"><div class="field"><label>Rental start</label><input type="date" id="ebi-start" value="${l.start||b.start}" oninput="editBookingItemPreview('${code}','${type}',${index})"></div><div class="field"><label>Rental end</label><input type="date" id="ebi-end" value="${l.end||b.end}" oninput="editBookingItemPreview('${code}','${type}',${index})"></div></div>
     <div class="field"><label>Customer price per day ₹</label><input type="number" min="0" id="ebi-rate" value="${l.rate}" oninput="editBookingItemPreview('${code}','${type}',${index})"></div>
     <div class="preview" id="ebi-preview">${money(l.rate)} × ${days} day${days===1?'':'s'}${qty>1?' × '+qty:''} = ${money(l.rate*days*qty)}</div>
-    <button class="btn btn-primary" style="width:100%" onclick="saveBookingItemPrice('${code}','${type}',${index})">Save price</button>`);
+    <button class="btn btn-primary" style="width:100%" onclick="saveBookingItemPrice('${code}','${type}',${index})">Save item</button>`);
 }
 function editBookingItemPreview(code,type,index){
   const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
-  const rate=Number($("#ebi-rate").value||0),days=lineDays(b,l),qty=l.qty||1;
+  const rate=Number($("#ebi-rate").value||0),days=lineDays(b,{...l,start:$("#ebi-start").value,end:$("#ebi-end").value}),qty=l.qty||1;
   $("#ebi-preview").textContent=`${money(rate)} × ${days} day${days===1?'':'s'}${qty>1?' × '+qty:''} = ${money(rate*days*qty)}`;
 }
 async function saveBookingItemPrice(code,type,index){
   const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
   const rate=Number($("#ebi-rate").value);
   if(!Number.isFinite(rate)||rate<0)return toast("Enter a valid price");
-  const saved=await SDB.updateBookingLine(code,l,{rate});
+  const start=$("#ebi-start").value,end=$("#ebi-end").value;
+  if(!start||!end||end<start)return toast("Enter a valid rental date range");
+  if(l.returnedAt&&start>l.returnedAt)return toast("Rental start cannot be after the recorded return");
+  if(!l.lineKind||l.lineKind==='own'){
+    const conflict=DATA.bookings.find(other=>other.code!==code&&!['cancelled','returned','completed'].includes(other.status)&&[...other.cameras,...other.accessories].some(item=>item.code===l.code&&(item.start||other.start)<=end&&(item.returnedAt||item.end||other.end)>=start));
+    if(conflict)return toast("Equipment overlaps booking "+conflict.code);
+  }
+  const saved=await SDB.updateBookingLine(code,l,{rate,start,end});
   if(SDB.on&&saved===undefined)return;
-  l.rate=rate;closeModal();$("#content").innerHTML=bookingDetail(code);toast(l.name+" price updated");
+  Object.assign(l,{rate,start,end});closeModal();$("#content").innerHTML=bookingDetail(code);toast(l.name+" updated");
 }
 async function deleteBookingItem(code,type,index){
   const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;

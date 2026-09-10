@@ -56,8 +56,8 @@ async function testDataLayer() {
   assert.strictEqual(mutations[3].row.line_kind, "custom");
   assert.strictEqual(mutations[3].row.label, "Car service");
 
-  await db.updateBookingLine("BK-1", manual, { rate: 2200 });
-  assert.deepStrictEqual(plain(mutations[4]), { op: "update", table: "booking_lines", row: { daily_rate_inr: 2200 }, column: "id", value: "line-3" });
+  await db.updateBookingLine("BK-1", manual, { rate: 2200, start: "2026-09-01", end: "2026-09-03" });
+  assert.deepStrictEqual(plain(mutations[4]), { op: "update", table: "booking_lines", row: { daily_rate_inr: 2200, item_start_at: "2026-09-01", item_end_at: "2026-09-03" }, column: "id", value: "line-3" });
   await db.deleteBookingLine("BK-1", manual);
   assert.deepStrictEqual(plain(mutations[5]), { op: "delete", table: "booking_lines", column: "id", value: "line-3" });
   await db.deleteRFQ("rfq-1");
@@ -173,9 +173,11 @@ async function testBookingUi() {
   assert.strictEqual(context.bookingTotals(booking).charges, 12300);
 
   elements["#ebi-rate"] = { value: "2200" };
+  elements["#ebi-start"] = { value: "2026-09-01" };
+  elements["#ebi-end"] = { value: "2026-09-03" };
   await context.saveBookingItemPrice("BK-1", "accessories", 1);
   assert.strictEqual(booking.accessories[1].rate, 2200);
-  assert.deepStrictEqual(plain(calls.update[0].patch), { rate: 2200 });
+  assert.deepStrictEqual(plain(calls.update[0].patch), { rate: 2200, start: "2026-09-01", end: "2026-09-03" });
   assert.strictEqual(context.bookingTotals(booking).charges, 14100);
 
   await context.deleteBookingItem("BK-1", "accessories", 1);

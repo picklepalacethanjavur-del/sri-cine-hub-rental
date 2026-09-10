@@ -412,6 +412,8 @@ window.SDB = (function () {
     const row = {};
     if (patch.rate != null) row.daily_rate_inr = patch.rate;
     if (patch.qty != null) row.quantity = patch.qty;
+    if (patch.start != null) row.item_start_at = patch.start;
+    if (patch.end != null) row.item_end_at = patch.end;
     if (!Object.keys(row).length) return true;
     const { error } = await sb.from("booking_lines").update(row).eq("id", lineId);
     if (error) throw error;
