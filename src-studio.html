@@ -425,7 +425,9 @@ function render(){
     el.innerHTML=`<div class="thumb"><img src="${us(p.img,600)}" loading="lazy" alt="${p.n}" onerror="this.onerror=null;this.src='${fb(p.n)}'">${p.flag?`<span class="flag">${p.flag}</span>`:''}</div>
       <div class="pkg-b"><h3>${p.n}</h3><p style="color:var(--mut);font-size:13.5px">${p.t}</p>
       <div class="inc">Includes: ${p.inc}</div>
+      <button type="button" class="btn wa-btn package-wa" style="width:100%;margin-bottom:8px">Rent via WhatsApp</button>
       <button class="btn btn-primary add-btn2" style="width:100%">＋ Add package to cart</button></div>`;
+    el.querySelector('.package-wa').onclick=e=>{e.stopPropagation();sendRentalWhatsApp([p.n]);};
     el.querySelector('.add-btn2').onclick=e=>{e.stopPropagation();toggle(key,el,e.target,'package');};
     pg.appendChild(el);
   });
