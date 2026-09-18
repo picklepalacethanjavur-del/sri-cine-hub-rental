@@ -261,7 +261,7 @@
 <header>
   <div class="bar">
     <div class="logo"><img src="logo.png" alt="Sri Cine Hub"><span class="txt">Sri Cine Hub<small>CINEMA RENTALS</small></span></div>
-    <details class="site-menu"><summary aria-label="Open menu">☰ Menu</summary><nav aria-label="Site menu"><a href="#equipment" onclick="showInfo('equipment')">Equipment</a><a href="#packages" onclick="showInfo('packages')">Packages</a><a href="#how" onclick="showInfo('how')">How it works</a><a href="#why" onclick="showInfo('why')">About us</a><a href="#contact" onclick="showInfo('contact')">Contact &amp; directions</a><a href="console.html">Staff Login</a></nav></details>
+    <details class="site-menu"><summary aria-label="Open menu">☰ Menu</summary><nav aria-label="Site menu"><a href="#equipment" onclick="showInfo('equipment')">Equipment</a><a href="#how" onclick="showInfo('how')">How it works</a><a href="#why" onclick="showInfo('why')">About us</a><a href="#contact" onclick="showInfo('contact')">Contact &amp; directions</a><a href="console.html">Staff Login</a></nav></details>
     <button class="toggle" id="themeBtn" onclick="toggleTheme()"><span id="themeIcon">☀</span><span id="themeLabel">Light</span></button>
     <button class="cta" type="button" onclick="openCart()" aria-label="Open cart"><span aria-hidden="true">🛒</span><span class="cart-word">Cart</span><span class="cart-badge" id="headerCartCount">0</span></button>
   </div>
@@ -270,16 +270,10 @@
   <div class="search"><span class="ic">🔍</span><input id="search" type="search" aria-label="Search all equipment" placeholder="Search all equipment…" oninput="filterCatalog(this.value);catalogTop()"></div>
   <div class="chips" id="chips"></div>
 </div></div>
-</header><main class="wrap" id="catalogResults"><h1 class="catalog-title">Rent cinema equipment</h1><div id="sections"></div><div class="noresult" id="noresult">No gear matches that search. Try another term, or <a href="#" onclick="openGeneralEnquiry();return false" style="color:var(--gold)">ask us directly →</a></div></main>
+</header><main class="wrap" id="catalogResults"><h1 class="catalog-title">Rent cinema equipment</h1><section id="packages" class="sec"><div class="sec-h"><h2>Packages</h2></div><div class="pkg-grid" id="pkgGrid" style="margin-top:0"></div></section><div id="sections"></div><div class="noresult" id="noresult">No gear matches that search. Try another term, or <a href="#" onclick="openGeneralEnquiry();return false" style="color:var(--gold)">ask us directly →</a></div></main>
 
 <!-- PACKAGES -->
-<div class="pkg-band"><section id="packages" class="wrap" style="padding-top:0;padding-bottom:0">
-  <div class="lead"><div class="eyebrow">Ready-made bundles</div>
-    <h2 class="disp">Pick a package, we tailor it</h2>
-    <p>Common production setups, pre-assembled. Add one to your cart — we'll adjust exact bodies, glass and quantities to your shoot.</p>
-  </div>
-  <div class="pkg-grid" id="pkgGrid"></div>
-</section></div>
+
 
 <!-- HOW IT WORKS -->
 <section id="how" class="wrap" style="padding:64px 26px">
@@ -387,15 +381,17 @@ const PACKAGES=[
 ];
 
 const cart=new Set();
-let selectedCategory=0;
+let selectedCategory='packages';
 function catalogTop(){document.getElementById('catalogResults').scrollIntoView({behavior:'instant',block:'start'});}
 function selectCategory(i){selectedCategory=i;document.getElementById('search').value='';filterCatalog('');catalogTop();}
-function showInfo(id){document.querySelectorAll('#packages,#how,#why').forEach(el=>{(el.closest('.pkg-band')||el).hidden=el.id!==id;});document.querySelector('.site-menu').open=false;}
+function showInfo(id){if(id==='packages'){selectCategory('packages');}document.querySelectorAll('#how,#why').forEach(el=>{(el.closest('.pkg-band')||el).hidden=el.id!==id;});document.querySelector('.site-menu').open=false;}
 
 function render(){
   const chips=document.getElementById('chips'), secs=document.getElementById('sections');
+  const packageChip=document.createElement('button');packageChip.type='button';packageChip.className='chip';packageChip.dataset.category='packages';packageChip.textContent='Packages';packageChip.onclick=()=>selectCategory('packages');chips.appendChild(packageChip);
   SRI_CATALOG.forEach((c,i)=>{
     const chip=document.createElement('button');chip.type='button';chip.className='chip'+(i===0?' active':'');chip.setAttribute('aria-pressed',String(i===0));
+    chip.dataset.category=String(i);
     chip.innerHTML=`${c.category}<span class="n">${c.items.length}</span>`;
     chip.onclick=()=>selectCategory(i);
     chips.appendChild(chip);
@@ -425,7 +421,7 @@ function render(){
   const pg=document.getElementById('pkgGrid');
   PACKAGES.forEach(p=>{
     const key='Package|'+p.n;
-    const el=document.createElement('div');el.className='pkg';
+    const el=document.createElement('div');el.className='pkg';el.dataset.text=(p.n+' '+p.t+' '+p.inc+' packages').toLowerCase();
     el.innerHTML=`<div class="thumb"><img src="${us(p.img,600)}" loading="lazy" alt="${p.n}" onerror="this.onerror=null;this.src='${fb(p.n)}'">${p.flag?`<span class="flag">${p.flag}</span>`:''}</div>
       <div class="pkg-b"><h3>${p.n}</h3><p style="color:var(--mut);font-size:13.5px">${p.t}</p>
       <div class="inc">Includes: ${p.inc}</div>
@@ -479,8 +475,10 @@ function removeFromCart(key){
 /* search */
 function filterCatalog(q){
   q=(q||'').trim().toLowerCase();
-  document.querySelectorAll('#chips .chip').forEach((chip,i)=>{const active=!q&&i===selectedCategory;chip.classList.toggle('active',active);chip.setAttribute('aria-pressed',String(active));});
+  document.querySelectorAll('#chips .chip').forEach((chip,i)=>{const active=!q&&chip.dataset.category===String(selectedCategory);chip.classList.toggle('active',active);chip.setAttribute('aria-pressed',String(active));});
   let any=false;
+  document.querySelectorAll('#pkgGrid .pkg').forEach(pkg=>{pkg.hidden=q?!pkg.dataset.text.includes(q):selectedCategory!=='packages';if(!pkg.hidden)any=true;});
+  document.getElementById('packages').hidden=!any;
   document.querySelectorAll('#sections .sec').forEach(sec=>{
     let visible=0;
     sec.querySelectorAll('.card').forEach(card=>{
