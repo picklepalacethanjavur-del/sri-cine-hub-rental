@@ -205,48 +205,54 @@
   .step{color:var(--gold);font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px;font-weight:700}
   @media(max-width:920px){nav.top{display:none}.contact-grid{grid-template-columns:1fr}.foot-grid{grid-template-columns:1fr 1fr}}
   @media(max-width:600px){.bar{padding:10px 14px;gap:9px}.logo{margin-right:auto}.logo .txt{display:none}.toggle{padding:8px}.toggle #themeLabel{display:none}.staff-link{font-size:0}.staff-link:before{content:'Staff';font-size:12px}.cta{padding:9px 12px}.cart-word{display:none}.cartbar-in{margin:10px;padding:12px;gap:9px}.cart-names{display:none}.cartbar .btn-ghost{display:none}.modal{padding:26px 20px}.row2{display:block}.checkout-actions{flex-direction:column-reverse}.foot-grid{grid-template-columns:1fr}}
+
+  [hidden]{display:none!important}
+  header{background:var(--bg)}
+  .bar{padding:10px 20px;gap:12px}
+  .logo{margin-right:auto}.logo img{width:34px;height:34px}
+  .site-menu{position:relative;order:4}.site-menu summary{cursor:pointer;list-style:none;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+  .site-menu nav{position:absolute;right:0;top:48px;width:230px;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--hover-shadow)}
+  .site-menu nav a{display:block;padding:12px;font-size:14px}
+  .catnav{position:static;background:var(--bg);backdrop-filter:none}
+  .catnav-inner{display:block;padding:0 20px 10px;overflow:visible}
+  .search{width:100%;margin-bottom:8px}.search input,.search input:focus{width:100%;font-size:16px;min-height:42px}
+  .chips{overflow-x:auto;max-width:100%;padding-bottom:3px;scrollbar-width:thin}
+  .chip{min-height:42px;flex-shrink:0;font-family:inherit}
+  #catalogResults{scroll-margin-top:var(--catalog-header,170px)}
+  .catalog-title{font-family:inherit;font-size:16px;max-width:none;margin:0;color:var(--mut);font-weight:500}
+  .sec{padding:12px 0}.sec-h{margin-bottom:16px;padding-bottom:10px}.sec-h h2{font-family:inherit;font-size:24px}
+  .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .card-b{padding:12px}.card-b h3{font-size:16px}.add{display:block}.add small{display:block;margin-bottom:8px}.add-btn{width:100%;min-height:44px}
+  .card:hover{transform:none}
+  .contact-band{padding:28px 0}.contact-grid{margin-top:18px;gap:20px}.contact-card{padding:16px}
+  .cartbar{display:none}
+  footer{padding:24px 20px}.foot-grid{display:none}.foot-bot{margin:0;padding-top:0;border:0}.foot-bot span:last-child{display:none}
+  @media(max-width:900px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:600px){
+    .bar{padding:8px 12px;gap:6px}.logo .txt{display:block;font-size:14px;letter-spacing:0}.logo .txt small{display:none}.logo{gap:6px}.logo img{width:28px;height:28px}
+    .site-menu summary{font-size:0;min-width:40px;min-height:40px;text-align:center}.site-menu summary:after{content:'☰';font-size:18px}
+    .toggle{min-width:40px;min-height:40px;justify-content:center}.cta{min-height:40px;padding:8px}.cart-word{display:none}
+    .catnav-inner{padding:0 12px 8px}.wrap{padding:16px 12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .thumb{height:120px}.card-b h3{font-size:14px}.card-b p{font-size:12px;min-height:38px}.card-b{padding:10px}.add small{font-size:11px}
+    .chip{padding:8px 12px}.sec-h h2{font-size:21px}
+  }
+  @media(max-width:350px){.grid{grid-template-columns:1fr}.logo .txt{font-size:12px}}
 </style>
 </head>
 <body data-theme="dark">
 <header>
   <div class="bar">
     <div class="logo"><img src="logo.png" alt="Sri Cine Hub"><span class="txt">Sri Cine Hub<small>CINEMA RENTALS</small></span></div>
-    <nav class="top">
-      <a href="#equipment">Equipment</a><a href="#packages">Packages</a><a href="#how">How it works</a><a href="#contact">Contact</a>
-    </nav>
+    <details class="site-menu"><summary aria-label="Open menu">☰ Menu</summary><nav aria-label="Site menu"><a href="#equipment" onclick="showInfo('equipment')">Equipment</a><a href="#packages" onclick="showInfo('packages')">Packages</a><a href="#how" onclick="showInfo('how')">How it works</a><a href="#why" onclick="showInfo('why')">About us</a><a href="#contact" onclick="showInfo('contact')">Contact &amp; directions</a><a href="console.html">Staff Login</a></nav></details>
     <button class="toggle" id="themeBtn" onclick="toggleTheme()"><span id="themeIcon">☀</span><span id="themeLabel">Light</span></button>
-    <a class="staff-link" href="console.html" aria-label="Staff login to studio console">Staff Login</a>
     <button class="cta" type="button" onclick="openCart()" aria-label="Open cart"><span aria-hidden="true">🛒</span><span class="cart-word">Cart</span><span class="cart-badge" id="headerCartCount">0</span></button>
   </div>
-</header>
-
-<section class="hero">
-  <div class="hero-bg" id="heroBg"></div>
-  <div class="kicker">Chennai · Cinema Equipment Rental</div>
-  <h1 class="disp">Gear that earns its place <em>on set.</em></h1>
-  <p class="sub">ARRI, RED, Sony and Canon systems — lenses, lighting, grip, transport and genset. Add equipment to your cart, check out once, and we'll confirm availability and a quote for your shoot dates.</p>
-  <div class="hero-actions">
-    <button class="btn btn-primary" onclick="document.querySelector('#equipment').scrollIntoView({behavior:'smooth'})">Browse Equipment</button>
-    <button class="btn btn-ghost" onclick="waStudio()">💬 WhatsApp us</button>
-  </div>
-  <div class="stats">
-    <div class="stat"><b>35+</b><span>Rental options</span></div>
-    <div class="stat"><b>7</b><span>Categories</span></div>
-    <div class="stat"><b>24h</b><span>Quote turnaround</span></div>
-  </div>
-</section>
-
-<div class="trust"><div class="trust-in">
-  <b>Trusted on set by</b>
-  <span>Ad Films</span><span>·</span><span>Feature Productions</span><span>·</span><span>Wedding Studios</span><span>·</span><span>Indie Crews</span>
-</div></div>
-
 <!-- EQUIPMENT -->
 <div class="catnav" id="equipment"><div class="catnav-inner">
-  <div class="search"><span class="ic">🔍</span><input id="search" placeholder="Search gear…" oninput="filterCatalog(this.value)"></div>
+  <div class="search"><span class="ic">🔍</span><input id="search" type="search" aria-label="Search all equipment" placeholder="Search all equipment…" oninput="filterCatalog(this.value);catalogTop()"></div>
   <div class="chips" id="chips"></div>
 </div></div>
-<main class="wrap"><div id="sections"></div><div class="noresult" id="noresult">No gear matches that search. Try another term, or <a href="#" onclick="openGeneralEnquiry();return false" style="color:var(--gold)">ask us directly →</a></div></main>
+</header><main class="wrap" id="catalogResults"><h1 class="catalog-title">Rent cinema equipment</h1><div id="sections"></div><div class="noresult" id="noresult">No gear matches that search. Try another term, or <a href="#" onclick="openGeneralEnquiry();return false" style="color:var(--gold)">ask us directly →</a></div></main>
 
 <!-- PACKAGES -->
 <div class="pkg-band"><section id="packages" class="wrap" style="padding-top:0;padding-bottom:0">
@@ -351,7 +357,7 @@ const HERO='1579632652768-6cb9dcf85912';
 const us=(id,w)=>`https://images.unsplash.com/photo-${id}?w=${w}&q=70&auto=format&fit=crop`;
 const imgFor=(cat,idx)=>{const p=IMG[cat]||[];return us(p[idx%p.length],600);};
 const fb=n=>`https://picsum.photos/seed/${encodeURIComponent(n)}/600/400`;
-document.getElementById('heroBg').style.backgroundImage=`url('${us(HERO,1600)}')`;
+
 
 /* ---- packages ---- */
 const PACKAGES=[
@@ -362,12 +368,17 @@ const PACKAGES=[
 ];
 
 const cart=new Set();
+let selectedCategory=0;
+function catalogTop(){document.getElementById('catalogResults').scrollIntoView({behavior:'instant',block:'start'});}
+function selectCategory(i){selectedCategory=i;document.getElementById('search').value='';filterCatalog('');catalogTop();}
+function showInfo(id){document.querySelectorAll('#packages,#how,#why').forEach(el=>{(el.closest('.pkg-band')||el).hidden=el.id!==id;});document.querySelector('.site-menu').open=false;}
+
 function render(){
   const chips=document.getElementById('chips'), secs=document.getElementById('sections');
   SRI_CATALOG.forEach((c,i)=>{
-    const chip=document.createElement('div');chip.className='chip'+(i===0?' active':'');
+    const chip=document.createElement('button');chip.type='button';chip.className='chip'+(i===0?' active':'');chip.setAttribute('aria-pressed',String(i===0));
     chip.innerHTML=`${c.category}<span class="n">${c.items.length}</span>`;
-    chip.onclick=()=>{document.getElementById('search').value='';filterCatalog('');document.getElementById('sec-'+i).scrollIntoView({behavior:'smooth'});[...chips.children].forEach(x=>x.classList.remove('active'));chip.classList.add('active');};
+    chip.onclick=()=>selectCategory(i);
     chips.appendChild(chip);
     const sec=document.createElement('section');sec.className='sec';sec.id='sec-'+i;
     sec.innerHTML=`<div class="sec-h"><h2 class="disp">${c.category}</h2><span>${c.items.length} options</span></div>`;
@@ -435,11 +446,12 @@ function removeFromCart(key){
 /* search */
 function filterCatalog(q){
   q=(q||'').trim().toLowerCase();
+  document.querySelectorAll('#chips .chip').forEach((chip,i)=>{const active=!q&&i===selectedCategory;chip.classList.toggle('active',active);chip.setAttribute('aria-pressed',String(active));});
   let any=false;
   document.querySelectorAll('#sections .sec').forEach(sec=>{
     let visible=0;
     sec.querySelectorAll('.card').forEach(card=>{
-      const match=!q||card.dataset.text.includes(q);
+      const match=q?card.dataset.text.includes(q):sec.id==='sec-'+selectedCategory;
       card.classList.toggle('hide',!match);
       if(match)visible++;
     });
@@ -566,7 +578,11 @@ function applyTheme(t){
 }
 function toggleTheme(){applyTheme(document.body.dataset.theme==='dark'?'light':'dark');}
 (function(){let t='dark';try{t=localStorage.getItem('src-theme')||'dark';}catch(e){}applyTheme(t);})();
-render();
+render();filterCatalog('');
+showInfo('equipment');
+const headerObserver=new ResizeObserver(()=>document.documentElement.style.setProperty('--catalog-header',document.querySelector('header').offsetHeight+'px'));
+headerObserver.observe(document.querySelector('header'));
+document.querySelectorAll('footer a[href^="#"]').forEach(a=>a.addEventListener('click',()=>showInfo(a.hash.slice(1))));
 </script>
 </body>
 </html>
