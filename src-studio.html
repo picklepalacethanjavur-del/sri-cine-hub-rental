@@ -159,7 +159,7 @@
   .cline .ci{font-size:20px;width:26px;text-align:center}
   .cline b{display:block;font-size:15px}.cline span{color:var(--mut);font-size:13.5px}
   .map{border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);min-height:280px;background:var(--thumb-grad) center/cover;position:relative}
-  .map:after{content:"📍 Chennai";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:15px;letter-spacing:.1em}
+  .map iframe{display:block;width:100%;height:320px;border:0}.map-link{display:block;padding:12px 16px;background:var(--bg);color:var(--text);text-align:center}
   /* cart bar */
   .cartbar{position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(140%);transition:.28s}
   .cartbar.show{transform:none}
@@ -205,48 +205,72 @@
   .step{color:var(--gold);font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px;font-weight:700}
   @media(max-width:920px){nav.top{display:none}.contact-grid{grid-template-columns:1fr}.foot-grid{grid-template-columns:1fr 1fr}}
   @media(max-width:600px){.bar{padding:10px 14px;gap:9px}.logo{margin-right:auto}.logo .txt{display:none}.toggle{padding:8px}.toggle #themeLabel{display:none}.staff-link{font-size:0}.staff-link:before{content:'Staff';font-size:12px}.cta{padding:9px 12px}.cart-word{display:none}.cartbar-in{margin:10px;padding:12px;gap:9px}.cart-names{display:none}.cartbar .btn-ghost{display:none}.modal{padding:26px 20px}.row2{display:block}.checkout-actions{flex-direction:column-reverse}.foot-grid{grid-template-columns:1fr}}
+
+  [hidden]{display:none!important}
+  header{background:var(--bg)}
+  .bar{padding:10px 20px;gap:12px}
+  .logo{margin-right:auto}.logo img{width:34px;height:34px}
+  .site-menu{position:relative;order:4}.site-menu summary{cursor:pointer;list-style:none;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+  .site-menu nav{position:absolute;right:0;top:48px;width:230px;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--hover-shadow)}
+  .site-menu nav a{display:block;padding:12px;font-size:14px}
+  .catnav{position:static;background:var(--bg);backdrop-filter:none}
+  .catnav-inner{display:block;padding:0 20px 10px;overflow:visible}
+  .search{width:100%;margin-bottom:8px}.search input,.search input:focus{width:100%;font-size:16px;min-height:42px}
+  .chips{overflow-x:auto;max-width:100%;padding-bottom:3px;scrollbar-width:thin}
+  .chip{min-height:42px;flex-shrink:0;font-family:inherit}
+  #catalogResults{scroll-margin-top:var(--catalog-header,170px)}
+  .catalog-title{font-family:inherit;font-size:16px;max-width:none;margin:0;color:var(--mut);font-weight:500}
+  .sec{padding:12px 0}.sec-h{margin-bottom:16px;padding-bottom:10px}.sec-h h2{font-family:inherit;font-size:24px}
+  .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .card-b{padding:12px}.card-b h3{font-size:16px}.add{display:block}.add small{display:block;margin-bottom:8px}.add-btn{width:100%;min-height:44px}
+  .card:hover{transform:none}
+  .contact-band{padding:28px 0}.contact-grid{margin-top:18px;gap:20px}.contact-card{padding:16px}
+  .cartbar{display:none}
+  footer{padding:24px 20px}.foot-grid{display:none}.foot-bot{margin:0;padding-top:0;border:0}.foot-bot span:last-child{display:none}
+  @media(max-width:900px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:600px){
+    .bar{padding:8px 12px;gap:6px}.logo .txt{display:block;font-size:14px;letter-spacing:0}.logo .txt small{display:none}.logo{gap:6px}.logo img{width:28px;height:28px}
+    .site-menu summary{font-size:0;min-width:40px;min-height:40px;text-align:center}.site-menu summary:after{content:'☰';font-size:18px}
+    .toggle{min-width:40px;min-height:40px;justify-content:center}.cta{min-height:40px;padding:8px}.cart-word{display:none}
+    .catnav-inner{padding:0 12px 8px}.wrap{padding:16px 12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .thumb{height:120px}.card-b h3{font-size:14px}.card-b p{font-size:12px;min-height:38px}.card-b{padding:10px}.add small{font-size:11px}
+    .chip{padding:8px 12px}.sec-h h2{font-size:21px}
+  }
+  @media(max-width:350px){.grid{grid-template-columns:1fr}.logo .txt{font-size:12px}}
+.detail-name{border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}.detail-name:focus-visible{outline:2px solid var(--gold)}
+.product-dialog{margin:auto;width:calc(100% - 24px);max-width:480px;max-height:85vh;overflow:auto;padding:48px 20px 20px;border:1px solid var(--gold);border-radius:14px;background:var(--card);color:var(--text)}
+.product-dialog::backdrop{background:rgba(0,0,0,.65)}.product-dialog img{width:100%;height:180px;object-fit:cover;border-radius:8px}.product-dialog h2{margin:16px 0 8px}.product-dialog p{margin:12px 0;color:var(--mut)}.product-dialog .btn{width:100%}
+
+  .wa-btn{border:1px solid var(--gold);background:var(--gold);color:#171309;border-radius:8px;padding:10px 8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;min-height:44px;width:100%}
+  .item-actions{display:grid;gap:8px}.cart-whatsapp{margin-top:8px}.product-dialog .wa-btn{margin-bottom:10px}
+  @media(hover:hover) and (pointer:fine){.card .item-actions{visibility:hidden;opacity:0}.card:hover .item-actions,.card:focus-within .item-actions{visibility:visible;opacity:1}}
+  @media(hover:none),(pointer:coarse){.card .item-actions{display:none}.card .add small:after{content:' · Tap for details'}}
+
+  /* Compact cards: actions overlay the photo and reserve no layout space. */
+  .card{position:relative}.card-b{padding:10px 12px}.card-b h3{margin:0;line-height:1.4}
+  .card .add{margin:0}.card .item-actions{position:absolute;top:0;left:0;right:0;height:150px;padding:12px;align-content:center;gap:6px;background:rgba(0,0,0,.65);z-index:3}
+  .card .item-actions .add-btn{background:var(--card);color:var(--text)}
+  .detail-name{min-height:36px;width:100%}
+  .floating-whatsapp{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:calc(16px + env(safe-area-inset-bottom));width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#128c4a;color:white;box-shadow:0 4px 16px #0004;z-index:45}
+  .floating-whatsapp svg{width:30px;height:30px}.floating-whatsapp:hover{background:#0b713b}.floating-whatsapp:focus-visible{outline:3px solid var(--gold);outline-offset:4px}
+  footer{padding-bottom:90px}
+  @media(max-width:600px){.card-b{padding:8px 10px}.card .item-actions{height:120px;padding:8px}.grid{gap:10px}.card-b h3{font-size:14px}}
 </style>
 </head>
 <body data-theme="dark">
 <header>
   <div class="bar">
     <div class="logo"><img src="logo.png" alt="Sri Cine Hub"><span class="txt">Sri Cine Hub<small>CINEMA RENTALS</small></span></div>
-    <nav class="top">
-      <a href="#equipment">Equipment</a><a href="#packages">Packages</a><a href="#how">How it works</a><a href="#contact">Contact</a>
-    </nav>
+    <details class="site-menu"><summary aria-label="Open menu">☰ Menu</summary><nav aria-label="Site menu"><a href="#equipment" onclick="showInfo('equipment')">Equipment</a><a href="#packages" onclick="showInfo('packages')">Packages</a><a href="#how" onclick="showInfo('how')">How it works</a><a href="#why" onclick="showInfo('why')">About us</a><a href="#contact" onclick="showInfo('contact')">Contact &amp; directions</a><a href="console.html">Staff Login</a></nav></details>
     <button class="toggle" id="themeBtn" onclick="toggleTheme()"><span id="themeIcon">☀</span><span id="themeLabel">Light</span></button>
-    <a class="staff-link" href="console.html" aria-label="Staff login to studio console">Staff Login</a>
     <button class="cta" type="button" onclick="openCart()" aria-label="Open cart"><span aria-hidden="true">🛒</span><span class="cart-word">Cart</span><span class="cart-badge" id="headerCartCount">0</span></button>
   </div>
-</header>
-
-<section class="hero">
-  <div class="hero-bg" id="heroBg"></div>
-  <div class="kicker">Chennai · Cinema Equipment Rental</div>
-  <h1 class="disp">Gear that earns its place <em>on set.</em></h1>
-  <p class="sub">ARRI, RED, Sony and Canon systems — lenses, lighting, grip, transport and genset. Add equipment to your cart, check out once, and we'll confirm availability and a quote for your shoot dates.</p>
-  <div class="hero-actions">
-    <button class="btn btn-primary" onclick="document.querySelector('#equipment').scrollIntoView({behavior:'smooth'})">Browse Equipment</button>
-    <button class="btn btn-ghost" onclick="waStudio()">💬 WhatsApp us</button>
-  </div>
-  <div class="stats">
-    <div class="stat"><b>35+</b><span>Rental options</span></div>
-    <div class="stat"><b>7</b><span>Categories</span></div>
-    <div class="stat"><b>24h</b><span>Quote turnaround</span></div>
-  </div>
-</section>
-
-<div class="trust"><div class="trust-in">
-  <b>Trusted on set by</b>
-  <span>Ad Films</span><span>·</span><span>Feature Productions</span><span>·</span><span>Wedding Studios</span><span>·</span><span>Indie Crews</span>
-</div></div>
-
 <!-- EQUIPMENT -->
 <div class="catnav" id="equipment"><div class="catnav-inner">
-  <div class="search"><span class="ic">🔍</span><input id="search" placeholder="Search gear…" oninput="filterCatalog(this.value)"></div>
+  <div class="search"><span class="ic">🔍</span><input id="search" type="search" aria-label="Search all equipment" placeholder="Search all equipment…" oninput="filterCatalog(this.value);catalogTop()"></div>
   <div class="chips" id="chips"></div>
 </div></div>
-<main class="wrap"><div id="sections"></div><div class="noresult" id="noresult">No gear matches that search. Try another term, or <a href="#" onclick="openGeneralEnquiry();return false" style="color:var(--gold)">ask us directly →</a></div></main>
+</header><main class="wrap" id="catalogResults"><h1 class="catalog-title">Rent cinema equipment</h1><div id="sections"></div><div class="noresult" id="noresult">No gear matches that search. Try another term, or <a href="#" onclick="openGeneralEnquiry();return false" style="color:var(--gold)">ask us directly →</a></div></main>
 
 <!-- PACKAGES -->
 <div class="pkg-band"><section id="packages" class="wrap" style="padding-top:0;padding-bottom:0">
@@ -266,7 +290,7 @@
   <div class="steps">
     <div class="step-c"><div class="step-n">1</div><h4>Browse the inventory</h4><p>35+ options across cameras, lenses, lighting, grip, transport and genset.</p></div>
     <div class="step-c"><div class="step-n">2</div><h4>Add to cart</h4><p>Tap “Add to cart” on anything you need. Mix individual gear and ready-made packages.</p></div>
-    <div class="step-c"><div class="step-n">3</div><h4>Quote checkout</h4><p>Review your cart, add contact details and shoot dates, then send one request. No login required.</p></div>
+    <div class="step-c"><div class="step-n">3</div><h4>Send your list</h4><p>Send your cart via WhatsApp without filling a form, or request a quote with your shoot details.</p></div>
     <div class="step-c"><div class="step-n">4</div><h4>We confirm &amp; quote</h4><p>We check availability for your dates and reply with pricing on WhatsApp within 24 hours.</p></div>
   </div>
 </section>
@@ -291,13 +315,13 @@
   </div>
   <div class="contact-grid">
     <div class="contact-card">
-      <div class="cline"><span class="ci">💬</span><div><b>WhatsApp / Call</b><span>+91 00000 00000 — fastest for quotes & availability</span></div></div>
-      <div class="cline"><span class="ci">✉️</span><div><b>Email</b><span>bookings@sricinehub.example</span></div></div>
-      <div class="cline"><span class="ci">📍</span><div><b>Studio floor</b><span>Chennai, Tamil Nadu — pickup & returns by appointment</span></div></div>
+      <div class="cline"><span class="ci">💬</span><div><b>WhatsApp / Call</b><span><a href="tel:+919500072167">+91 95000 72167</a> — fastest for quotes & availability</span></div></div>
+      <div class="cline"><span class="ci">✉️</span><div><b>Email</b><span><a href="mailto:sricinehub@gmail.com">sricinehub@gmail.com</a></span></div></div>
+      <div class="cline"><span class="ci">📍</span><div><b>Studio floor</b><span>Kesavarthini IN, 104, Brindavan Main Rd, opp. Valasaravakkam, Fathima Nagar, Chennai, Tamil Nadu 600087<br>Pickup &amp; returns by appointment<br><a href="https://maps.app.goo.gl/1dA1aojS1VPM1AZL8" target="_blank" rel="noopener noreferrer">Get directions →</a></span></div></div>
       <div class="cline"><span class="ci">🕘</span><div><b>Hours</b><span>Mon–Sat · 9:00 AM – 8:00 PM</span></div></div>
       <button class="btn btn-primary" style="width:100%;margin-top:18px" onclick="openGeneralEnquiry()">Request unlisted equipment →</button>
     </div>
-    <div class="map"></div>
+    <div class="map"><iframe title="Sri Cine Hub studio location" src="https://maps.google.com/maps?q=13.043129,80.1803999&amp;z=17&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe><a class="map-link" href="https://maps.app.goo.gl/1dA1aojS1VPM1AZL8" target="_blank" rel="noopener noreferrer">Open Sri Cine Hub in Google Maps →</a></div>
   </div>
 </section></div>
 
@@ -308,6 +332,7 @@
   <button class="btn btn-primary" style="padding:10px 18px" onclick="openCart()">Checkout →</button>
 </div></div>
 
+<dialog id="productDialog" class="product-dialog"><button class="modal-close" aria-label="Close equipment details" onclick="document.getElementById('productDialog').close()">×</button><div id="productDetails"></div></dialog>
 <!-- CART / QUOTE CHECKOUT -->
 <div class="ov" id="cartOv" aria-hidden="true"><div class="modal" id="checkoutModal" role="dialog" aria-modal="true" aria-label="Quote checkout">
   <button class="modal-close" type="button" onclick="closeCheckout()" aria-label="Close">×</button>
@@ -325,7 +350,7 @@
     <div class="foot-col"><h5>Company</h5>
       <a href="#packages">Packages</a><a href="#how">How it works</a><a href="#why">Why Sri Cine Hub</a><a href="#contact">Contact</a></div>
     <div class="foot-col"><h5>Get a quote</h5>
-      <a href="#" onclick="openCart();return false">Open Cart</a><a href="#" onclick="openGeneralEnquiry();return false">Request unlisted equipment</a><a href="#contact">WhatsApp us</a></div>
+      <a href="#" onclick="openCart();return false">Open Cart</a><a href="#" onclick="openGeneralEnquiry();return false">Request unlisted equipment</a><a href="https://wa.me/919500072167" target="_blank" rel="noopener noreferrer">WhatsApp us</a></div>
   </div>
   <div class="foot-bot">
     <span>© 2026 Sri Cine Hub · Chennai</span>
@@ -351,7 +376,7 @@ const HERO='1579632652768-6cb9dcf85912';
 const us=(id,w)=>`https://images.unsplash.com/photo-${id}?w=${w}&q=70&auto=format&fit=crop`;
 const imgFor=(cat,idx)=>{const p=IMG[cat]||[];return us(p[idx%p.length],600);};
 const fb=n=>`https://picsum.photos/seed/${encodeURIComponent(n)}/600/400`;
-document.getElementById('heroBg').style.backgroundImage=`url('${us(HERO,1600)}')`;
+
 
 /* ---- packages ---- */
 const PACKAGES=[
@@ -362,12 +387,17 @@ const PACKAGES=[
 ];
 
 const cart=new Set();
+let selectedCategory=0;
+function catalogTop(){document.getElementById('catalogResults').scrollIntoView({behavior:'instant',block:'start'});}
+function selectCategory(i){selectedCategory=i;document.getElementById('search').value='';filterCatalog('');catalogTop();}
+function showInfo(id){document.querySelectorAll('#packages,#how,#why').forEach(el=>{(el.closest('.pkg-band')||el).hidden=el.id!==id;});document.querySelector('.site-menu').open=false;}
+
 function render(){
   const chips=document.getElementById('chips'), secs=document.getElementById('sections');
   SRI_CATALOG.forEach((c,i)=>{
-    const chip=document.createElement('div');chip.className='chip'+(i===0?' active':'');
+    const chip=document.createElement('button');chip.type='button';chip.className='chip'+(i===0?' active':'');chip.setAttribute('aria-pressed',String(i===0));
     chip.innerHTML=`${c.category}<span class="n">${c.items.length}</span>`;
-    chip.onclick=()=>{document.getElementById('search').value='';filterCatalog('');document.getElementById('sec-'+i).scrollIntoView({behavior:'smooth'});[...chips.children].forEach(x=>x.classList.remove('active'));chip.classList.add('active');};
+    chip.onclick=()=>selectCategory(i);
     chips.appendChild(chip);
     const sec=document.createElement('section');sec.className='sec';sec.id='sec-'+i;
     sec.innerHTML=`<div class="sec-h"><h2 class="disp">${c.category}</h2><span>${c.items.length} options</span></div>`;
@@ -380,9 +410,13 @@ function render(){
           <img src="${imgFor(c.category,j)}" loading="lazy" alt="${it.n}" onerror="this.onerror=null;this.src='${fb(it.n)}'">
           ${it.flag?`<span class="flag">${it.flag}</span>`:''}
         </div>
-        <div class="card-b"><h3>${it.n}</h3><p>${it.d}</p>
-        <div class="add"><small>Availability on request</small><button class="add-btn">＋ Add to cart</button></div></div>`;
+        <div class="card-b"><h3>${it.n}</h3>
+        <div class="add"><div class="item-actions"><button class="wa-btn">Rent via WhatsApp</button><button class="add-btn">＋ Add to cart</button></div></div></div>`;
+      card.querySelector('.wa-btn').onclick=e=>{e.stopPropagation();sendRentalWhatsApp([it.n]);};
       card.querySelector('.add-btn').onclick=e=>{e.stopPropagation();toggle(key,card,e.target);};
+      const detailButton=document.createElement('button');detailButton.type='button';detailButton.className='detail-name';detailButton.textContent=it.n;detailButton.onclick=()=>openProduct(it,key,card,j,c.category);
+      card.querySelector('h3').replaceChildren(detailButton);
+      card.onclick=e=>{if(!e.target.closest('button,a'))openProduct(it,key,card,j,c.category);};
       g.appendChild(card);
     });
     sec.appendChild(g);secs.appendChild(sec);
@@ -399,6 +433,16 @@ function render(){
     el.querySelector('.add-btn2').onclick=e=>{e.stopPropagation();toggle(key,el,e.target,'package');};
     pg.appendChild(el);
   });
+}
+function openProduct(it,key,card,j,category){
+  const area=document.getElementById('productDetails');area.replaceChildren();
+  const img=document.createElement('img');img.src=imgFor(category,j);img.alt=it.n;area.appendChild(img);
+  const title=document.createElement('h2');title.textContent=it.n;area.appendChild(title);
+  const description=document.createElement('p');description.textContent=it.d;area.appendChild(description);
+  const note=document.createElement('p');note.textContent='Contact us to confirm specifications, package contents and availability.';area.appendChild(note);
+  const wa=document.createElement('button');wa.className='btn wa-btn';wa.textContent='Rent via WhatsApp';wa.onclick=()=>sendRentalWhatsApp([it.n]);area.appendChild(wa);
+  const add=document.createElement('button');add.className='btn btn-ghost';add.textContent=cart.has(key)?'✓ In cart':'＋ Add to cart';add.onclick=()=>{const button=card.querySelector('.add-btn');toggle(key,card,button);add.textContent=button.textContent;};area.appendChild(add);
+  document.getElementById('productDialog').showModal();
 }
 function toggle(key,node,btn,kind){
   const inLabel = kind==='package' ? '✓ Package in cart' : '✓ In cart';
@@ -435,11 +479,12 @@ function removeFromCart(key){
 /* search */
 function filterCatalog(q){
   q=(q||'').trim().toLowerCase();
+  document.querySelectorAll('#chips .chip').forEach((chip,i)=>{const active=!q&&i===selectedCategory;chip.classList.toggle('active',active);chip.setAttribute('aria-pressed',String(active));});
   let any=false;
   document.querySelectorAll('#sections .sec').forEach(sec=>{
     let visible=0;
     sec.querySelectorAll('.card').forEach(card=>{
-      const match=!q||card.dataset.text.includes(q);
+      const match=q?card.dataset.text.includes(q):sec.id==='sec-'+selectedCategory;
       card.classList.toggle('hide',!match);
       if(match)visible++;
     });
@@ -475,7 +520,7 @@ function renderCheckout(){
       el.innerHTML=`<div class="empty-cart"><div class="icon" aria-hidden="true">🛒</div><h3 class="disp">Your cart is empty</h3><p>Add equipment before starting quote checkout, or tell us about equipment that is not listed.</p><button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="browseEquipment()">Browse Equipment</button><button class="btn btn-ghost" style="width:100%" onclick="openGeneralEnquiry()">Request unlisted equipment</button></div>`;
       return;
     }
-    el.innerHTML=`<div class="step">Quote checkout · Step 1 of 3</div><h3 class="disp">Review your cart</h3><p class="mut">Confirm the equipment you want us to check for your shoot.</p><div class="cart-summary"><div class="ks-title">${cart.size} item${cart.size>1?'s':''}</div>${cartRows()}</div><div class="checkout-actions"><button class="btn btn-ghost" onclick="clearCart()">Clear cart</button><button class="btn btn-primary" onclick="checkoutNext()">Continue →</button></div>`;
+    el.innerHTML=`<h3 class="disp">Your cart</h3><div class="cart-summary"><div class="ks-title">${cart.size} item${cart.size>1?'s':''}</div>${cartRows()}</div><button class="btn wa-btn cart-whatsapp" onclick="sendCartWhatsApp()">Send cart via WhatsApp</button><div class="checkout-actions"><button class="btn btn-ghost" onclick="clearCart()">Clear cart</button><button class="btn btn-ghost" onclick="checkoutNext()">Request quote via form →</button></div>`;
     return;
   }
   if(CHECKOUT.step===2){renderDetailsStep(el);return;}
@@ -512,12 +557,21 @@ function renderReviewStep(el){
   const dates=d.start||d.end?`${d.start||'Start date not provided'} → ${d.end||'End date not provided'}`:'Dates not provided';
   el.innerHTML=`<div class="step">${isGeneral?'Equipment enquiry · Review':'Quote checkout · Step 3 of 3'}</div><h3 class="disp">Review your request</h3><p class="mut">Submitting this request does not confirm a booking. Our team will check availability and send pricing.</p>${requestSummary}<div class="review-block"><b>Contact</b><p>${escHtml(d.name)} · ${escHtml(d.phone)}${d.production?'\n'+escHtml(d.production):''}</p></div><div class="review-block"><b>Shoot dates</b><p>${escHtml(dates)}</p></div>${!isGeneral&&d.notes?`<div class="review-block"><b>Notes</b><p>${escHtml(d.notes)}</p></div>`:''}<div id="q-msg" style="${CHECKOUT.error?'':'display:none;'}color:#e0705a;font-size:13px;margin-bottom:10px">${escHtml(CHECKOUT.error)}</div><div class="checkout-actions"><button class="btn btn-ghost" onclick="checkoutBack()">← Edit details</button><button class="btn btn-primary" id="q-send" onclick="submitRequest()">Submit quote request →</button></div>`;
 }
+function rentalWhatsAppUrl(items){
+  const names=items.filter(Boolean);
+  const msg=names.length===1
+    ? "Hi Sri Cine Hub, I'd like to rent "+names[0]+". Please share availability and pricing."
+    : "Hi Sri Cine Hub, I'd like to rent the following equipment:\n"+names.map(name=>'• '+name).join('\n')+"\n\nPlease share availability and pricing.";
+  return 'https://wa.me/919500072167?text='+encodeURIComponent(msg);
+}
+function sendRentalWhatsApp(items){if(!items.length)return;window.open(rentalWhatsAppUrl(items),'_blank','noopener,noreferrer');}
+function sendCartWhatsApp(){sendRentalWhatsApp(cartItems().map(item=>item.name));}
 function waStudio(){
   const request=LAST_REQUEST||{items:cartItems().map(item=>item.name),details:CHECKOUT.details};
   const d=request.details||{};
   const body=request.items&&request.items.length?request.items.map(i=>'• '+i).join('\n'):(d.notes||'(equipment for a shoot)');
   const msg=`Hi Sri Cine Hub, I'd like to enquire about renting:\n${body}\n\nShoot dates: ${d.start||'___'} to ${d.end||'___'}\nName: ${d.name||'___'}`;
-  window.open('https://wa.me/910000000000?text='+encodeURIComponent(msg),'_blank');
+  window.open('https://wa.me/919500072167?text='+encodeURIComponent(msg),'_blank');
 }
 let _sb=null;
 function getSB(){const c=window.SUPABASE_CONFIG;if(!c||!c.url||!window.supabase)return null;if(!_sb)_sb=window.supabase.createClient(c.url,c.anonKey,{db:{schema:c.schema||'srchub'}});return _sb;}
@@ -566,7 +620,14 @@ function applyTheme(t){
 }
 function toggleTheme(){applyTheme(document.body.dataset.theme==='dark'?'light':'dark');}
 (function(){let t='dark';try{t=localStorage.getItem('src-theme')||'dark';}catch(e){}applyTheme(t);})();
-render();
+render();filterCatalog('');
+showInfo('equipment');
+const headerObserver=new ResizeObserver(()=>document.documentElement.style.setProperty('--catalog-header',document.querySelector('header').offsetHeight+'px'));
+headerObserver.observe(document.querySelector('header'));
+document.querySelectorAll('footer a[href^="#"]').forEach(a=>a.addEventListener('click',()=>showInfo(a.hash.slice(1))));
 </script>
+<a class="floating-whatsapp" href="https://wa.me/919500072167?text=Hi%20Sri%20Cine%20Hub%2C%20I%27d%20like%20to%20enquire%20about%20equipment%20rental." target="_blank" rel="noopener noreferrer" aria-label="Chat with Sri Cine Hub on WhatsApp" title="Chat on WhatsApp">
+<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M27 15.5A11.5 11.5 0 0 1 10 25.6L4 27l1.5-5.8A11.5 11.5 0 1 1 27 15.5Z" stroke="currentColor" stroke-width="2"/><path d="M11 9c-.8 0-2 1.2-2 2.5 0 4.5 6.5 10.5 10.5 10.5 1.4 0 3-1.5 3-2.5 0-.4-.2-.6-.6-.8l-3-1.4c-.4-.2-.7-.1-1 .3l-1 1.2c-2-.8-4-2.8-4.8-4.5l1-1.2c.3-.3.3-.6.1-1l-1.3-2.6c-.2-.4-.5-.5-.9-.5Z" fill="currentColor"/></svg>
+</a>
 </body>
 </html>
