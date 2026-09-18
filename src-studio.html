@@ -237,6 +237,9 @@
     .chip{padding:8px 12px}.sec-h h2{font-size:21px}
   }
   @media(max-width:350px){.grid{grid-template-columns:1fr}.logo .txt{font-size:12px}}
+.detail-name{border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}.detail-name:focus-visible{outline:2px solid var(--gold)}
+.product-dialog{margin:auto;width:calc(100% - 24px);max-width:480px;max-height:85vh;overflow:auto;padding:48px 20px 20px;border:1px solid var(--gold);border-radius:14px;background:var(--card);color:var(--text)}
+.product-dialog::backdrop{background:rgba(0,0,0,.65)}.product-dialog img{width:100%;height:180px;object-fit:cover;border-radius:8px}.product-dialog h2{margin:16px 0 8px}.product-dialog p{margin:12px 0;color:var(--mut)}.product-dialog .btn{width:100%}
 </style>
 </head>
 <body data-theme="dark">
@@ -314,6 +317,7 @@
   <button class="btn btn-primary" style="padding:10px 18px" onclick="openCart()">Checkout →</button>
 </div></div>
 
+<dialog id="productDialog" class="product-dialog"><button class="modal-close" aria-label="Close equipment details" onclick="document.getElementById('productDialog').close()">×</button><div id="productDetails"></div></dialog>
 <!-- CART / QUOTE CHECKOUT -->
 <div class="ov" id="cartOv" aria-hidden="true"><div class="modal" id="checkoutModal" role="dialog" aria-modal="true" aria-label="Quote checkout">
   <button class="modal-close" type="button" onclick="closeCheckout()" aria-label="Close">×</button>
@@ -394,6 +398,9 @@ function render(){
         <div class="card-b"><h3>${it.n}</h3><p>${it.d}</p>
         <div class="add"><small>Availability on request</small><button class="add-btn">＋ Add to cart</button></div></div>`;
       card.querySelector('.add-btn').onclick=e=>{e.stopPropagation();toggle(key,card,e.target);};
+      const detailButton=document.createElement('button');detailButton.type='button';detailButton.className='detail-name';detailButton.textContent=it.n;detailButton.onclick=()=>openProduct(it,key,card,j,c.category);
+      card.querySelector('h3').replaceChildren(detailButton);
+      card.querySelector('.thumb').onclick=()=>openProduct(it,key,card,j,c.category);
       g.appendChild(card);
     });
     sec.appendChild(g);secs.appendChild(sec);
@@ -410,6 +417,15 @@ function render(){
     el.querySelector('.add-btn2').onclick=e=>{e.stopPropagation();toggle(key,el,e.target,'package');};
     pg.appendChild(el);
   });
+}
+function openProduct(it,key,card,j,category){
+  const area=document.getElementById('productDetails');area.replaceChildren();
+  const img=document.createElement('img');img.src=imgFor(category,j);img.alt=it.n;area.appendChild(img);
+  const title=document.createElement('h2');title.textContent=it.n;area.appendChild(title);
+  const description=document.createElement('p');description.textContent=it.d;area.appendChild(description);
+  const note=document.createElement('p');note.textContent='Contact us to confirm specifications, package contents and availability.';area.appendChild(note);
+  const add=document.createElement('button');add.className='btn btn-primary';add.textContent=cart.has(key)?'✓ In cart':'＋ Add to cart';add.onclick=()=>{const button=card.querySelector('.add-btn');toggle(key,card,button);add.textContent=button.textContent;};area.appendChild(add);
+  document.getElementById('productDialog').showModal();
 }
 function toggle(key,node,btn,kind){
   const inLabel = kind==='package' ? '✓ Package in cart' : '✓ In cart';
