@@ -257,7 +257,7 @@
   @media(max-width:600px){.card-b{padding:8px 10px}.card .item-actions{height:120px;padding:8px}.grid{gap:10px}.card-b h3{font-size:14px}}
 </style>
 </head>
-<body data-theme="dark">
+<body data-theme="light">
 <header>
   <div class="bar">
     <div class="logo"><img src="logo.png" alt="Sri Cine Hub"><span class="txt">Sri Cine Hub<small>CINEMA RENTALS</small></span></div>
@@ -374,10 +374,10 @@ const fb=n=>`https://picsum.photos/seed/${encodeURIComponent(n)}/600/400`;
 
 /* ---- packages ---- */
 const PACKAGES=[
+  {n:'Feature Production Package',img:IMG.Cameras[0],inc:'<b>ARRI camera</b> · Ultra Primes · full lighting · Tempo Traveller · 45KV genset',t:'High-end ARRI build with transport and power on tap.',flag:'Popular'},
   {n:'Indie Short Film Kit',img:IMG.Cameras[2],inc:'<b>Sony FX3</b> · prime lens set · 2× LED lights · slider · wireless mic',t:'Compact single-camera build for shorts and music videos.'},
   {n:'Ad Film Package',img:IMG.Cameras[1],inc:'<b>RED Komodo 6K</b> · cine zooms · SkyPanel + Aputure · C-stands · Nucleus FF',t:'Multi-camera commercial setup with full lighting and grip.'},
-  {n:'Wedding / Event Kit',img:IMG.Cameras[3],inc:'<b>2× Sony A7S III</b> · G-Master lenses · gimbal · lapel + wireless mics',t:'Run-and-gun coverage with backup bodies and audio.'},
-  {n:'Feature Production Package',img:IMG.Cameras[0],inc:'<b>ARRI camera</b> · Ultra Primes · full lighting · Tempo Traveller · 45KV genset',t:'High-end ARRI build with transport and power on tap.',flag:'Popular'}
+  {n:'Wedding / Event Kit',img:IMG.Cameras[3],inc:'<b>2× Sony A7S III</b> · G-Master lenses · gimbal · lapel + wireless mics',t:'Run-and-gun coverage with backup bodies and audio.'}
 ];
 
 const cart=new Set();
@@ -617,7 +617,7 @@ function applyTheme(t){
   try{localStorage.setItem('src-theme',t);}catch(e){}
 }
 function toggleTheme(){applyTheme(document.body.dataset.theme==='dark'?'light':'dark');}
-(function(){let t='dark';try{t=localStorage.getItem('src-theme')||'dark';}catch(e){}applyTheme(t);})();
+(function(){let t='light';try{t=localStorage.getItem('src-theme')||'light';}catch(e){}applyTheme(t);})();
 render();filterCatalog('');
 showInfo('equipment');
 const headerObserver=new ResizeObserver(()=>document.documentElement.style.setProperty('--catalog-header',document.querySelector('header').offsetHeight+'px'));
