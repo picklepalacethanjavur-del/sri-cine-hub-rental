@@ -2199,6 +2199,28 @@ VIEWS.investor.after=()=>refreshInvestorPortal();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ROLE==='investor')refreshInvestorPortal();});
 window.addEventListener('focus',()=>{if(ROLE==='investor')refreshInvestorPortal();});
 setInterval(()=>{if(!document.hidden&&ROLE==='investor')refreshInvestorPortal();},30000);
+function openProfitSharingBreakdown(camCode,period="all"){
+  const cam=DATA.cameras.find(c=>c.code===camCode);
+  if(!cam)return;
+  const matchesPeriod=b=>period==="all"||(period.length===4?String(parseD(b.start).getFullYear())===period:b.start.slice(0,7)===period);
+  const bookings=DATA.bookings.filter(b=>["checked_out","overdue","returned"].includes(b.status)&&b.cameras.some(c=>c.code===camCode)&&matchesPeriod(b));
+  const details=bookings.map(b=>{
+    const bt=bookingTotals(b);
+    const cameraRent=b.cameras.filter(c=>c.code===camCode).reduce((sum,c)=>sum+c.rate*lineDays(b,c)*(c.qty||1),0);
+    const allocated=bt.charges>0?Math.round(bt.paid*cameraRent/bt.charges):0;
+    return {b,totalBill:bt.charges,paid:bt.paid,cameraRent,allocated};
+  });
+  const totals=details.reduce((a,r)=>({totalBill:a.totalBill+r.totalBill,paid:a.paid+r.paid,cameraRent:a.cameraRent+r.cameraRent,allocated:a.allocated+r.allocated}),{totalBill:0,paid:0,cameraRent:0,allocated:0});
+  const label=period==="all"?"All time":period.length===4?period:parseD(period+"-01").toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+  openModal(`<h3>Gross received calculation</h3>
+    <p class="mut">ARRI rent is allocated from each booking's recorded payment in proportion to the camera's share of that booking.</p>
+    <div class="review-block"><b>Formula</b><p>Camera received = Booking payment × Camera rent ÷ Total booking bill</p></div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Booking</th><th>Total bill</th><th>Paid</th><th>Camera rent</th><th>Allocated to camera</th></tr></thead><tbody>
+      ${details.length?details.map(r=>`<tr><td><b>${escAttr(r.b.code)}</b><div class="muted" style="font-size:11px">${escAttr(r.b.project||r.b.production||"")} · ${fmtDate(r.b.start)}</div></td><td class="amt">${money(r.totalBill)}</td><td class="amt">${money(r.paid)}</td><td class="amt">${money(r.cameraRent)}</td><td class="amt gold">${money(r.allocated)}</td></tr>`).join(""):`<tr><td colspan="5" class="empty">No qualifying bookings for this period.</td></tr>`}
+      ${details.length?`<tr><td><b>Total · ${escAttr(label)}</b></td><td class="amt"><b>${money(totals.totalBill)}</b></td><td class="amt"><b>${money(totals.paid)}</b></td><td class="amt"><b>${money(totals.cameraRent)}</b></td><td class="amt gold"><b>${money(totals.allocated)}</b></td></tr>`:""}
+    </tbody></table></div>
+    <p class="mut" style="margin-top:12px;font-size:12px">Read-only calculation. No manager entry or allocation is required.</p>`,true,"Close");
+}
 function investorBody(){
   const invCams=DATA.cameras.filter(c=>c.investors&&c.investors.length);
   if(!invCams.length)return `<div class="empty" style="padding:48px;text-align:center">
@@ -2276,7 +2298,7 @@ function investorBody(){
         <td>${paid>0?money(paid):'<span class="muted">—</span>'}</td><td>${roi.toFixed(1)}%</td></tr>`;}).join("")}
     </tbody></table></div>
 
-  <div class="card" style="margin-bottom:18px"><div class="card-h"><h3>Monthly Profit Sharing · ${periodLbl}</h3></div>
+  <div class="card" style="margin-bottom:18px"><div class="card-h" onclick="openProfitSharingBreakdown('${cam.code}','${INVEST.period}')" style="cursor:pointer" title="View gross received calculation"><h3>Monthly Profit Sharing · ${periodLbl}</h3><span class="lnk" style="font-size:12px">View calculation →</span></div>
     <div class="muted" style="padding:12px 16px 4px;font-size:12px">Each month's investor pool is ${(poolPct*100).toFixed(0)}% of that month's received revenue. Settle a month once its payments are in — the split is divided by each investor's stake.</div>
     <table><thead><tr><th>Month</th><th>Bookings</th><th>Gross received</th><th>Investor pool</th><th>Split by investor</th><th style="text-align:right">Settlement</th></tr></thead><tbody>
     ${monthKeys.length?monthKeys.map(mk=>{const m=months[mk];const mpool=Math.round(m.recv*poolPct);const st=settlementFor(mk);
@@ -2350,7 +2372,7 @@ function userSetRole(id,role){ SDB.setProfile(id,{role}); toast('Role updated');
 function userToggle(id,active){ SDB.setProfile(id,{is_active:active}); go('users'); }
 
 /* ============ modal / theme ============ */
-function openModal(html,wide){$("#modal").style.maxWidth=wide?"760px":"440px";$("#modal").innerHTML=html+'<div style="text-align:right;margin-top:6px"><span class="lnk muted" style="cursor:pointer;font-size:12.5px" onclick="closeModal()">Cancel</span></div>';$("#ov").classList.add("show");}
+function openModal(html,wide,closeLabel="Cancel"){$("#modal").style.maxWidth=wide?"760px":"440px";const closeAction=closeLabel==="Cancel"?'<div style="text-align:right;margin-top:6px"><span class="lnk muted" style="cursor:pointer;font-size:12.5px" onclick="closeModal()">Cancel</span></div>':`<div style="text-align:right;margin-top:12px"><button class="btn btn-ghost" onclick="closeModal()">${escAttr(closeLabel)}</button></div>`;$("#modal").innerHTML=html+closeAction;$("#ov").classList.add("show");}
 function closeModal(){$("#ov").classList.remove("show");}
 let MODAL_BACKDROP_DOWN=false;
 $("#ov").addEventListener("pointerdown",e=>{MODAL_BACKDROP_DOWN=e.target.id==="ov";});
