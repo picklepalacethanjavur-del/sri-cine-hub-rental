@@ -2372,7 +2372,7 @@ function userSetRole(id,role){ SDB.setProfile(id,{role}); toast('Role updated');
 function userToggle(id,active){ SDB.setProfile(id,{is_active:active}); go('users'); }
 
 /* ============ modal / theme ============ */
-function openModal(html,wide,closeLabel="Cancel"){$("#modal").style.maxWidth=wide?"760px":"440px";const closeAction=closeLabel==="Cancel"?'<div style="text-align:right;margin-top:6px"><span class="lnk muted" style="cursor:pointer;font-size:12.5px" onclick="closeModal()">Cancel</span></div>':`<div style="text-align:right;margin-top:12px"><button class="btn btn-ghost" onclick="closeModal()">${esc(closeLabel)}</button></div>`;$("#modal").innerHTML=html+closeAction;$("#ov").classList.add("show");}
+function openModal(html,wide,closeLabel="Cancel"){$("#modal").style.maxWidth=wide?"760px":"440px";const closeAction=closeLabel==="Cancel"?'<div style="text-align:right;margin-top:6px"><span class="lnk muted" style="cursor:pointer;font-size:12.5px" onclick="closeModal()">Cancel</span></div>':`<div style="text-align:right;margin-top:12px"><button class="btn btn-ghost" onclick="closeModal()">${escAttr(closeLabel)}</button></div>`;$("#modal").innerHTML=html+closeAction;$("#ov").classList.add("show");}
 function closeModal(){$("#ov").classList.remove("show");}
 let MODAL_BACKDROP_DOWN=false;
 $("#ov").addEventListener("pointerdown",e=>{MODAL_BACKDROP_DOWN=e.target.id==="ov";});
