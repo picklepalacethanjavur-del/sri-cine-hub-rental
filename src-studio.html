@@ -240,6 +240,11 @@
 .detail-name{border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}.detail-name:focus-visible{outline:2px solid var(--gold)}
 .product-dialog{margin:auto;width:calc(100% - 24px);max-width:480px;max-height:85vh;overflow:auto;padding:48px 20px 20px;border:1px solid var(--gold);border-radius:14px;background:var(--card);color:var(--text)}
 .product-dialog::backdrop{background:rgba(0,0,0,.65)}.product-dialog img{width:100%;height:180px;object-fit:cover;border-radius:8px}.product-dialog h2{margin:16px 0 8px}.product-dialog p{margin:12px 0;color:var(--mut)}.product-dialog .btn{width:100%}
+
+  .wa-btn{border:1px solid var(--gold);background:var(--gold);color:#171309;border-radius:8px;padding:10px 8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;min-height:44px;width:100%}
+  .item-actions{display:grid;gap:8px}.cart-whatsapp{margin-top:8px}.product-dialog .wa-btn{margin-bottom:10px}
+  @media(hover:hover) and (pointer:fine){.card .item-actions{visibility:hidden;opacity:0}.card:hover .item-actions,.card:focus-within .item-actions{visibility:visible;opacity:1}}
+  @media(hover:none),(pointer:coarse){.card .item-actions{display:none}.card .add small:after{content:' · Tap for details'}}
 </style>
 </head>
 <body data-theme="dark">
@@ -275,7 +280,7 @@
   <div class="steps">
     <div class="step-c"><div class="step-n">1</div><h4>Browse the inventory</h4><p>35+ options across cameras, lenses, lighting, grip, transport and genset.</p></div>
     <div class="step-c"><div class="step-n">2</div><h4>Add to cart</h4><p>Tap “Add to cart” on anything you need. Mix individual gear and ready-made packages.</p></div>
-    <div class="step-c"><div class="step-n">3</div><h4>Quote checkout</h4><p>Review your cart, add contact details and shoot dates, then send one request. No login required.</p></div>
+    <div class="step-c"><div class="step-n">3</div><h4>Send your list</h4><p>Send your cart via WhatsApp without filling a form, or request a quote with your shoot details.</p></div>
     <div class="step-c"><div class="step-n">4</div><h4>We confirm &amp; quote</h4><p>We check availability for your dates and reply with pricing on WhatsApp within 24 hours.</p></div>
   </div>
 </section>
@@ -396,11 +401,12 @@ function render(){
           ${it.flag?`<span class="flag">${it.flag}</span>`:''}
         </div>
         <div class="card-b"><h3>${it.n}</h3><p>${it.d}</p>
-        <div class="add"><small>Availability on request</small><button class="add-btn">＋ Add to cart</button></div></div>`;
+        <div class="add"><small>Availability on request</small><div class="item-actions"><button class="wa-btn">Rent via WhatsApp</button><button class="add-btn">＋ Add to cart</button></div></div></div>`;
+      card.querySelector('.wa-btn').onclick=e=>{e.stopPropagation();sendRentalWhatsApp([it.n]);};
       card.querySelector('.add-btn').onclick=e=>{e.stopPropagation();toggle(key,card,e.target);};
       const detailButton=document.createElement('button');detailButton.type='button';detailButton.className='detail-name';detailButton.textContent=it.n;detailButton.onclick=()=>openProduct(it,key,card,j,c.category);
       card.querySelector('h3').replaceChildren(detailButton);
-      card.querySelector('.thumb').onclick=()=>openProduct(it,key,card,j,c.category);
+      card.onclick=e=>{if(!e.target.closest('button,a'))openProduct(it,key,card,j,c.category);};
       g.appendChild(card);
     });
     sec.appendChild(g);secs.appendChild(sec);
@@ -424,7 +430,8 @@ function openProduct(it,key,card,j,category){
   const title=document.createElement('h2');title.textContent=it.n;area.appendChild(title);
   const description=document.createElement('p');description.textContent=it.d;area.appendChild(description);
   const note=document.createElement('p');note.textContent='Contact us to confirm specifications, package contents and availability.';area.appendChild(note);
-  const add=document.createElement('button');add.className='btn btn-primary';add.textContent=cart.has(key)?'✓ In cart':'＋ Add to cart';add.onclick=()=>{const button=card.querySelector('.add-btn');toggle(key,card,button);add.textContent=button.textContent;};area.appendChild(add);
+  const wa=document.createElement('button');wa.className='btn wa-btn';wa.textContent='Rent via WhatsApp';wa.onclick=()=>sendRentalWhatsApp([it.n]);area.appendChild(wa);
+  const add=document.createElement('button');add.className='btn btn-ghost';add.textContent=cart.has(key)?'✓ In cart':'＋ Add to cart';add.onclick=()=>{const button=card.querySelector('.add-btn');toggle(key,card,button);add.textContent=button.textContent;};area.appendChild(add);
   document.getElementById('productDialog').showModal();
 }
 function toggle(key,node,btn,kind){
@@ -503,7 +510,7 @@ function renderCheckout(){
       el.innerHTML=`<div class="empty-cart"><div class="icon" aria-hidden="true">🛒</div><h3 class="disp">Your cart is empty</h3><p>Add equipment before starting quote checkout, or tell us about equipment that is not listed.</p><button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="browseEquipment()">Browse Equipment</button><button class="btn btn-ghost" style="width:100%" onclick="openGeneralEnquiry()">Request unlisted equipment</button></div>`;
       return;
     }
-    el.innerHTML=`<div class="step">Quote checkout · Step 1 of 3</div><h3 class="disp">Review your cart</h3><p class="mut">Confirm the equipment you want us to check for your shoot.</p><div class="cart-summary"><div class="ks-title">${cart.size} item${cart.size>1?'s':''}</div>${cartRows()}</div><div class="checkout-actions"><button class="btn btn-ghost" onclick="clearCart()">Clear cart</button><button class="btn btn-primary" onclick="checkoutNext()">Continue →</button></div>`;
+    el.innerHTML=`<div class="step">Quote checkout · Step 1 of 3</div><h3 class="disp">Review your cart</h3><p class="mut">Send your equipment list directly on WhatsApp. No contact form needed.</p><div class="cart-summary"><div class="ks-title">${cart.size} item${cart.size>1?'s':''}</div>${cartRows()}</div><button class="btn wa-btn cart-whatsapp" onclick="sendCartWhatsApp()">Send cart via WhatsApp</button><div class="checkout-actions"><button class="btn btn-ghost" onclick="clearCart()">Clear cart</button><button class="btn btn-ghost" onclick="checkoutNext()">Request quote via form →</button></div>`;
     return;
   }
   if(CHECKOUT.step===2){renderDetailsStep(el);return;}
@@ -540,6 +547,15 @@ function renderReviewStep(el){
   const dates=d.start||d.end?`${d.start||'Start date not provided'} → ${d.end||'End date not provided'}`:'Dates not provided';
   el.innerHTML=`<div class="step">${isGeneral?'Equipment enquiry · Review':'Quote checkout · Step 3 of 3'}</div><h3 class="disp">Review your request</h3><p class="mut">Submitting this request does not confirm a booking. Our team will check availability and send pricing.</p>${requestSummary}<div class="review-block"><b>Contact</b><p>${escHtml(d.name)} · ${escHtml(d.phone)}${d.production?'\n'+escHtml(d.production):''}</p></div><div class="review-block"><b>Shoot dates</b><p>${escHtml(dates)}</p></div>${!isGeneral&&d.notes?`<div class="review-block"><b>Notes</b><p>${escHtml(d.notes)}</p></div>`:''}<div id="q-msg" style="${CHECKOUT.error?'':'display:none;'}color:#e0705a;font-size:13px;margin-bottom:10px">${escHtml(CHECKOUT.error)}</div><div class="checkout-actions"><button class="btn btn-ghost" onclick="checkoutBack()">← Edit details</button><button class="btn btn-primary" id="q-send" onclick="submitRequest()">Submit quote request →</button></div>`;
 }
+function rentalWhatsAppUrl(items){
+  const names=items.filter(Boolean);
+  const msg=names.length===1
+    ? "Hi Sri Cine Hub, I'd like to rent "+names[0]+". Please share availability and pricing."
+    : "Hi Sri Cine Hub, I'd like to rent the following equipment:\n"+names.map(name=>'• '+name).join('\n')+"\n\nPlease share availability and pricing.";
+  return 'https://wa.me/919500072167?text='+encodeURIComponent(msg);
+}
+function sendRentalWhatsApp(items){if(!items.length)return;window.open(rentalWhatsAppUrl(items),'_blank','noopener,noreferrer');}
+function sendCartWhatsApp(){sendRentalWhatsApp(cartItems().map(item=>item.name));}
 function waStudio(){
   const request=LAST_REQUEST||{items:cartItems().map(item=>item.name),details:CHECKOUT.details};
   const d=request.details||{};
