@@ -234,6 +234,23 @@
     .topbar .who{display:none}.topbar .toggle{min-height:44px;padding:8px}
     .content{padding:16px 12px}
   }
+
+  .monthly-investor{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:4px 0}
+  .monthly-investor b{overflow-wrap:anywhere}.monthly-investor .amt{white-space:nowrap}
+  @media(max-width:760px){
+    .monthly-payouts,.monthly-payouts tbody,.monthly-payouts tr,.monthly-payouts td{display:block;width:100%;min-width:0}
+    .monthly-payouts thead{display:none}
+    .monthly-payouts tr{padding:16px;border-bottom:1px solid var(--line)}
+    .monthly-payouts tr:last-child{border-bottom:0}
+    .monthly-payouts td{padding:6px 0;border:0;white-space:normal;text-align:left}
+    .monthly-payouts td[data-label]:not(.monthly-split){display:flex;justify-content:space-between;gap:12px;align-items:center}
+    .monthly-payouts td[data-label]::before{content:attr(data-label);font-size:13px;color:var(--mut);font-weight:400}
+    .monthly-payouts .monthly-heading{font-size:17px;padding-bottom:10px}
+    .monthly-payouts .monthly-split{margin:10px 0;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+    .monthly-payouts .monthly-split::before{display:block;margin-bottom:8px}
+    .monthly-investor{font-size:15px;padding:8px 0}
+    .monthly-payouts .btn{min-height:44px}
+  }
 </style>
 </head>
 <body data-theme="dark">
@@ -2334,14 +2351,14 @@ function investorBody(){
 
   <div class="card" style="margin-bottom:18px"><div class="card-h" onclick="openProfitSharingBreakdown('${cam.code}','${INVEST.period}')" style="cursor:pointer" title="View gross received calculation"><h3>Monthly Profit Sharing · ${periodLbl}</h3><span class="lnk" style="font-size:12px">View calculation →</span></div>
     <div class="muted" style="padding:12px 16px 4px;font-size:12px">Each month's investor pool is ${(poolPct*100).toFixed(0)}% of that month's received revenue. Settle a month once its payments are in — the split is divided by each investor's stake.</div>
-    <table><thead><tr><th>Month</th><th>Bookings</th><th>Gross received</th><th>Investor pool</th><th>Split by investor</th><th style="text-align:right">Settlement</th></tr></thead><tbody>
+    <table class="monthly-payouts"><thead><tr><th>Month</th><th>Bookings</th><th>Gross received</th><th>Investor pool</th><th>Split by investor</th><th style="text-align:right">Settlement</th></tr></thead><tbody>
     ${monthKeys.length?monthKeys.map(mk=>{const m=months[mk];const mpool=Math.round(m.recv*poolPct);const st=settlementFor(mk);
       const mlabel=parseD(mk+"-01").toLocaleDateString("en-IN",{month:"long",year:"numeric"});
-      const split=cam.investors.map(iv=>`<div><b>${iv.name.split(" ")[0]}</b> ${money(round1(mpool*iv.invested/totalInvested))}</div>`).join("");
-      return `<tr><td><b>${mlabel}</b></td><td>${m.bookings}</td><td class="amt">${money(m.recv)}</td>
-        <td class="amt" style="color:var(--ok)">${money(mpool)}</td>
-        <td class="muted" style="font-size:12px;line-height:1.7">${split}</td>
-        <td style="text-align:right">${st?`<span class="badge b-ok">✓ settled ${fmtDate(st.date)}</span>`:(ROLE==='admin'?`<button class="btn btn-primary btn-sm" onclick="settleMonth('${cam.code}','${mk}')">Settle up →</button>`:`<span class="muted" style="font-size:12px">pending</span>`)}</td></tr>`;}).join(""):`<tr><td colspan="6" class="empty">No revenue to settle in this period.</td></tr>`}
+      const split=cam.investors.map(iv=>`<div class="monthly-investor"><b>${escAttr(iv.name)}</b><span class="amt">${money(round1(mpool*iv.invested/totalInvested))}</span></div>`).join("");
+      return `<tr><td class="monthly-heading"><b>${mlabel}</b></td><td data-label="Bookings">${m.bookings}</td><td data-label="Gross received" class="amt">${money(m.recv)}</td>
+        <td data-label="Investor pool" class="amt" style="color:var(--ok)">${money(mpool)}</td>
+        <td class="monthly-split" data-label="Monthly share by investor">${split}</td>
+        <td class="monthly-settlement" data-label="Settlement" style="text-align:right">${st?`<span class="badge b-ok">✓ settled ${fmtDate(st.date)}</span>`:(ROLE==='admin'?`<button class="btn btn-primary btn-sm" onclick="settleMonth('${cam.code}','${mk}')">Settle up →</button>`:`<span class="muted" style="font-size:12px">pending</span>`)}</td></tr>`;}).join(""):`<tr><td colspan="6" class="empty">No revenue to settle in this period.</td></tr>`}
     </tbody></table></div>
 
   <div class="card" style="margin-bottom:18px"><div class="card-h"><h3>All ${cam.manufacturer} bookings · ${periodLbl}</h3></div>
