@@ -220,17 +220,31 @@
   .wf .a{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
   .wf.good{background:var(--gold-soft)} .wf.good b{color:var(--gold)}
   .wf.pool{background:var(--ok-bg)} .wf.pool b{color:var(--ok)}
+
+  .mobile-menu-button{display:none}
+  .mobile-nav-dialog{padding:0;border:0;background:var(--sidebar);color:#eee;width:min(320px,90vw);max-width:90vw;height:100dvh;max-height:100dvh;margin:0;overflow:hidden}
+  .mobile-nav-dialog::backdrop{background:rgba(0,0,0,.55)}
+  .mobile-nav-dialog .sidebar{display:flex;width:100%;height:calc(100dvh - 52px);position:static;border:0}
+  .mobile-nav-close{display:block;margin:6px 12px 2px auto;min-height:44px;padding:8px 14px;border:1px solid #655b48;border-radius:8px;background:transparent;color:#fff;font:inherit;cursor:pointer}
+  @media(max-width:760px){
+    .mobile-menu-button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);font:inherit;cursor:pointer;flex-shrink:0}
+    .main{min-width:0;width:100%}.topbar{flex-wrap:wrap;padding:12px;gap:8px}
+    .topbar h1{font-size:20px}.topbar .tsearch{order:5;width:100%;flex-basis:100%;min-width:0}
+    .topbar .tsearch input{width:100%;min-width:0;font-size:16px}
+    .topbar .who{display:none}.topbar .toggle{min-height:44px;padding:8px}
+    .content{padding:16px 12px}
+  }
 </style>
 </head>
 <body data-theme="dark">
 <div class="app">
-  <aside class="sidebar">
+  <aside class="sidebar" id="consoleSidebar">
     <div class="sb-logo"><img src="logo.png" alt="Sri Cine Hub"><div><b>Sri Cine Hub</b><span>STUDIO CONSOLE</span></div></div>
     <nav class="nav" id="nav"></nav>
     <div class="sb-foot" id="sbfoot"></div>
   </aside>
   <div class="main">
-    <div class="topbar">
+    <div class="topbar"><button type="button" class="mobile-menu-button" id="mobileMenuButton" aria-haspopup="dialog" aria-controls="mobileNavDialog" aria-expanded="false" onclick="openMobileNav()">☰ Menu</button>
       <div><h1 id="pageTitle">Dashboard</h1></div>
       <div class="spacer"></div>
       <div class="tsearch"><span class="ic">🔍</span><input id="globalSearch" placeholder="Search bookings, gear, people…" onkeydown="if(event.key==='Enter')gsearch(this.value)"></div>
@@ -241,6 +255,7 @@
   </div>
 </div>
 
+<dialog id="mobileNavDialog" class="mobile-nav-dialog" aria-label="Console navigation"><button type="button" class="mobile-nav-close" onclick="closeMobileNav()">Close ×</button></dialog>
 <div class="ov" id="ov"><div class="modal" id="modal"></div></div>
 <div class="toast" id="toast"></div>
 
@@ -414,6 +429,25 @@ const NAV=[
 let ROLE="manager", CUR="dashboard";
 const ALLOWED={admin:"*",manager:["dashboard","quickrent","requests","bookings","checkout","calendar","inventory","hirein","suppliers","customers","technicians","crew","receipts"],investor:["investor"]};
 function canSee(v){const a=ALLOWED[ROLE];return a==="*"||a.includes(v);}
+function openMobileNav(){
+  const dialog=document.getElementById("mobileNavDialog");
+  if(dialog.open)return;
+  dialog.appendChild(document.getElementById("consoleSidebar"));
+  document.getElementById("mobileMenuButton").setAttribute("aria-expanded","true");
+  dialog.showModal();
+}
+function closeMobileNav(){
+  const dialog=document.getElementById("mobileNavDialog");
+  if(dialog.open)dialog.close();
+}
+document.getElementById("mobileNavDialog").addEventListener("close",()=>{
+  document.querySelector(".app").prepend(document.getElementById("consoleSidebar"));
+  document.getElementById("mobileMenuButton").setAttribute("aria-expanded","false");
+});
+document.getElementById("mobileNavDialog").addEventListener("click",event=>{
+  if(event.target===event.currentTarget)closeMobileNav();
+});
+window.matchMedia("(min-width:761px)").addEventListener("change",event=>{if(event.matches)closeMobileNav();});
 function buildNav(){
   const el=$("#nav");el.innerHTML="";
   NAV.forEach(n=>{
@@ -428,7 +462,7 @@ function buildNav(){
   const search=$("#globalSearch");if(search&&search.closest(".tsearch"))search.closest(".tsearch").style.display=canSee("dashboard")?"":"none";
 }
 function setRole(r){ROLE=r;$("#avatar").textContent=r[0].toUpperCase();if(!canSee(CUR))CUR=(ALLOWED[r]==="*"?"dashboard":ALLOWED[r][0]);buildNav();go(CUR);}
-function go(v,param){if(ROLE&&!canSee(v)){v=(ALLOWED[ROLE]==="*"?"dashboard":(ALLOWED[ROLE][0]||"dashboard"));param=undefined;}CUR=v;buildNav();const V=VIEWS[v];$("#pageTitle").textContent=(NAV.find(n=>n.v===v)||{}).t||"";$("#content").innerHTML=V?V(param):"<div class='empty'>Coming soon.</div>";if(V&&V.after)V.after(param);window.scrollTo(0,0);}
+function go(v,param){closeMobileNav();if(ROLE&&!canSee(v)){v=(ALLOWED[ROLE]==="*"?"dashboard":(ALLOWED[ROLE][0]||"dashboard"));param=undefined;}CUR=v;buildNav();const V=VIEWS[v];$("#pageTitle").textContent=(NAV.find(n=>n.v===v)||{}).t||"";$("#content").innerHTML=V?V(param):"<div class='empty'>Coming soon.</div>";if(V&&V.after)V.after(param);window.scrollTo(0,0);}
 /* Global search across bookings, gear, customers, suppliers, technicians and crew. */
 function gsearch(raw){const q=(raw||"").trim();if(!q){toast("Type something to search");return;}if(ROLE&&!canSee("dashboard")){toast("Search isn't available for this role");return;}CUR="";buildNav();$("#pageTitle").textContent='Search: "'+q+'"';$("#content").innerHTML=searchView(q);window.scrollTo(0,0);}
 function searchView(q){
