@@ -255,6 +255,9 @@
   .floating-whatsapp svg{width:30px;height:30px}.floating-whatsapp:hover{background:#0b713b}.floating-whatsapp:focus-visible{outline:3px solid var(--gold);outline-offset:4px}
   footer{padding-bottom:90px}
   @media(max-width:600px){.card-b{padding:8px 10px}.card .item-actions{height:120px;padding:8px}.grid{gap:10px}.card-b h3{font-size:14px}}
+.camera-card .thumb{background:#f3f3f1}
+.camera-card .thumb img,.product-dialog img.camera-product-image{object-fit:contain;box-sizing:border-box;padding:10px;background:#f3f3f1;filter:none}
+.camera-card .thumb:after{display:none}
 </style>
 </head>
 <body data-theme="light">
@@ -368,7 +371,15 @@ const IMG={
 };
 const HERO='1579632652768-6cb9dcf85912';
 const us=(id,w)=>`https://images.unsplash.com/photo-${id}?w=${w}&q=70&auto=format&fit=crop`;
-const imgFor=(cat,idx)=>{const p=IMG[cat]||[];return us(p[idx%p.length],600);};
+// Camera photos are keyed by product, never rotated generic stock images.
+const cameraPlaceholder=()=> 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect width="600" height="400" fill="#f3f3f1"/><text x="300" y="205" text-anchor="middle" fill="#626262" font-family="Arial,sans-serif" font-size="22">Photo coming soon</text></svg>');
+const imgFor=(cat,idx)=>{
+  if(cat==='Cameras'){const item=SRI_CATALOG.find(c=>c.category===cat)?.items[idx];return item?.image||cameraPlaceholder();}
+  const p=IMG[cat]||[];return us(p[idx%p.length],600);
+};
+function equipmentImageError(img,category,name){
+  img.onerror=null;img.src=category==='Cameras'?cameraPlaceholder():fb(name);
+}
 const fb=n=>`https://picsum.photos/seed/${encodeURIComponent(n)}/600/400`;
 
 
@@ -400,10 +411,10 @@ function render(){
     const g=document.createElement('div');g.className='grid';
     c.items.forEach((it,j)=>{
       const key=c.category+'|'+it.n;
-      const card=document.createElement('div');card.className='card';
+      const card=document.createElement('div');card.className='card'+(c.category==='Cameras'?' camera-card':'');
       card.dataset.text=(it.n+' '+it.d+' '+c.category).toLowerCase();
       card.innerHTML=`<div class="thumb">
-          <img src="${imgFor(c.category,j)}" loading="lazy" alt="${it.n}" onerror="this.onerror=null;this.src='${fb(it.n)}'">
+          <img src="${imgFor(c.category,j)}" loading="lazy" alt="${it.n}" onerror="equipmentImageError(this,this.dataset.category,this.alt)" data-category="${c.category}">
           ${it.flag?`<span class="flag">${it.flag}</span>`:''}
         </div>
         <div class="card-b"><h3>${it.n}</h3>
@@ -434,7 +445,7 @@ function render(){
 }
 function openProduct(it,key,card,j,category){
   const area=document.getElementById('productDetails');area.replaceChildren();
-  const img=document.createElement('img');img.src=imgFor(category,j);img.alt=it.n;area.appendChild(img);
+  const img=document.createElement('img');img.src=imgFor(category,j);img.alt=it.n;img.className=category==='Cameras'?'camera-product-image':'';img.onerror=()=>equipmentImageError(img,category,it.n);area.appendChild(img);
   const title=document.createElement('h2');title.textContent=it.n;area.appendChild(title);
   const description=document.createElement('p');description.textContent=it.d;area.appendChild(description);
   const note=document.createElement('p');note.textContent='Contact us to confirm specifications, package contents and availability.';area.appendChild(note);
