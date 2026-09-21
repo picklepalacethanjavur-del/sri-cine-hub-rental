@@ -3,8 +3,8 @@ window.SRI_CATALOG = [
   {
     category: "Cameras",
     items: [
-      { n: "ARRI S35", d: "Cinema camera package." },
-      { n: "RED Raptor 8K", d: "Cinema camera package." },
+      { n: "ARRI S35", d: "ARRI ALEXA 35 cinema camera package.", image: "https://elitecam.com.br/cdn/shop/files/arri_k0_0042900_alexa_35_body_1654048563_1708577_800x.jpg?v=1706284162", imageSource: "https://elitecam.com.br/products/camera-arri-alexa-35" },
+      { n: "RED Raptor 8K", d: "RED V-RAPTOR 8K VV cinema camera package.", image: "https://hotrodcameras.com/cdn/shop/products/redRaptor_10__64146_500x500.jpg?v=1684605235", imageSource: "https://hotrodcameras.com/products/red-digital-cinema-v-raptor-8k-vv-dsmc3-cinema-camera-canon-rf" },
       { n: "RED Helium (DCSM2) 8K", d: "Cinema camera package.", image: "https://www.bookmylens.com/admin/uploads/product_images/1568363861.jpg", imageSource: "https://www.bookmylens.com/product?id=298" },
       { n: "RED Gemini 5K", d: "Cinema camera package.", image: "https://cameraambassador.com/cdn/shop/products/Red_Gemini_fa43ebe6-5a51-4584-be8c-9193152d53b3_2400x.jpg?v=1652224689", imageSource: "https://cameraambassador.com/products/red-gemini-dsmc2-5k-kit" },
       { n: "RED Komodo 6K", d: "Cinema camera package.", image: "https://media.vocas.nl/media/catalog/product/r/e/red_komodo_6k_710-0333_front_2_1.png", imageSource: "https://vocas.nl/red-komodo-6k/" },
