@@ -258,6 +258,11 @@
 .camera-card .thumb{background:#f3f3f1}
 .camera-card .thumb img,.product-dialog img.camera-product-image{object-fit:contain;box-sizing:border-box;padding:10px;background:#f3f3f1;filter:none}
 .camera-card .thumb:after{display:none}
+.card-b p.camera-summary{margin:6px 0 0;min-height:0;font-size:12px;line-height:1.45;color:var(--mut);overflow-wrap:anywhere}
+.product-dialog .features-heading{margin:16px 0 8px;font-size:15px}
+.camera-features{margin:0;padding-left:19px;font-size:14px;line-height:1.5}
+.camera-features li{margin:0 0 8px}
+.product-dialog p.rental-note{font-size:12px;line-height:1.45}
 </style>
 </head>
 <body data-theme="light">
@@ -423,6 +428,10 @@ function render(){
       card.querySelector('.add-btn').onclick=e=>{e.stopPropagation();toggle(key,card,e.target);};
       const detailButton=document.createElement('button');detailButton.type='button';detailButton.className='detail-name';detailButton.textContent=it.n;detailButton.onclick=()=>openProduct(it,key,card,j,c.category);
       card.querySelector('h3').replaceChildren(detailButton);
+      if(it.summary){
+        const summary=document.createElement('p');summary.className='camera-summary';summary.textContent=it.summary;
+        card.querySelector('h3').after(summary);
+      }
       card.onclick=e=>{if(!e.target.closest('button,a'))openProduct(it,key,card,j,c.category);};
       g.appendChild(card);
     });
@@ -448,7 +457,13 @@ function openProduct(it,key,card,j,category){
   const img=document.createElement('img');img.src=imgFor(category,j);img.alt=it.n;img.className=category==='Cameras'?'camera-product-image':'';img.onerror=()=>equipmentImageError(img,category,it.n);area.appendChild(img);
   const title=document.createElement('h2');title.textContent=it.n;area.appendChild(title);
   const description=document.createElement('p');description.textContent=it.d;area.appendChild(description);
-  const note=document.createElement('p');note.textContent='Contact us to confirm specifications, package contents and availability.';area.appendChild(note);
+  if(it.features?.length){
+    const heading=document.createElement('h3');heading.textContent='Key features';heading.className='features-heading';area.appendChild(heading);
+    const list=document.createElement('ul');list.className='camera-features';
+    it.features.forEach(feature=>{const li=document.createElement('li');li.textContent=feature;list.appendChild(li);});
+    area.appendChild(list);
+  }
+  const note=document.createElement('p');note.className='rental-note';note.textContent=it.features?.length?'Confirm the supplied lens mount, accessories and recording setup when booking.':'Contact us to confirm specifications, package contents and availability.';area.appendChild(note);
   const wa=document.createElement('button');wa.className='btn wa-btn';wa.textContent='Rent via WhatsApp';wa.onclick=()=>sendRentalWhatsApp([it.n]);area.appendChild(wa);
   const add=document.createElement('button');add.className='btn btn-ghost';add.textContent=cart.has(key)?'✓ In cart':'＋ Add to cart';add.onclick=()=>{const button=card.querySelector('.add-btn');toggle(key,card,button);add.textContent=button.textContent;};area.appendChild(add);
   document.getElementById('productDialog').showModal();
