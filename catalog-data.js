@@ -16,22 +16,22 @@ window.SRI_CATALOG = [
   {
     category: "Lenses",
     items: [
-      { n: "Ultra Prime", d: "Cinema/photo lens option." },
-      { n: "CP3", d: "Cinema/photo lens option." },
-      { n: "CP2", d: "Cinema/photo lens option." },
-      { n: "Otus", d: "Cinema/photo lens option." },
-      { n: "Alura", d: "Cinema/photo lens option." },
+      { n: "Ultra Prime", d: "ARRI/ZEISS Ultra Prime cinema lens set.", image: "https://images.squarespace-cdn.com/content/v1/660b1cc33b6142320670f44d/42680d70-ba2a-41c0-a774-9fc091922bad/UltraPrimes.png", imageSource: "https://vynepictures.com/ultraprimes" },
+      { n: "CP3", d: "ZEISS Compact Prime CP.3 cinema lens set.", image: "https://s3.eu-west-2.amazonaws.com/kitroomstaging/assets/fc4157a66261fc1d978a3f0e7aaf4ae9.png", imageSource: "https://www.thekitroom.co.uk/kit/cine-lenses/zeiss-compact-prime-cp3-lens-set-pl-mount" },
+      { n: "CP2", d: "ZEISS Compact Prime CP.2 cinema lens set.", image: "https://images.squarespace-cdn.com/content/v1/58c1352ff5e231655c3ebaa0/1525281939364-RJCVHMAHFOEYOP38XXN9/Zeiss%2BCP.2%2Bx5%2Bkit%2B%281%2Bof%2B2%29.jpg", imageSource: "https://www.newdaypictures.com/video-camera-lens-hire/5x-zeiss-compact-prime-cp2-ef-lens-set-hire" },
+      { n: "Otus", d: "ZEISS Otus prime lens set.", image: "https://www.zeiss.nl/content/dam/pno/images/photography/products/lenses-for-videography/otus-lenses/product-slideshow/zeiss-otus-lenses-product-01.jpg/_jcr_content/renditions/original.image_file.1920.1280.0%2C160%2C3840%2C2720.file/zeiss-otus-lenses-product-01.jpg", imageSource: "https://www.zeiss.nl/photonics-and-optics/fotografie/producten/objectieven-voor-videografie/otus-objectieven.html" },
+      { n: "Alura", d: "ARRI/FUJINON Alura cinema zoom lens.", image: "https://media.exapro.com/product/2025/08/P250812086/81d66174ed7fb23300805debc51fa7d9/arri-alura-45-250mm-p250812086_1.jpg", imageSource: "https://www.exapro.com/arri-alura-45-250mm-p250812086/" },
       { n: "CP2 Zoom", d: "Cinema/photo lens option." },
       { n: "HR", d: "Cinema/photo lens option." },
       { n: "Canon Lens", d: "Cinema/photo lens option." },
       { n: "Sony G-Master Lens", d: "Cinema/photo lens option." },
-      { n: "Tokina 11-16", d: "Cinema/photo lens option." },
+      { n: "Tokina 11-16", d: "Tokina 11–16mm f/2.8 ultra-wide zoom lens.", image: "https://www.bhphotovideo.com/cdn-cgi/image/fit%3Dscale-down%2Cwidth%3D500%2Cquality%3D95/https%3A//www.bhphotovideo.com/images/images500x500/tokina_atx_i_af116cfc_atx_i_11_16mm_f_2_8_cf_1625738153_1512054.jpg", imageSource: "https://www.bhphotovideo.com/c/product/1512054-REG/tokina_atx_i_af116cfc_atx_i_11_16mm_f_2_8_cf.html" },
       { n: "100 Micro Lens", d: "Cinema/photo lens option." },
       { n: "Carl Zeiss", d: "Cinema/photo lens option." },
       { n: "Samyang", d: "Cinema/photo lens option." },
       { n: "2x Extender Lens", d: "Cinema/photo lens option." },
-      { n: "Sirui Anamorphic (RF mount)", d: "Cinema/photo lens option." },
-      { n: "Blaser Anamorphic (PL mount)", d: "Cinema/photo lens option." }
+      { n: "Sirui Anamorphic (RF mount)", d: "SIRUI Venus full-frame anamorphic RF-mount lens.", image: "https://store.sirui.com/cdn/shop/products/75mm_29548f9b-f5df-4e04-9624-890eb35fd236.png?v=1762400095", imageSource: "https://store.sirui.com/products/sirui-venus-anamorphic-lens-kit" },
+      { n: "Blazar Anamorphic (PL mount)", d: "Blazar Remus 1.5x anamorphic PL-mount cinema lens set.", image: "https://www.adorama.com/images/Large/BLRE4LAPLS.JPG", imageSource: "https://www.adorama.com/blazar-lens-remus-15x-anamorphic-4-lens-kit-pl-mount/p/blre4lapls" }
     ]
   },
   {
