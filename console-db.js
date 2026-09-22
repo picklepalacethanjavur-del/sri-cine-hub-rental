@@ -138,7 +138,7 @@ window.SDB = (function () {
         const u = unitById[l.unit_id] || {};
         const code = u.code || (l.line_kind === "hirein" ? "(hire-in)" : l.line_kind === "custom" ? "(manual)" : "(assign at checkout)");
         ids.lineKey[l.booking_id + "|" + code] = l.id;
-        const o = { code, name: u.name || l.label || "—", rate: Number(l.daily_rate_inr),
+        const o = { code, name: u.name || l.label || "—", rate: Number(l.daily_rate_inr), pricingMode: l.pricing_mode || "per_day",
           qty: l.quantity || 1, lineKind: l.line_kind || "own", supplierId: l.supplier_id || null,
           cost: l.cost_inr != null ? Number(l.cost_inr) : null,
           _lineId: l.id, optionName: l.label || null, unassigned: !u.code };
@@ -248,7 +248,18 @@ window.SDB = (function () {
     if (be) throw be;
     ids.bookingByCode[b.code] = bk.id;
     const src = [...b.cameras.map(c => ({ ...c, kind: "camera" })), ...b.accessories.map(a => ({ ...a, kind: "accessory" }))];
-    const rows = src.map(l => ({ booking_id: bk.id, unit_id: ids.unitByCode[l.code], kind: l.kind, daily_rate_inr: l.rate, quantity: l.qty || 1 }));
+    const rows = src.map(l => ({
+      booking_id: bk.id,
+      unit_id: l.lineKind === "custom" ? null : (ids.unitByCode[l.code] || null),
+      kind: l.kind,
+      label: l.name || null,
+      line_kind: l.lineKind || "own",
+      daily_rate_inr: l.rate,
+      quantity: l.qty || 1,
+      pricing_mode: l.pricingMode || "per_day",
+      item_start_at: l.start || null,
+      item_end_at: l.end || null
+    }));
     if (rows.length) {
       const { data: ins, error } = await sb.from("booking_lines").insert(rows).select("id"); if (error) throw error;
       (ins || []).forEach((r, i) => { const code = src[i] && src[i].code; if (code) ids.lineKey[bk.id + "|" + code] = r.id; });
@@ -396,6 +407,7 @@ window.SDB = (function () {
       cost_inr: line.cost != null ? line.cost : null,
       daily_rate_inr: line.rate,
       quantity: line.qty || 1,
+      pricing_mode: line.pricingMode || "per_day",
       item_start_at: line.start || null,
       item_end_at: line.end || null,
       added_mid_booking: true
@@ -410,8 +422,10 @@ window.SDB = (function () {
     const lineId = line._lineId || ids.lineKey[bid + "|" + line.code];
     if (!lineId) throw new Error("Booking item could not be identified. Refresh and try again.");
     const row = {};
+    if (patch.name != null) row.label = patch.name;
     if (patch.rate != null) row.daily_rate_inr = patch.rate;
     if (patch.qty != null) row.quantity = patch.qty;
+    if (patch.pricingMode != null) row.pricing_mode = patch.pricingMode;
     if (patch.start != null) row.item_start_at = patch.start;
     if (patch.end != null) row.item_end_at = patch.end;
     if (!Object.keys(row).length) return true;
@@ -434,6 +448,7 @@ window.SDB = (function () {
     const bid = ids.bookingByCode[b.code];
     const { error } = await sb.from("bookings").update({ status: newStatus }).eq("id", bid); if (error) throw error;
     const upd = async (l, cam) => {
+      if (l.lineKind === "custom") return;
       const lid = l._lineId || ids.lineKey[bid + "|" + l.code]; if (!lid) return;
       const patch = newStatus === "checked_out" ? { condition_out: l.conditionOut } : { condition_in: l.conditionIn };
       if (cam) { if (newStatus === "checked_out") patch.checkout_hours = l.checkoutHours; else patch.return_hours = l.returnHours; }
