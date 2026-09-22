@@ -36,7 +36,7 @@ async function testDataLayer() {
   assert.strictEqual(ownId, "line-1");
   assert.deepStrictEqual(plain(mutations[0].row), {
     booking_id: "booking-1", unit_id: "unit-1", kind: "camera", label: "Owned camera", catalog_option_id: null,
-    line_kind: "own", supplier_id: null, cost_inr: null, daily_rate_inr: 1000, quantity: 2,
+    line_kind: "own", supplier_id: null, cost_inr: null, daily_rate_inr: 1000, quantity: 2, pricing_mode: "per_day",
     item_start_at: "2026-09-01", item_end_at: "2026-09-02", added_mid_booking: true
   });
 
@@ -114,6 +114,7 @@ async function testBookingUi() {
     toast: value => { context.lastToast = value; },
     bookingDetail: () => "booking detail rerendered",
     confirm: () => true,
+    capFirst: value => String(value || "").trim().replace(/^./, c => c.toUpperCase()),
     escAttr: value => String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/\"/g, "&quot;").replace(/</g, "&lt;"),
     money: value => "₹" + Number(value || 0).toLocaleString("en-IN"),
     fmtDate: value => value,
@@ -160,6 +161,11 @@ async function testBookingUi() {
   assert.strictEqual(context.bookingTotals(booking).outstanding, 6500, "total outstanding should still cover the full booking");
   booking.payments.length=0;
 
+  booking.accessories.push({ code: "MISC-1", name: "Accessories", rate: 500, qty: 2, lineKind: "custom", pricingMode: "flat" });
+  assert.strictEqual(context.bookingTotals(booking).charges, 8500, "flat miscellaneous charges must not multiply by booking days");
+  assert.strictEqual(context.bookingTotals(booking).accruedCharges, 6000, "flat charges accrue once when the booking starts");
+  booking.accessories.pop();
+
   context.addEquip("BK-1");
   context.setAddBookingMode("manual");
   elements["#ae-name"] = { value: "Car service" };
@@ -173,11 +179,14 @@ async function testBookingUi() {
   assert.strictEqual(context.bookingTotals(booking).charges, 12300);
 
   elements["#ebi-rate"] = { value: "2200" };
+  elements["#ebi-name"] = { value: "Car service" };
+  elements["#ebi-mode"] = { value: "per_day" };
+  elements["#ebi-qty"] = { value: "1" };
   elements["#ebi-start"] = { value: "2026-09-01" };
   elements["#ebi-end"] = { value: "2026-09-03" };
   await context.saveBookingItemPrice("BK-1", "accessories", 1);
   assert.strictEqual(booking.accessories[1].rate, 2200);
-  assert.deepStrictEqual(plain(calls.update[0].patch), { rate: 2200, start: "2026-09-01", end: "2026-09-03" });
+  assert.deepStrictEqual(plain(calls.update[0].patch), { name: "Car service", rate: 2200, qty: 1, pricingMode: "per_day", start: "2026-09-01", end: "2026-09-03" });
   assert.strictEqual(context.bookingTotals(booking).charges, 14100);
 
   await context.deleteBookingItem("BK-1", "accessories", 1);
@@ -185,6 +194,8 @@ async function testBookingUi() {
   assert.strictEqual(calls.delete.length, 1);
   assert.strictEqual(context.bookingTotals(booking).charges, 7500);
   assert.strictEqual(elements["#content"].innerHTML, "booking detail rerendered");
+  assert(html.includes("＋ Miscellaneous item") && html.includes("function addQRMisc"), "Quick Rent should expose miscellaneous line entry");
+  assert(html.includes("l.lineKind==='custom'?'':rowFor"), "custom lines should stay out of physical checkout and return rows");
 }
 
 (async () => {

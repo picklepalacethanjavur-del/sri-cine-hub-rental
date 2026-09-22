@@ -405,13 +405,22 @@ function accruedLineDays(b,l,asOf){
   if(!start||!end||asOf<start)return 0;
   const accruedEnd=asOf<end?asOf:end;return accruedEnd<start?0:daysBetween(start,accruedEnd);
 }
+function lineCharge(b,l){
+  const qty=l.qty||1;
+  return l.pricingMode==='flat'?l.rate*qty:l.rate*lineDays(b,l)*qty;
+}
+function accruedLineCharge(b,l,asOf){
+  const qty=l.qty||1,start=l.start||b.start;
+  if(l.pricingMode==='flat')return start&&asOf>=start?l.rate*qty:0;
+  return l.rate*accruedLineDays(b,l,asOf)*qty;
+}
 function bookingTotals(b){
   if(b._charges!=null){
     const charges=Number(b._charges||0),paid=Number(b._paid||0);
     const outstanding=charges-paid;return {charges,paid,outstanding,dueToday:Math.max(0,outstanding),accruedCharges:charges,deposit:b.deposit||0};
   }
   let equipmentCharges=0,accruedEquipment=0;
-  [...b.cameras,...b.accessories].forEach(l=>{const daily=l.rate*(l.qty||1);equipmentCharges+=daily*lineDays(b,l);accruedEquipment+=daily*accruedLineDays(b,l,TODAY);});
+  [...b.cameras,...b.accessories].forEach(l=>{equipmentCharges+=lineCharge(b,l);accruedEquipment+=accruedLineCharge(b,l,TODAY);});
   let charges=equipmentCharges;
   charges += (b.otherCharges||0) - (b.discount||0);
   const paid=b.payments.reduce((a,p)=>a+p.amount,0);
@@ -563,6 +572,7 @@ VIEWS.quickrent=()=>{
         <div class="field"><label>Return</label><input type="date" id="qr-end" value="${QR.end}" onchange="QR.end=this.value;renderCart()"></div></div>
         <div id="qr-dur" class="muted" style="font-size:12.5px;margin:-4px 0 12px"></div>
         <div id="qr-cart"></div>
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px" onclick="openQRMisc()">＋ Miscellaneous item</button>
         <div style="display:flex;gap:8px;margin-top:14px">
           <button class="btn btn-ghost" onclick="clearQR()">Clear</button>
           <button class="btn btn-primary" style="flex:1" onclick="checkoutQR()">Check Out →</button>
@@ -598,6 +608,23 @@ function toggleQR(code,type){
   if(i>=0)QR.cart.splice(i,1);else QR.cart.push({code,name:it.name,rate:it.dailyRate,type,qty:1});
   renderQRcatalog();renderCart();
 }
+function openQRMisc(){
+  openModal(`<h3>Add miscellaneous item</h3><p class="mut">For non-inventory charges such as accessories, transport or service.</p>
+    <div class="field"><label>Item / service name *</label><input id="qrm-name" placeholder="e.g. Accessories"></div>
+    <div class="r2"><div class="field"><label>Charge type</label><select id="qrm-mode" onchange="qrMiscMode()"><option value="flat">Flat amount</option><option value="per_day">Per day</option></select></div>
+      <div class="field"><label>Quantity</label><input id="qrm-qty" type="number" min="1" step="1" value="1"></div></div>
+    <div class="field"><label id="qrm-price-label">Flat price ₹</label><input id="qrm-price" type="number" min="0" placeholder="0"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="addQRMisc()">Add line item</button>`);
+}
+function qrMiscMode(){const l=$("#qrm-price-label"),m=$("#qrm-mode");if(l&&m)l.textContent=m.value==='flat'?'Flat price ₹':'Price per day ₹';}
+function addQRMisc(){
+  const name=capFirst($("#qrm-name").value),qty=Math.max(1,Math.floor(Number($("#qrm-qty").value)||1));
+  const rate=Number($("#qrm-price").value),pricingMode=$("#qrm-mode").value;
+  if(!name)return toast("Enter an item or service name");
+  if(!Number.isFinite(rate)||rate<0)return toast("Enter a valid price");
+  QR.cart.push({code:"MISC-"+Date.now(),name,rate,qty,type:"custom",lineKind:"custom",pricingMode});
+  closeModal();renderCart();toast(name+" added");
+}
 function renderCart(){
   const el=$("#qr-cart");if(!el)return;
   const dur=$("#qr-dur");
@@ -605,10 +632,10 @@ function renderCart(){
   if(dur)dur.textContent=QR.end?`Duration: ${days} day${days>1?'s':''}`:"Set a return date to price the booking.";
   if(!QR.cart.length){el.innerHTML=`<div class="empty" style="padding:18px">Tap gear to build the kit.</div>`;return;}
   let total=0;
-  el.innerHTML=QR.cart.map((c,idx)=>{const qty=c.qty||1;const line=c.rate*(days||1)*qty;if(QR.end)total+=line;return `<div class="cart-line">
-    <div class="grow"><div class="t" style="font-size:13.5px">${c.name}</div><div class="sub">${money(c.rate)}/day × ${days||'?'} day${days>1?'s':''}${qty>1?' × '+qty+' units':''}</div></div>
+  el.innerHTML=QR.cart.map((c,idx)=>{const qty=c.qty||1,flat=c.pricingMode==='flat';const line=c.rate*(flat?1:(days||1))*qty;if(QR.end)total+=line;return `<div class="cart-line">
+    <div class="grow"><div class="t" style="font-size:13.5px">${c.name}${c.lineKind==='custom'?' <span class="badge b-warn">misc</span>':''}</div><div class="sub">${flat?'Flat '+money(c.rate):money(c.rate)+'/day × '+(days||'?')+' day'+(days>1?'s':'')}${qty>1?' × '+qty:''}</div></div>
     <input type="number" title="Qty" min="1" value="${qty}" onchange="QR.cart[${idx}].qty=Math.max(1,Math.floor(+this.value)||1);renderCart()" style="width:52px">
-    <input type="number" title="Rate/day" value="${c.rate}" onchange="QR.cart[${idx}].rate=+this.value;renderCart()">
+    <input type="number" title="Price" value="${c.rate}" onchange="QR.cart[${idx}].rate=Math.max(0,+this.value||0);renderCart()">
     <div class="amt" style="width:78px;text-align:right">${QR.end?money(line):'—'}</div>
     <span class="cart-x" onclick="QR.cart.splice(${idx},1);renderQRcatalog();renderCart()">×</span></div>`;}).join("")
     +`<div class="total-row"><span>Total</span><span class="gold">${QR.end?money(total):'—'}</span></div>`;
@@ -635,14 +662,14 @@ async function checkoutQR(){
   if(!QR.end)return toast("Set a return date");
   if(parseD(QR.end)<parseD(QR.start))return toast("Return date can't be before checkout");
   // Warn (don't hard-block) if any unit is already out for overlapping dates.
-  const clash=unitClashes(QR.cart.map(c=>c.code),QR.start,QR.end);
+  const clash=unitClashes(QR.cart.filter(c=>c.lineKind!=='custom').map(c=>c.code),QR.start,QR.end);
   if(clash.length&&!confirm(clash.join("\n")+"\n\nThese are already booked for overlapping dates. Create this booking anyway?"))return;
   const code="BK-2026-"+String(Date.now()).slice(-6);
   const prod=capFirst(QR.prod), phone=(QR.phone||"").trim(), proj=cleanBookingProject(QR.project);
   const b={code,customer:"CUS-new",production:prod||name,project:proj,
     contact:name,phone,status:"confirmed",start:QR.start,end:QR.end,pickup:"Studio floor",operator:"",
-    cameras:QR.cart.filter(c=>c.type==="camera").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1,lineKind:'own'})),
-    accessories:QR.cart.filter(c=>c.type==="accessory").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1,lineKind:'own'})),
+    cameras:QR.cart.filter(c=>c.type==="camera").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1,lineKind:'own',pricingMode:'per_day'})),
+    accessories:QR.cart.filter(c=>c.type!=="camera").map(c=>({code:c.code,name:c.name,rate:c.rate,qty:c.qty||1,lineKind:c.lineKind||'own',pricingMode:c.pricingMode||'per_day'})),
     payments:[]};
   // Persist FIRST when online — only claim success if it actually saved.
   if(SDB.on){
@@ -653,7 +680,7 @@ async function checkoutQR(){
   }
   // Saved (or offline) — reflect locally.
   DATA.customers.push({id:"CUS-new",name,company:prod||"",phone});
-  QR.cart.forEach(c=>{const src=c.type==="camera"?DATA.cameras:DATA.accessories;const u=src.find(x=>x.code===c.code);if(u&&u.status==="available")u.status="booked";});
+  QR.cart.filter(c=>c.lineKind!=='custom').forEach(c=>{const src=c.type==="camera"?DATA.cameras:DATA.accessories;const u=src.find(x=>x.code===c.code);if(u&&u.status==="available")u.status="booked";});
   DATA.bookings.unshift(b);
   QR={cart:[],start:TODAY,end:"",tab:"all",q:"",name:"",phone:"",prod:"",project:""};
   toast("Booking "+code+" created");openBooking(code);
@@ -1044,7 +1071,7 @@ function bookingDetail(code){
   const t=bookingTotals(b);
   const isOut=["checked_out","overdue"].includes(b.status);
   const isReady=["reserved","confirmed","preparing"].includes(b.status);
-  const line=(l,type,index)=>{const days=lineDays(b,l);const ret=!!l.returnedAt;
+  const line=(l,type,index)=>{const days=lineDays(b,l);const ret=!!l.returnedAt,flat=l.pricingMode==='flat';
     let meter="";
     if(type==="cameras"&&(l.checkoutHours!=null||l.returnHours!=null)){
       const used=(l.checkoutHours!=null&&l.returnHours!=null)?` (${l.returnHours-l.checkoutHours}h used)`:"";
@@ -1054,10 +1081,10 @@ function bookingDetail(code){
     const kb=l.lineKind==='hirein'?' <span class="badge b-info">hire-in</span>':l.lineKind==='custom'?' <span class="badge b-warn">custom</span>':'';
     return `<div class="list-row" style="cursor:default;opacity:${ret?.55:1}">
     <div class="grow"><div class="t">${l.name} <span class="muted" style="font-weight:400">· ${l.code}</span>${kb} ${ret?'<span class="badge b-ok">✓ returned</span>':''}</div>
-      <div class="sub">${fmtDate(l.start||b.start)}–${fmtDate(l.returnedAt||l.end||b.end)} · ${money(l.rate)}/day × ${days}${qty>1?' × '+qty:''} = <span class="amt">${money(l.rate*days*qty)}</span></div>${meter}</div>
+      <div class="sub">${fmtDate(l.start||b.start)}–${fmtDate(l.returnedAt||l.end||b.end)} · ${flat?'Flat '+money(l.rate):money(l.rate)+'/day × '+days}${qty>1?' × '+qty:''} = <span class="amt">${money(lineCharge(b,l))}</span></div>${meter}</div>
     <button class="btn btn-ghost btn-sm" onclick="editBookingItemForm('${code}','${type}',${index})">Edit item</button>
     <button class="btn btn-ghost btn-sm btn-danger" onclick="deleteBookingItem('${code}','${type}',${index})">Delete</button>
-    ${!ret&&isOut?`<button class="btn btn-ghost btn-sm" onclick="returnEarly('${code}','${type}',${index})">Return early</button>`:''}</div>`;};
+    ${l.lineKind!=='custom'&&!ret&&isOut?`<button class="btn btn-ghost btn-sm" onclick="returnEarly('${code}','${type}',${index})">Return early</button>`:''}</div>`;};
   return `<div class="crumb muted" style="margin-bottom:12px;cursor:pointer" onclick="go('bookings')">← All bookings</div>
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><h1 class="disp" style="font-size:26px">${b.contact||b.project}</h1>${badge(b.status)}
     ${isReady?`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go('checkout','${code}')">Check out →</button>`:isOut?`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go('checkout','${code}')">Return →</button>`:''}
@@ -1163,32 +1190,38 @@ function saveBookingEdit(code){
 }
 function editBookingItemForm(code,type,index){
   const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
-  const days=lineDays(b,l),qty=l.qty||1;
+  const custom=l.lineKind==='custom',flat=l.pricingMode==='flat',days=lineDays(b,l),qty=l.qty||1;
   openModal(`<h3>Edit item</h3><p class="mut">${escAttr(l.name)} · ${fmtDate(l.start||b.start)}–${fmtDate(l.end||b.end)}</p>
-    <div class="grid2"><div class="field"><label>Rental start</label><input type="date" id="ebi-start" value="${l.start||b.start}" oninput="editBookingItemPreview('${code}','${type}',${index})"></div><div class="field"><label>Rental end</label><input type="date" id="ebi-end" value="${l.end||b.end}" oninput="editBookingItemPreview('${code}','${type}',${index})"></div></div>
-    <div class="field"><label>Customer price per day ₹</label><input type="number" min="0" id="ebi-rate" value="${l.rate}" oninput="editBookingItemPreview('${code}','${type}',${index})"></div>
-    <div class="preview" id="ebi-preview">${money(l.rate)} × ${days} day${days===1?'':'s'}${qty>1?' × '+qty:''} = ${money(l.rate*days*qty)}</div>
+    ${custom?`<div class="field"><label>Item / service name</label><input id="ebi-name" value="${escAttr(l.name)}"></div><div class="r2"><div class="field"><label>Charge type</label><select id="ebi-mode" onchange="editBookingItemPreview('${code}','${type}',${index})"><option value="flat" ${flat?'selected':''}>Flat amount</option><option value="per_day" ${!flat?'selected':''}>Per day</option></select></div><div class="field"><label>Quantity</label><input id="ebi-qty" type="number" min="1" step="1" value="${qty}" oninput="editBookingItemPreview('${code}','${type}',${index})"></div></div>`:''}
+    <div id="ebi-dates" class="grid2" style="${custom&&flat?'display:none':''}"><div class="field"><label>Rental start</label><input type="date" id="ebi-start" value="${l.start||b.start}" oninput="editBookingItemPreview('${code}','${type}',${index})"></div><div class="field"><label>Rental end</label><input type="date" id="ebi-end" value="${l.end||b.end}" oninput="editBookingItemPreview('${code}','${type}',${index})"></div></div>
+    <div class="field"><label id="ebi-rate-label">${flat?'Flat price':'Customer price per day'} ₹</label><input type="number" min="0" id="ebi-rate" value="${l.rate}" oninput="editBookingItemPreview('${code}','${type}',${index})"></div>
+    <div class="preview" id="ebi-preview">${flat?'Flat '+money(l.rate):money(l.rate)+' × '+days+' day'+(days===1?'':'s')}${qty>1?' × '+qty:''} = ${money(lineCharge(b,l))}</div>
     <button class="btn btn-primary" style="width:100%" onclick="saveBookingItemPrice('${code}','${type}',${index})">Save item</button>`);
 }
 function editBookingItemPreview(code,type,index){
   const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
-  const rate=Number($("#ebi-rate").value||0),days=lineDays(b,{...l,start:$("#ebi-start").value,end:$("#ebi-end").value}),qty=l.qty||1;
-  $("#ebi-preview").textContent=`${money(rate)} × ${days} day${days===1?'':'s'}${qty>1?' × '+qty:''} = ${money(rate*days*qty)}`;
+  const mode=$("#ebi-mode")?$("#ebi-mode").value:(l.pricingMode||'per_day'),flat=mode==='flat';
+  const rate=Number($("#ebi-rate").value||0),qty=$("#ebi-qty")?Math.max(1,Math.floor(Number($("#ebi-qty").value)||1)):(l.qty||1);
+  const start=$("#ebi-start")?$("#ebi-start").value:(l.start||b.start),end=$("#ebi-end")?$("#ebi-end").value:(l.end||b.end),days=lineDays(b,{...l,start,end});
+  const dates=$("#ebi-dates"),label=$("#ebi-rate-label");if(dates)dates.style.display=flat?'none':'';if(label)label.textContent=(flat?'Flat price':'Customer price per day')+' ₹';
+  $("#ebi-preview").textContent=`${flat?'Flat '+money(rate):money(rate)+' × '+days+' day'+(days===1?'':'s')}${qty>1?' × '+qty:''} = ${money(rate*(flat?1:days)*qty)}`;
 }
 async function saveBookingItemPrice(code,type,index){
   const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
   const rate=Number($("#ebi-rate").value);
   if(!Number.isFinite(rate)||rate<0)return toast("Enter a valid price");
-  const start=$("#ebi-start").value,end=$("#ebi-end").value;
-  if(!start||!end||end<start)return toast("Enter a valid rental date range");
+  const pricingMode=$("#ebi-mode")?$("#ebi-mode").value:(l.pricingMode||'per_day'),qty=$("#ebi-qty")?Math.max(1,Math.floor(Number($("#ebi-qty").value)||1)):(l.qty||1);
+  const name=$("#ebi-name")?capFirst($("#ebi-name").value):l.name;if(!name)return toast("Enter an item name");
+  const start=$("#ebi-start")?$("#ebi-start").value:(l.start||b.start),end=$("#ebi-end")?$("#ebi-end").value:(l.end||b.end);
+  if(pricingMode!=='flat'&&(!start||!end||end<start))return toast("Enter a valid rental date range");
   if(l.returnedAt&&start>l.returnedAt)return toast("Rental start cannot be after the recorded return");
   if(!l.lineKind||l.lineKind==='own'){
     const conflict=DATA.bookings.find(other=>other.code!==code&&!['cancelled','returned','completed'].includes(other.status)&&[...other.cameras,...other.accessories].some(item=>item.code===l.code&&(item.start||other.start)<=end&&(item.returnedAt||item.end||other.end)>=start));
     if(conflict)return toast("Equipment overlaps booking "+conflict.code);
   }
-  const saved=await SDB.updateBookingLine(code,l,{rate,start,end});
+  const saved=await SDB.updateBookingLine(code,l,{name,rate,qty,pricingMode,start,end});
   if(SDB.on&&saved===undefined)return;
-  Object.assign(l,{rate,start,end});closeModal();$("#content").innerHTML=bookingDetail(code);toast(l.name+" updated");
+  Object.assign(l,{name,rate,qty,pricingMode,start,end});closeModal();$("#content").innerHTML=bookingDetail(code);toast(l.name+" updated");
 }
 async function deleteBookingItem(code,type,index){
   const b=DATA.bookings.find(x=>x.code===code);const l=b&&b[type]&&b[type][index];if(!l)return;
@@ -1337,7 +1370,7 @@ function checkoutPanel(b){
     const cond=`<td><select id="cond-${type}-${idx}" style="${inpS}"><option>good</option><option>fair</option><option>damaged</option>${isOut?'<option>missing</option>':''}</select></td>`;
     return `<tr><td><b>${l.name}</b>${l.qty>1?` <span class="muted">×${l.qty}</span>`:''}</td>${unitCell}${hoursCell}${cond}</tr>`;
   };
-  const rows=b.cameras.map((l,i)=>rowFor(l,'cam',i,true)).join("")+b.accessories.map((l,i)=>rowFor(l,'acc',i,false)).join("");
+  const rows=b.cameras.map((l,i)=>l.lineKind==='custom'?'':rowFor(l,'cam',i,true)).join("")+b.accessories.map((l,i)=>l.lineKind==='custom'?'':rowFor(l,'acc',i,false)).join("");
   const t=bookingTotals(b);
   const who=b.contact||b.project;
   const meta=[b.code,b.production&&b.production!==who?b.production:'',b.phone].filter(Boolean).join(' · ');
@@ -1351,7 +1384,7 @@ function checkoutPanel(b){
     <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openReceipt('${b.code}')">🧾 Invoice</button>
   </div>
   <div class="sec-title" style="margin-top:18px">1 · ${isOut?'Check the gear back in':'Hand over the gear'}</div>
-  <div class="card"><table><thead><tr><th>Item</th><th>Unit</th><th>Meter hours ${isOut?'(in)':'(out)'}</th><th>Condition ${isOut?'in':'out'}</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="card"><table><thead><tr><th>Item</th><th>Unit</th><th>Meter hours ${isOut?'(in)':'(out)'}</th><th>Condition ${isOut?'in':'out'}</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">No physical equipment in this booking.</td></tr>'}</tbody></table></div>
   <p class="muted" style="font-size:12.5px;margin-top:8px">${isOut?"Return reading updates each camera's lifetime meter hours.":"Assign the actual serial unit for each line, then log the checkout meter reading."}</p>
 
   <div class="sec-title" style="margin-top:22px">2 · Money</div>
@@ -2109,8 +2142,8 @@ function openReceipt(code){CUR="receipts";buildNav();$("#pageTitle").textContent
 function receiptView(code){
   const b=DATA.bookings.find(x=>x.code===code);if(!b)return VIEWS.receipts();
   const t=bookingTotals(b);const rc="INV-"+b.code.slice(3);
-  const items=[...b.cameras,...b.accessories].map(l=>{const days=lineDays(b,l);const s=l.start||b.start,e=l.returnedAt||l.end||b.end;
-    const qty=l.qty||1;return `<tr><td><b>${l.name}</b></td><td class="c">${l.code}</td><td>${fmtDate(s)}–${fmtDate(e)}</td><td class="r">${money(l.rate)}</td><td class="r">${days}</td><td class="r">${qty}</td><td class="r">${money(l.rate*days*qty)}</td></tr>`;}).join("");
+  const items=[...b.cameras,...b.accessories].map(l=>{const days=lineDays(b,l),flat=l.pricingMode==='flat';const s=l.start||b.start,e=l.returnedAt||l.end||b.end;
+    const qty=l.qty||1;return `<tr><td><b>${l.name}</b></td><td class="c">${l.lineKind==='custom'?'Misc.':l.code}</td><td>${fmtDate(s)}–${fmtDate(e)}</td><td class="r">${flat?'Flat '+money(l.rate):money(l.rate)+'/day'}</td><td class="r">${flat?'—':days}</td><td class="r">${qty}</td><td class="r">${money(lineCharge(b,l))}</td></tr>`;}).join("");
   const pays=b.payments.length?b.payments.map(p=>`<div class="p"><span>${fmtDate(p.date)} · ${p.type} · ${p.method}${p.ref?' · '+p.ref:''}</span><span>${money(p.amount)}</span></div>`).join(""):'<div class="p"><span>No payments recorded yet</span><span>₹0</span></div>';
   const fname=fnameSafe('Sri Cine Hub Invoice '+rc+' - '+(b.contact||b.project||'customer'));
   return `<div class="rc-actions no-print">
@@ -2127,7 +2160,7 @@ function receiptView(code){
       <div><label>Billed to</label><div class="v"><b>${b.contact}</b><br>${b.production}<br>${b.phone}</div></div>
       <div style="text-align:right"><label>Rental period</label><div class="v">${fmtDate(b.start)} – ${fmtDate(b.end)}<br>${daysBetween(b.start,b.end)} days<br>${b.project}</div></div>
     </div>
-    <table class="rc-table"><thead><tr><th>Equipment</th><th>Code</th><th>Dates</th><th class="r">Rate/day</th><th class="r">Days</th><th class="r">Qty</th><th class="r">Amount</th></tr></thead><tbody>${items}</tbody></table>
+    <table class="rc-table"><thead><tr><th>Item</th><th>Code</th><th>Dates</th><th class="r">Price / basis</th><th class="r">Days</th><th class="r">Qty</th><th class="r">Amount</th></tr></thead><tbody>${items}</tbody></table>
     <div class="rc-totals">
       <div class="row"><span>Total charges</span><span>${money(t.charges)}</span></div>
       <div class="row paid"><span>Paid</span><span>${money(t.paid)}</span></div>
