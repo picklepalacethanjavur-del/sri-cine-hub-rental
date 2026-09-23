@@ -204,12 +204,12 @@ window.SDB = (function () {
         catalog: scat.data.filter(c => c.supplier_id === s.id).map(c => ({ _id: c.id, item: c.item, rate: Number(c.daily_rate_inr) }))
       }));
       const unitCode = uid => unitById[uid]?.code;
-      const settlements = setts.data.map(s => ({ cam: unitCode(s.unit_id), month: (s.period_month || "").slice(0, 7), date: (s.settled_at || s.period_month || "").slice(0, 10), pool: Number(s.pool_inr) }));
+      const settlements = setts.data.map(s => ({ cam: unitCode(s.unit_id), month: (s.period_month || "").slice(0, 10), date: (s.settled_at || s.period_month || "").slice(0, 10), gross: Number(s.gross_received_inr || 0), pool: Number(s.pool_inr) }));
       const settById = {}; setts.data.forEach(s => settById[s.id] = s);
       const payouts = shares.data.map(sh => ({
         cam: unitCode(settById[sh.settlement_id]?.unit_id), investor: invById[sh.investor_id]?.name,
         amount: Number(sh.amount_inr), date: (settById[sh.settlement_id]?.settled_at || "").slice(0, 10),
-        mode: "Monthly settlement", month: (settById[sh.settlement_id]?.period_month || "").slice(0, 7)
+        mode: "Monthly settlement", month: (settById[sh.settlement_id]?.period_month || "").slice(0, 10)
       }));
       const g = rcfg.data.find(r => r.unit_id == null) || rcfg.data[0] || { maintenance_pct: 0.1, manager_pct: 0.1 };
       const config = { maintenancePct: Number(g.maintenance_pct), managerPct: Number(g.manager_pct) };
@@ -466,8 +466,9 @@ window.SDB = (function () {
   });
 
   const settleMonth = guard(async (camCode, mk) => {
-    const { error } = await sb.rpc("settle_month", { p_unit: ids.unitByCode[camCode], p_month: mk + "-01" });
+    const { data, error } = await sb.rpc("settle_month", { p_unit: ids.unitByCode[camCode], p_month: mk });
     if (error) throw error;
+    return data;
   });
 
   const addSupplierItem = guard(async (sid, item, rate) => {
