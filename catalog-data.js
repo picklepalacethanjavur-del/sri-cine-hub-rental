@@ -37,9 +37,9 @@ window.SRI_CATALOG = [
   {
     category: "Lights",
     items: [
-      { n: "M40", d: "Lighting fixture." },
-      { n: "M18", d: "Lighting fixture." },
-      { n: "M8", d: "Lighting fixture." },
+      { n: "M40", d: "ARRI M40 2.5/4K HMI lamphead.", image: "https://skillvision.eu/cdn/shop/products/2023-01-30_134534502_2048x.png?v=1675079276", imageSource: "https://skillvision.eu/products/arri-m40-hmi-2-5-4kw-kit-with-eb-max-ballast" },
+      { n: "M18", d: "ARRI M18 1.8K HMI lamphead.", image: "https://static.wixstatic.com/media/f952ff_467202e8073b481e9000c70939543929~mv2.jpg/v1/fill/w_505,h_420,al_c,q_85,usm_0.66_1.00_0.01/f952ff_467202e8073b481e9000c70939543929~mv2.jpg", imageSource: "https://www.arri.com/en/lighting/daylight-tungsten/daylight/m-series/m18" },
+      { n: "M8", d: "ARRI M8 800W HMI lamphead.", image: "https://images.prolighting.de/imagesshop/webpXL/L0.37200HS.jpg", imageSource: "https://www.prolighting.de/en/lighting-effects/spotlights/theater-stagelighting/arri/arri-m-series-sets/arri-m8-high-speed-set.html" },
       { n: "SkyPanel S60", d: "Lighting fixture." },
       { n: "4-Bank LED 4ft", d: "Lighting fixture." },
       { n: "4-Bank LED 2ft", d: "Lighting fixture." },
@@ -51,8 +51,8 @@ window.SRI_CATALOG = [
       { n: "RGB Pavo Tube 30X", d: "Lighting fixture." },
       { n: "RGB Pavo Tube 15X", d: "Lighting fixture." },
       { n: "LED Panel", d: "Lighting fixture." },
-      { n: "Forza 500", d: "Lighting fixture." },
-      { n: "Forza 60B", d: "Lighting fixture." },
+      { n: "Forza 500", d: "Nanlite Forza 500 daylight LED monolight.", image: "https://www.kamerithalat.com/images_buyuk/f7/nanlite-forza-500-led-monolight_9807_1.jpg", imageSource: "https://www.kamerithalat.com/nanlite-forza-500-led-monolight_9807.html" },
+      { n: "Forza 60B", d: "Nanlite Forza 60B bi-color LED monolight.", image: "https://www.sinarphoto.com/prd/l/nanlite-forza-60b-kit-01_001.jpg", imageSource: "https://www.sinarphoto.com/ProductInfo.asp?id=6169" },
       { n: "Senior", d: "Lighting fixture." },
       { n: "Par Can", d: "Lighting fixture." },
       { n: "1KW", d: "Lighting fixture." },
@@ -60,10 +60,10 @@ window.SRI_CATALOG = [
       { n: "LED Spot Light", d: "Lighting fixture." },
       { n: "SL200", d: "Lighting fixture." },
       { n: "Colour Reds", d: "Lighting fixture." },
-      { n: "Amaran 300c", d: "Lighting fixture." },
-      { n: "Aputure 600c", d: "Lighting fixture." },
-      { n: "Aputure Nova P600c", d: "Lighting fixture." },
-      { n: "Aputure 1200d", d: "Lighting fixture." }
+      { n: "Amaran 300c", d: "amaran 300c 300W RGBWW LED light.", image: "https://cdn.shopify.com/s/files/1/0862/5432/1947/products/amaran300cblack_8.png?crop=center&height=1000&v=1710517064&width=1000", imageSource: "https://amarancreators.com/products/amaran-300c-charcoal" },
+      { n: "Aputure 600c", d: "Aputure LS 600c Pro full-color LED light.", image: "https://res.cloudinary.com/offshoot/q_67,w_3840,c_limit,f_auto/REIS/products/62c7908e7c23d2abb6056bd3/aputure_ls_600c_led_light_fixture_2", imageSource: "https://aputure.com/en-US/products/ls-600c-pro" },
+      { n: "Aputure Nova P600c", d: "Aputure Nova P600c 600W RGBWW soft panel.", image: "https://cdn.shopify.com/s/files/1/1343/1935/files/NOVAP600c-3_c36bf318-c04a-4a60-86cd-023c6a1e94cc.png?crop=center&v=1699441391&width=2400", imageSource: "https://aputure.com/en-US/products/nova-p600c" },
+      { n: "Aputure 1200d", d: "Aputure LS 1200d Pro daylight LED light.", image: "https://cameraclub.in/cdn/shop/files/LS1200dPro_7c8a7406-443a-44c5-8bd5-60bcf99a4c6c.webp?v=1737190011&width=1946", imageSource: "https://aputure.com/en-US/products/ls-1200d-pro" }
     ]
   },
   {
