@@ -2283,27 +2283,45 @@ VIEWS.investor.after=()=>refreshInvestorPortal();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ROLE==='investor')refreshInvestorPortal();});
 window.addEventListener('focus',()=>{if(ROLE==='investor')refreshInvestorPortal();});
 setInterval(()=>{if(!document.hidden&&ROLE==='investor')refreshInvestorPortal();},30000);
-function openProfitSharingBreakdown(camCode,period="all"){
-  const cam=DATA.cameras.find(c=>c.code===camCode);
-  if(!cam)return;
-  const matchesPeriod=b=>period==="all"||(period.length===4?String(parseD(b.start).getFullYear())===period:b.start.slice(0,7)===period);
-  const bookings=DATA.bookings.filter(b=>["checked_out","overdue","returned"].includes(b.status)&&b.cameras.some(c=>c.code===camCode)&&matchesPeriod(b));
-  const details=bookings.map(b=>{
-    const bt=bookingTotals(b);
-    const cameraRent=b.cameras.filter(c=>c.code===camCode).reduce((sum,c)=>sum+c.rate*lineDays(b,c)*(c.qty||1),0);
-    const allocated=bt.charges>0?Math.round(bt.paid*cameraRent/bt.charges):0;
-    return {b,totalBill:bt.charges,paid:bt.paid,cameraRent,allocated};
+const isoLocal=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function profitCycleStart(date){
+  const d=parseD(date),start=new Date(d.getFullYear(),d.getMonth()-(d.getDate()<15?1:0),15);
+  return isoLocal(start);
+}
+function profitCycleEnd(start){const d=parseD(start);d.setMonth(d.getMonth()+1);d.setDate(d.getDate()-1);return isoLocal(d);}
+function profitCycleLabel(start){
+  const end=profitCycleEnd(start),s=parseD(start),e=parseD(end);
+  const left=s.toLocaleDateString("en-IN",{day:"numeric",month:"short"});
+  const right=e.toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"});
+  return `${left} – ${right}`;
+}
+const cycleInPeriod=(cycle,period)=>period==="all"||cycle.slice(0,4)===period;
+const cycleClosed=cycle=>TODAY>profitCycleEnd(cycle);
+function cameraPaymentAllocations(b,camCode){
+  const totalBill=bookingTotals(b).charges;
+  const cameraRent=b.cameras.filter(c=>c.code===camCode).reduce((sum,c)=>sum+lineCharge(b,c),0);
+  let payments=b.payments||[];
+  if(!payments.length&&Number(b._paid||0)>0)payments=[{amount:Number(b._paid),type:"payment",date:b.start,method:"Recorded"}];
+  return payments.filter(p=>p.date&&Number(p.amount||0)!==0).map(p=>{
+    const payment=(p.type==="refund"?-1:1)*Math.abs(Number(p.amount||0));
+    return {b,p,totalBill,cameraRent,payment,allocated:totalBill>0?payment*cameraRent/totalBill:0,cycle:profitCycleStart(p.date)};
   });
-  const totals=details.reduce((a,r)=>({totalBill:a.totalBill+r.totalBill,paid:a.paid+r.paid,cameraRent:a.cameraRent+r.cameraRent,allocated:a.allocated+r.allocated}),{totalBill:0,paid:0,cameraRent:0,allocated:0});
-  const label=period==="all"?"All time":period.length===4?period:parseD(period+"-01").toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+}
+function investorBookingEligible(b){return ["checked_out","overdue","returned"].includes(b.status)||bookingTotals(b).paid!==0;}
+function openProfitSharingBreakdown(camCode,period="all"){
+  const cam=DATA.cameras.find(c=>c.code===camCode);if(!cam)return;
+  const details=DATA.bookings.filter(b=>investorBookingEligible(b)&&b.cameras.some(c=>c.code===camCode))
+    .flatMap(b=>cameraPaymentAllocations(b,camCode)).filter(r=>cycleInPeriod(r.cycle,period));
+  const allocated=Math.round(details.reduce((sum,r)=>sum+r.allocated,0));
+  const label=period==="all"?"All time":period;
   openModal(`<h3>Gross received calculation</h3>
-    <p class="mut">ARRI rent is allocated from each booking's recorded payment in proportion to the camera's share of that booking.</p>
+    <p class="mut">Every recorded payment appears in its 15th–14th sharing cycle, even when the booking is still confirmed.</p>
     <div class="review-block"><b>Formula</b><p>Camera received = Booking payment × Camera rent ÷ Total booking bill</p></div>
-    <div style="overflow-x:auto"><table><thead><tr><th>Booking</th><th>Total bill</th><th>Paid</th><th>Camera rent</th><th>Allocated to camera</th></tr></thead><tbody>
-      ${details.length?details.map(r=>`<tr><td><b>${escAttr(r.b.code)}</b><div class="muted" style="font-size:11px">${escAttr(r.b.project||r.b.production||"")} · ${fmtDate(r.b.start)}</div></td><td class="amt">${money(r.totalBill)}</td><td class="amt">${money(r.paid)}</td><td class="amt">${money(r.cameraRent)}</td><td class="amt gold">${money(r.allocated)}</td></tr>`).join(""):`<tr><td colspan="5" class="empty">No qualifying bookings for this period.</td></tr>`}
-      ${details.length?`<tr><td><b>Total · ${escAttr(label)}</b></td><td class="amt"><b>${money(totals.totalBill)}</b></td><td class="amt"><b>${money(totals.paid)}</b></td><td class="amt"><b>${money(totals.cameraRent)}</b></td><td class="amt gold"><b>${money(totals.allocated)}</b></td></tr>`:""}
+    <div style="overflow-x:auto"><table><thead><tr><th>Booking / cycle</th><th>Payment date</th><th>Payment</th><th>Camera rent</th><th>Total bill</th><th>Camera received</th></tr></thead><tbody>
+      ${details.length?details.map(r=>`<tr><td><b>${escAttr(r.b.code)}</b><div class="muted" style="font-size:11px">${profitCycleLabel(r.cycle)}</div></td><td>${fmtDate(r.p.date)}</td><td class="amt">${money(r.payment)}</td><td class="amt">${money(r.cameraRent)}</td><td class="amt">${money(r.totalBill)}</td><td class="amt gold">${money(Math.round(r.allocated))}</td></tr>`).join(""):`<tr><td colspan="6" class="empty">No recorded payments for this period.</td></tr>`}
+      ${details.length?`<tr><td colspan="5"><b>Total · ${escAttr(label)}</b></td><td class="amt gold"><b>${money(allocated)}</b></td></tr>`:""}
     </tbody></table></div>
-    <p class="mut" style="margin-top:12px;font-size:12px">Read-only calculation. No manager entry or allocation is required.</p>`,true,"Close");
+    <p class="mut" style="margin-top:12px;font-size:12px">Read-only calculation. Settled cycles stay locked; later receipts enter the next matching cycle.</p>`,true,"Close");
 }
 function investorBody(){
   const invCams=DATA.cameras.filter(c=>c.investors&&c.investors.length);
@@ -2317,25 +2335,27 @@ function investorBody(){
   const totalInvested=cam.investors.reduce((a,i)=>a+i.invested,0);
   const periodLbl=INVEST.period==="all"?"All time":"Jan–Dec "+INVEST.period;
 
-  const shipped=DATA.bookings.filter(b=>["checked_out","overdue","returned"].includes(b.status)
+  const shipped=DATA.bookings.filter(b=>investorBookingEligible(b)
     && b.cameras.some(c=>c.code===cam.code)
     && (INVEST.period==="all"||String(parseD(b.start).getFullYear())===INVEST.period));
-  let totalBilled=0,totalReceived=0;const rows=[];
-  shipped.forEach(b=>{const bt=bookingTotals(b);
-    b.cameras.filter(c=>c.code===cam.code).forEach(c=>{
-      const billed=c.rate*lineDays(b,c)*(c.qty||1);
-      const recv=bt.charges>0?Math.round(bt.paid*billed/bt.charges):0;
-      totalBilled+=billed;totalReceived+=recv;rows.push({b,billed,recv});});});
+  let totalBilled=0;const rows=[];
+  shipped.forEach(b=>{b.cameras.filter(c=>c.code===cam.code).forEach(c=>{
+      const billed=lineCharge(b,c);
+      totalBilled+=billed;rows.push({b,billed});});});
+  const allocationRows=DATA.bookings.filter(b=>investorBookingEligible(b)&&b.cameras.some(c=>c.code===cam.code))
+    .flatMap(b=>cameraPaymentAllocations(b,cam.code)).filter(r=>cycleInPeriod(r.cycle,INVEST.period));
+  const totalReceived=Math.round(allocationRows.reduce((sum,r)=>sum+r.allocated,0));
   const gross=totalReceived;
   const maint=Math.round(gross*cfg.maintenancePct), mgr=Math.round(gross*cfg.managerPct), pool=gross-maint-mgr;
   const billedPool=totalBilled*poolPct;
   const activeNow=shipped.filter(b=>b.status!=="returned").length;
-  const payoutsFor=name=>DATA.payouts.filter(p=>p.cam===cam.code&&p.investor===name).reduce((a,p)=>a+p.amount,0);
+  const payoutsFor=name=>DATA.payouts.filter(p=>p.cam===cam.code&&p.investor===name&&cycleInPeriod(p.month||"",INVEST.period)).reduce((a,p)=>a+p.amount,0);
   const tile=(l,v,s,gold)=>`<div class="metric ${gold?'tint':''}"><div class="l">${l}</div><div class="v ${gold?'gold':''}">${v}</div><div class="s">${s}</div></div>`;
 
   // monthly aggregation for settlement
   const months={};
-  rows.forEach(r=>{const mk=r.b.start.slice(0,7);(months[mk]||(months[mk]={bookings:0,billed:0,recv:0}));months[mk].bookings++;months[mk].billed+=r.billed;months[mk].recv+=r.recv;});
+  allocationRows.forEach(r=>{const m=months[r.cycle]||(months[r.cycle]={bookings:new Set(),recv:0});m.bookings.add(r.b.code);m.recv+=r.allocated;});
+  DATA.settlements.filter(s=>s.cam===cam.code&&cycleInPeriod(s.month,INVEST.period)).forEach(s=>{months[s.month]||(months[s.month]={bookings:new Set(),recv:Number(s.gross||0)});});
   const monthKeys=Object.keys(months).sort().reverse();
   const settlementFor=mk=>DATA.settlements.find(s=>s.cam===cam.code&&s.month===mk);
 
@@ -2383,15 +2403,15 @@ function investorBody(){
     </tbody></table></div>
 
   <div class="card" style="margin-bottom:18px"><div class="card-h" onclick="openProfitSharingBreakdown('${cam.code}','${INVEST.period}')" style="cursor:pointer" title="View gross received calculation"><h3>Monthly Profit Sharing · ${periodLbl}</h3><span class="lnk" style="font-size:12px">View calculation →</span></div>
-    <div class="muted" style="padding:12px 16px 4px;font-size:12px">Each month's investor pool is ${(poolPct*100).toFixed(0)}% of that month's received revenue. Settle a month once its payments are in — the split is divided by each investor's stake.</div>
-    <table class="monthly-payouts"><thead><tr><th>Month</th><th>Bookings</th><th>Gross received</th><th>Investor pool</th><th>Split by investor</th><th style="text-align:right">Settlement</th></tr></thead><tbody>
-    ${monthKeys.length?monthKeys.map(mk=>{const m=months[mk];const mpool=Math.round(m.recv*poolPct);const st=settlementFor(mk);
-      const mlabel=parseD(mk+"-01").toLocaleDateString("en-IN",{month:"long",year:"numeric"});
-      const split=cam.investors.map(iv=>`<div class="monthly-investor"><b>${escAttr(iv.name)}</b><span class="amt">${money(round1(mpool*iv.invested/totalInvested))}</span></div>`).join("");
-      return `<tr><td class="monthly-heading"><b>${mlabel}</b></td><td data-label="Bookings">${m.bookings}</td><td data-label="Gross received" class="amt">${money(m.recv)}</td>
+    <div class="muted" style="padding:12px 16px 4px;font-size:12px">Payments received from the 15th through the 14th form one sharing cycle. A settled cycle is locked; later payments never change it.</div>
+    <table class="monthly-payouts"><thead><tr><th>Sharing cycle</th><th>Bookings</th><th>Gross received</th><th>Investor pool</th><th>Split by investor</th><th style="text-align:right">Settlement</th></tr></thead><tbody>
+    ${monthKeys.length?monthKeys.map(mk=>{const m=months[mk],st=settlementFor(mk);const mgross=st?Number(st.gross||0):Math.round(m.recv);const mpool=st?Number(st.pool||0):Math.round(mgross*poolPct);
+      const split=cam.investors.map(iv=>{const saved=st&&DATA.payouts.find(p=>p.cam===cam.code&&p.month===mk&&p.investor===iv.name);const amount=saved?Number(saved.amount):round1(mpool*iv.invested/totalInvested);return `<div class="monthly-investor"><b>${escAttr(iv.name)}</b><span class="amt">${money(amount)}</span></div>`;}).join("");
+      const settlement=st?`<span class="badge b-ok">✓ settled ${fmtDate(st.date)}</span>`:!cycleClosed(mk)?`<span class="badge b-info">Open · ends ${fmtDate(profitCycleEnd(mk))}</span>`:(ROLE==='admin'?`<button class="btn btn-primary btn-sm" onclick="settleMonth('${cam.code}','${mk}')">Settle up →</button>`:`<span class="muted" style="font-size:12px">pending</span>`);
+      return `<tr><td class="monthly-heading"><b>${profitCycleLabel(mk)}</b></td><td data-label="Bookings">${m.bookings.size}</td><td data-label="Gross received" class="amt">${money(mgross)}</td>
         <td data-label="Investor pool" class="amt" style="color:var(--ok)">${money(mpool)}</td>
         <td class="monthly-split" data-label="Monthly share by investor">${split}</td>
-        <td class="monthly-settlement" data-label="Settlement" style="text-align:right">${st?`<span class="badge b-ok">✓ settled ${fmtDate(st.date)}</span>`:(ROLE==='admin'?`<button class="btn btn-primary btn-sm" onclick="settleMonth('${cam.code}','${mk}')">Settle up →</button>`:`<span class="muted" style="font-size:12px">pending</span>`)}</td></tr>`;}).join(""):`<tr><td colspan="6" class="empty">No revenue to settle in this period.</td></tr>`}
+        <td class="monthly-settlement" data-label="Settlement" style="text-align:right">${settlement}</td></tr>`;}).join(""):`<tr><td colspan="6" class="empty">No recorded payments in this period.</td></tr>`}
     </tbody></table></div>
 
   <div class="card" style="margin-bottom:18px"><div class="card-h"><h3>All ${cam.manufacturer} bookings · ${periodLbl}</h3></div>
@@ -2404,19 +2424,12 @@ function investorBody(){
       <div class="grow"><div class="t">RC-${r.b.code.slice(3)} · ${r.b.contact}</div><div class="sub">${r.b.code} · ${r.b.project} · ${fmtDate(r.b.end)}</div></div>
       <div class="amt gold">${money(r.billed)}</div></div>`).join(""):'<div class="empty">No receipts in this period.</div>'}</div>`;
 };
-function settleMonth(camCode,mk){
+async function settleMonth(camCode,mk){
   if(ROLE!=='admin')return toast("Only admins can settle payouts");
-  const cam=DATA.cameras.find(c=>c.code===camCode);
-  const totalInvested=cam.investors.reduce((a,i)=>a+i.invested,0);
-  const poolPct=1-DATA.config.maintenancePct-DATA.config.managerPct;
-  let recv=0;
-  DATA.bookings.filter(b=>["checked_out","overdue","returned"].includes(b.status)&&b.start.slice(0,7)===mk&&b.cameras.some(c=>c.code===camCode))
-    .forEach(b=>{const bt=bookingTotals(b);b.cameras.filter(c=>c.code===camCode).forEach(c=>{const billed=c.rate*lineDays(b,c)*(c.qty||1);recv+=bt.charges>0?Math.round(bt.paid*billed/bt.charges):0;});});
-  const mpool=Math.round(recv*poolPct);
-  DATA.settlements.push({cam:camCode,month:mk,date:mk+"-28",pool:mpool});
-  cam.investors.forEach(iv=>DATA.payouts.push({cam:camCode,investor:iv.name,amount:round1(mpool*iv.invested/totalInvested),date:mk+"-28",mode:"Monthly settlement",month:mk,notes:mk}));
-  SDB.settleMonth(camCode,mk);
-  go("investor");toast("Settled "+parseD(mk+"-01").toLocaleDateString("en-IN",{month:"short",year:"numeric"}));
+  if(!cycleClosed(mk))return toast(`This cycle stays open through ${fmtDate(profitCycleEnd(mk))}`);
+  if(!confirm(`Settle and lock ${profitCycleLabel(mk)}? Later payments will not change it.`))return;
+  const saved=await SDB.settleMonth(camCode,mk);if(saved===undefined)return;
+  await SDB.bootstrap(ROLE);normalizeConsoleNames();go("investor");toast(`Settled ${profitCycleLabel(mk)}`);
 }
 
 /* ---- Users (admin) ---- */
