@@ -379,7 +379,9 @@ const us=(id,w)=>`https://images.unsplash.com/photo-${id}?w=${w}&q=70&auto=forma
 // Camera photos are keyed by product, never rotated generic stock images.
 const cameraPlaceholder=()=> 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect width="600" height="400" fill="#f3f3f1"/><text x="300" y="205" text-anchor="middle" fill="#626262" font-family="Arial,sans-serif" font-size="22">Photo coming soon</text></svg>');
 const imgFor=(cat,idx)=>{
-  if(cat==='Cameras'){const item=SRI_CATALOG.find(c=>c.category===cat)?.items[idx];return item?.image||cameraPlaceholder();}
+  const item=SRI_CATALOG.find(c=>c.category===cat)?.items[idx];
+  if(item?.image)return item.image;
+  if(cat==='Cameras')return cameraPlaceholder();
   const p=IMG[cat]||[];return us(p[idx%p.length],600);
 };
 function equipmentImageError(img,category,name){
