@@ -69,10 +69,10 @@ window.SRI_CATALOG = [
   {
     category: "Accessories",
     items: [
-      { n: "Wireless Nucleus M", d: "Production accessory." },
-      { n: "Wireless Nucleus N", d: "Production accessory." },
-      { n: "Hollyland Mars 400", d: "Production accessory." },
-      { n: "Hollyland 300", d: "Production accessory." },
+      { n: "Wireless Nucleus M", d: "Tilta Nucleus-M wireless FIZ lens control system for focus, iris and zoom.", image: "https://www.glazerscamera.com/cdn/shop/products/90025_02_1243x700.jpg?v=1681506152", imageSource: "https://www.glazerscamera.com/products/tilta-nucleus-m-lens-cntrl-sys" },
+      { n: "Wireless Nucleus N", d: "Tilta Nucleus-Nano compact wireless follow-focus system.", image: "https://cdn.uniquephoto.com/resources/uniquephoto/images/products/processed/TIL2054.zoom.a.jpeg", imageSource: "https://www.uniquephoto.com/product/tilta-nucleus-nano-wireless-lens-control-system-with-nucleus-m-motor" },
+      { n: "Hollyland Mars 400", d: "Hollyland Mars 400S wireless SDI/HDMI video transmitter and receiver.", image: "https://d1rzxhvrtciqq1.cloudfront.net/uploads/images/listingimage/1181051/image/big-87af07288b6d21c4412b498f6241fb5c.png", imageSource: "https://www.sharegrid.com/denver/l/144187-hollyland-mars-400s-wireless-sdi-hdmi-video-transmitter-and" },
+      { n: "Hollyland 300", d: "Hollyland Mars 300 wireless HDMI video transmitter and receiver set.", image: "https://www.ormsdirect.co.za/cdn/shop/products/hollyland-mars-300-dual-hdmi-wireless-video-transmitter-and-receiver-set-front.webp?v=1678096028&width=1024", imageSource: "https://www.ormsdirect.co.za/collections/hollyland" },
       { n: "Crane 3S Pro", d: "Production accessory." },
       { n: "Track & Trolley", d: "Production accessory." },
       { n: "Slider", d: "Production accessory." },
@@ -97,18 +97,18 @@ window.SRI_CATALOG = [
   {
     category: "Grip",
     items: [
-      { n: "C-Stand", d: "Grip & rigging." },
-      { n: "Par Stand", d: "Grip & rigging." },
+      { n: "C-Stand", d: "Heavy-duty C-stand with grip head and arm for lights, flags and modifiers.", image: "https://images.booqablecdn.com/uploads/a68064c4a195a9cf1ba62f1992e88d25/photo/photo/fa457e62-afc7-42c3-99dd-62e2f81f3dc0/1707637152-61598314065233-0225-0380/cstand_40in_c_spring-loaded-base_756140_04_web_1024x1024_2x.jpg", imageSource: "https://www.msegrip.com/products/40-double-riser-spring-loaded-folding-c-stand-w-grip-head-arm" },
+      { n: "Par Stand", d: "Heavy-duty combination stand for professional lighting fixtures.", image: "https://unitedbroadcast.com/cdn/shop/files/1767351055_187164.jpg?v=1777885835", imageSource: "https://unitedbroadcast.com/products/matthews-hollywood-combo-triple-riser-stand-silver-14-8" },
       { n: "Boom Rod", d: "Grip & rigging." },
       { n: "Frame 10x10", d: "Grip & rigging." },
-      { n: "Frame 12x12", d: "Grip & rigging." },
-      { n: "Lolly Board", d: "Grip & rigging." },
+      { n: "Frame 12x12", d: "12×12 ft overhead frame for diffusion, bounce and light-control textiles.", image: "https://specular-assets.spicyweb.net.au/media/Brands-A-D/Avenger/_650x650_letterbox_center-center_none_ffffff/AVE-H2512-01.jpg", imageSource: "https://specular.com.au/avenger-h2512-butterfly-overhead-compact-foldaway-scrim-frame-12x12-ft-3-6m-x-3-6m" },
+      { n: "Lolly Board", d: "Silver reflector board for bouncing and shaping light on set.", image: "https://images.booqablecdn.com/uploads/a68064c4a195a9cf1ba62f1992e88d25/photo/photo/4385bd6f-acdb-41d4-933a-715330f6bbbd/470c000_-_4x4_Silver_Bounceboard.JPG", imageSource: "https://kauaigripandlighting.com/products/18-x-24-scrims-flags" },
       { n: "Green Screen", d: "Grip & rigging." },
-      { n: "Stand Head", d: "Grip & rigging." },
+      { n: "Stand Head", d: "Multi-socket grip head for mounting arms, flags and lighting modifiers.", image: "https://cdn.manfrotto.com/media/catalog/product/g/r/grip-head-avenger-2-12-black-d200-01.jpg", imageSource: "https://www.manfrotto.com/global-en/grip-head-2-1-2-black-d200b/" },
       { n: "Silver Ladder", d: "Grip & rigging." },
       { n: "C-Stand Small", d: "Grip & rigging." },
-      { n: "Stand Bag", d: "Grip & rigging." },
-      { n: "Flag", d: "Grip & rigging." }
+      { n: "Stand Bag", d: "Padded carrying bag for light stands and grip equipment.", image: "https://uk.neewer.com/cdn/shop/products/10101877.jpg?v=1694770714&width=1600", imageSource: "https://uk.neewer.com/products/neewer-47-1-2m-tripod-carrying-case-66602150" },
+      { n: "Flag", d: "Black production flag for blocking spill and shaping light.", image: "https://www.amt.tv/media/catalog/product/1/6/169062.jpg", imageSource: "https://www.amt.tv/matthews-24x36-flag-black.html" }
     ]
   }
 ];
