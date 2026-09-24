@@ -108,7 +108,7 @@ window.SRI_CATALOG = [
       { n: "Silver Ladder", d: "Grip & rigging." },
       { n: "C-Stand Small", d: "Grip & rigging." },
       { n: "Stand Bag", d: "Padded carrying bag for light stands and grip equipment.", image: "https://uk.neewer.com/cdn/shop/products/10101877.jpg?v=1694770714&width=1600", imageSource: "https://uk.neewer.com/products/neewer-47-1-2m-tripod-carrying-case-66602150" },
-      { n: "Flag", d: "Black production flag for blocking spill and shaping light.", image: "https://www.amt.tv/media/catalog/product/1/6/169062.jpg", imageSource: "https://www.amt.tv/matthews-24x36-flag-black.html" }
+      { n: "Flag", d: "Black production flag for blocking spill and shaping light.", image: "https://filmequipmentstore.com/cdn/shop/products/Matthews_169062_24x36_Flag_1315341504000_32828.jpg?v=1552386878", imageSource: "https://filmequipmentstore.com/products/matthews-24x36-flag-169062" }
     ]
   }
 ];
