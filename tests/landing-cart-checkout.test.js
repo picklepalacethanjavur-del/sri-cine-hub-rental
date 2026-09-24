@@ -20,6 +20,7 @@ class ClassList {
   assert(catalog.includes("window.SRI_CATALOG"), "public catalog should use Sri branding");
   assert(!catalog.includes("SRC_CATALOG"), "legacy SRC branding must not return");
   assert(html.includes("SRI_CATALOG.forEach"), "landing page should load the Sri catalog");
+  assert(html.includes("if(item?.image)return item.image;"), "all catalog categories should use their assigned product images");
 
   assert(html.includes('href="console.html"'), "landing page must link to the protected staff console");
   assert(html.includes(">Staff Login</a>"), "staff entry point must be clearly labelled");
@@ -78,7 +79,8 @@ class ClassList {
   assert(element("cartbar").classList.contains("show"));
 
   context.openCart();
-  assert(element("checkoutContent").innerHTML.includes("Step 1 of 3"));
+  assert(element("checkoutContent").innerHTML.includes("Your cart"));
+  assert(!element("checkoutContent").innerHTML.includes("Step 1 of 3"));
   assert(element("checkoutContent").innerHTML.includes("Sony FX3"));
   context.checkoutNext();
   assert(element("checkoutContent").innerHTML.includes("Step 2 of 3"));
