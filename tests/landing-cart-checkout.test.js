@@ -21,6 +21,8 @@ class ClassList {
   assert(!catalog.includes("SRC_CATALOG"), "legacy SRC branding must not return");
   assert(html.includes("SRI_CATALOG.forEach"), "landing page should load the Sri catalog");
   assert(html.includes("if(item?.image)return item.image;"), "all catalog categories should use their assigned product images");
+  assert(catalog.includes("Matthews_169062_24x36_Flag"), "the production flag should use the verified Matthews product photo");
+  assert(!html.includes("picsum.photos"), "failed product images must never become unrelated random photos");
 
   assert(html.includes('href="console.html"'), "landing page must link to the protected staff console");
   assert(html.includes(">Staff Login</a>"), "staff entry point must be clearly labelled");
