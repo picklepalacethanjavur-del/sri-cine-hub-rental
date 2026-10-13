@@ -141,6 +141,21 @@
   input[type=number]{-moz-appearance:textfield;appearance:textfield}
   input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   .total-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0 4px;font-family:var(--font-display);font-size:20px}
+  /* Desktop calendar: dialog top layer keeps it above booking/return modals. */
+  [data-theme="dark"] input[type=date]{color-scheme:dark}
+  [data-theme="light"] input[type=date]{color-scheme:light}
+  input[type=date]{cursor:pointer}
+  .date-calendar{margin:auto;width:330px;max-width:calc(100vw - 24px);padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--text);box-shadow:var(--shadow)}
+  .date-calendar::backdrop{background:rgba(0,0,0,.35)}
+  .date-calendar header,.date-calendar footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .date-calendar h3{font-size:16px;text-align:center}
+  .date-calendar button{font:inherit;cursor:pointer;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--text);padding:8px}
+  .date-calendar button:hover,.date-calendar button:focus-visible{border-color:var(--gold);outline:2px solid var(--gold)}
+  .date-calendar button[aria-pressed="true"]{background:var(--gold);color:var(--bg)}
+  .date-calendar button:disabled{opacity:.3;cursor:default}
+  .date-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:14px 0}
+  .date-calendar-grid span{text-align:center;font-size:12px;color:var(--mut);padding:6px 0}
+
   /* calendar timeline (Gantt) */
   .cal-wrap{position:relative}
   .cal-head,.cal-row{display:flex;border-bottom:1px solid var(--line)}
@@ -2467,6 +2482,93 @@ async function doAddUser(){
 }
 function userSetRole(id,role){ SDB.setProfile(id,{role}); toast('Role updated'); }
 function userToggle(id,active){ SDB.setProfile(id,{is_active:active}); go('users'); }
+
+/* ============ desktop date calendar ============ */
+// Delegation covers Quick Rent, checkout/return dates and dynamically created forms.
+const desktopDatePicker=window.matchMedia('(hover: hover) and (pointer: fine)');
+let DATE_CALENDAR=null, DATE_INPUT=null, DATE_MONTH=null;
+const dateISO=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function dateAllowed(value,input){return (!input.min||value>=input.min)&&(!input.max||value<=input.max);}
+function closeDateCalendar(){
+  const input=DATE_INPUT;
+  DATE_INPUT=null;
+  if(DATE_CALENDAR&&DATE_CALENDAR.open)DATE_CALENDAR.close();
+  if(input&&input.isConnected)input.focus({preventScroll:true});
+}
+function chooseCalendarDate(value){
+  const input=DATE_INPUT;
+  if(!input||!input.isConnected||input.disabled||input.readOnly)return closeDateCalendar();
+  if(value&&!dateAllowed(value,input))return;
+  closeDateCalendar();
+  if(input.value===value)return;
+  input.value=value;
+  // Preserve the existing pricing, availability and form-state handlers.
+  input.dispatchEvent(new Event('input',{bubbles:true}));
+  input.dispatchEvent(new Event('change',{bubbles:true}));
+}
+function renderDateCalendar(){
+  const input=DATE_INPUT, year=DATE_MONTH.getFullYear(), month=DATE_MONTH.getMonth();
+  const heading=DATE_MONTH.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  const first=new Date(year,month,1).getDay(), count=new Date(year,month+1,0).getDate();
+  let grid=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day=>`<span>${day}</span>`).join('')+'<span></span>'.repeat(first);
+  for(let day=1;day<=count;day++){
+    const d=new Date(year,month,day), value=dateISO(d);
+    grid+=`<button type="button" data-date="${value}" aria-label="${d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}" aria-pressed="${input.value===value}" ${dateAllowed(value,input)?'':'disabled'}>${day}</button>`;
+  }
+  DATE_CALENDAR.innerHTML=`<header><button type="button" data-month="-1" aria-label="Previous month">‹</button><h3 id="date-calendar-title">${heading}</h3><button type="button" data-month="1" aria-label="Next month">›</button></header><div class="date-calendar-grid">${grid}</div><footer><button type="button" data-action="today" ${dateAllowed(dateISO(new Date()),input)?'':'disabled'}>Today</button><button type="button" data-action="clear" ${input.required?'disabled':''}>Clear</button><button type="button" data-action="close">Close</button></footer>`;
+}
+function openDateCalendar(input){
+  if(!input||input.disabled||input.readOnly)return;
+  if(!DATE_CALENDAR){
+    DATE_CALENDAR=document.createElement('dialog');
+    DATE_CALENDAR.className='date-calendar';
+    DATE_CALENDAR.setAttribute('aria-labelledby','date-calendar-title');
+    document.body.appendChild(DATE_CALENDAR);
+    DATE_CALENDAR.addEventListener('cancel',e=>{e.preventDefault();closeDateCalendar();});
+    DATE_CALENDAR.addEventListener('click',e=>{
+      if(e.target===DATE_CALENDAR){
+        const r=DATE_CALENDAR.getBoundingClientRect();
+        if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDateCalendar();
+        return;
+      }
+      const button=e.target.closest('button');
+      if(!button||button.disabled)return;
+      if(button.dataset.date)return chooseCalendarDate(button.dataset.date);
+      if(button.dataset.month){
+        DATE_MONTH.setMonth(DATE_MONTH.getMonth()+Number(button.dataset.month));
+        renderDateCalendar();
+        DATE_CALENDAR.querySelector(`[data-month="${button.dataset.month}"]`).focus();
+      }else if(button.dataset.action==='today')chooseCalendarDate(dateISO(new Date()));
+      else if(button.dataset.action==='clear')chooseCalendarDate('');
+      else closeDateCalendar();
+    });
+  }
+  DATE_INPUT=input;
+  const initial=input.value||dateISO(new Date());
+  const bounded=input.min&&initial<input.min?input.min:input.max&&initial>input.max?input.max:initial;
+  const d=parseD(bounded);
+  DATE_MONTH=new Date(d.getFullYear(),d.getMonth(),1);
+  renderDateCalendar();
+  if(!DATE_CALENDAR.open)DATE_CALENDAR.showModal();
+  const selected=DATE_CALENDAR.querySelector('[aria-pressed="true"]:not(:disabled)')||DATE_CALENDAR.querySelector('[data-date]:not(:disabled)');
+  if(selected)selected.focus();
+}
+document.addEventListener('click',e=>{
+  const input=e.target.closest&&e.target.closest('input[type=date]');
+  if(!input||!desktopDatePicker.matches||input.disabled||input.readOnly)return;
+  e.preventDefault();
+  openDateCalendar(input);
+});
+document.addEventListener('keydown',e=>{
+  // Escape dismisses only the calendar, leaving the underlying Return form open.
+  if(DATE_CALENDAR&&DATE_CALENDAR.open&&e.key==='Escape'){
+    e.preventDefault();e.stopImmediatePropagation();closeDateCalendar();return;
+  }
+  if(desktopDatePicker.matches&&e.target.matches('input[type=date]')&&(e.key===' '||(e.altKey&&e.key==='ArrowDown'))){
+    e.preventDefault();openDateCalendar(e.target);
+  }
+},true);
+/* ============ end desktop date calendar ============ */
 
 /* ============ modal / theme ============ */
 function openModal(html,wide,closeLabel="Cancel"){$("#modal").style.maxWidth=wide?"760px":"440px";const closeAction=closeLabel==="Cancel"?'<div style="text-align:right;margin-top:6px"><span class="lnk muted" style="cursor:pointer;font-size:12.5px" onclick="closeModal()">Cancel</span></div>':`<div style="text-align:right;margin-top:12px"><button class="btn btn-ghost" onclick="closeModal()">${escAttr(closeLabel)}</button></div>`;$("#modal").innerHTML=html+closeAction;$("#ov").classList.add("show");}
